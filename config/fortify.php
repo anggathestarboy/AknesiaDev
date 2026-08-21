@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => '/'.trim(env('CMS_ROUTE', 'admin-panel'), '/').'/dashboard',
 
     /*
     |--------------------------------------------------------------------------
@@ -84,9 +84,12 @@ return [
     | that it registers with the application. If necessary, you may change
     | subdomain under which all of the Fortify routes will be available.
     |
+    | This is tied to the CMS_ROUTE env var (see config/cms.php) so the login
+    | screen lives under the same prefix as the rest of the CMS panel.
+    |
     */
 
-    'prefix' => '',
+    'prefix' => env('CMS_ROUTE', 'admin-panel'),
 
     'domain' => null,
 

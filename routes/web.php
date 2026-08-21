@@ -4,8 +4,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::view('dashboard', 'dashboard')->name('dashboard');
-});
+if (config('cms.enabled')) {
+    Route::middleware(['auth', 'verified'])
+        ->prefix(config('cms.route'))
+        ->group(function () {
+            Route::view('dashboard', 'dashboard')->name('dashboard');
+        });
+}
 
 require __DIR__.'/settings.php';

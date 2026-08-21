@@ -27,6 +27,25 @@ Tidak ada folder `app/Models/Cms/`, `app/Statamic/`, `app/Cp/` atau
 sejenisnya. Kalau butuh model CMS baru, ikuti struktur `app/Models/` yang
 sudah ada (flat, bukan sub-namespace) kecuali user minta lain.
 
+## Konfigurasi route CMS
+
+`config/cms.php` mengatur panel CMS (mirip `cp.enabled`/`cp.route` di
+Statamic):
+
+- `CMS_ENABLED` (default `true`) — kalau `false`, route `dashboard` di
+  `routes/web.php` tidak didaftarkan. Route Fortify (login/register/dll)
+  tetap terdaftar — CMS_ENABLED belum mematikan itu, cek `config/fortify.php`
+  kalau butuh disable total.
+- `CMS_ROUTE` (default `admin-panel`) — prefix URL untuk seluruh panel.
+  Dipakai di dua tempat yang **harus tetap sinkron**: `routes/web.php`
+  (`Route::prefix(config('cms.route'))` untuk `dashboard`) dan
+  `config/fortify.php` (`'prefix'` dan `'home'`, dibaca langsung dari
+  `env('CMS_ROUTE', ...)` bukan dari `config('cms.route')`, supaya tidak
+  bergantung urutan load file config). Kalau menambah route CMS baru,
+  taruh di dalam group `Route::prefix(config('cms.route'))` yang sama di
+  `routes/web.php`, jangan hardcode `/dashboard` atau path lain di kode/JS —
+  selalu pakai `route('dashboard')` dsb.
+
 ## Model & auth yang sudah ada
 
 - `App\Models\User` — primary key **UUID** via trait `HasUuids`
