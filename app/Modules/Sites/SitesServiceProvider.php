@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Modules\Sites;
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * Multi-site configuration.
+ * Owns tables: sites.
+ */
+class SitesServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        //
+    }
+
+    public function boot(): void
+    {
+        $this->loadViewsFrom(__DIR__.'/resources/views', 'sites');
+        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        Route::middleware(['web', 'auth', 'verified'])
+            ->prefix(config('cms.route'))
+            ->name('sites.')
+            ->group(__DIR__.'/routes.php');
+    }
+}

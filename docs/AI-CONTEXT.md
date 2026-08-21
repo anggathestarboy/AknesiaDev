@@ -12,20 +12,125 @@ app/
   Concerns/
   Console/Commands/
   Http/Controllers/
-  Livewire/            — komponen Livewire (baru untuk Settings/Auth)
+  Livewire/            — komponen Livewire untuk Settings/Auth (BUKAN modul CMS)
   Livewire/Settings/
-  Models/              — HANYA ADA User.php saat ini
+  Models/              — HANYA User.php (identity/auth, di luar sistem modul)
+  Modules/             — SEMUA fitur CMS hidup di sini, 1 folder per modul.
+                          Lihat bagian "Sistem modul CMS" di bawah.
   Providers/
-database/migrations/    — skema penuh CMS sudah ada, lihat docs/PRD.md §3
+database/migrations/    — skema CMS versi awal (semua tabel dari docs/PRD.md
+                           §3) masih di sini, BELUM dipindah ke masing-masing
+                           modul. Jangan dipindah tanpa diminta — lihat aturan
+                           di bawah.
 routes/
-  web.php               — cuma route `/` dan `/dashboard` (auth+verified)
+  web.php               — route `/` dan (kalau cms.enabled) `dashboard`.
+                           Route per-modul TIDAK didaftarkan di sini, lihat
+                           di bawah.
   settings.php
-resources/views/        — Blade + Livewire views (Flux UI)
+resources/views/        — Blade + Livewire views level aplikasi (Flux UI,
+                           layout, halaman settings/auth). Modul CMS punya
+                           resources/views sendiri, lihat di bawah.
 ```
 
-Tidak ada folder `app/Models/Cms/`, `app/Statamic/`, `app/Cp/` atau
-sejenisnya. Kalau butuh model CMS baru, ikuti struktur `app/Models/` yang
-sudah ada (flat, bukan sub-namespace) kecuali user minta lain.
+`app/Models/User.php` sengaja tetap di `app/Models/` (bukan modul) karena
+dia infrastruktur identity/auth yang dipakai semua modul, bukan fitur
+konten. Jangan pindahkan `User` ke dalam sebuah modul.
+
+## Sistem modul CMS
+
+Setiap fitur CMS (collection, blueprint, media, dst.) adalah **modul
+mandiri** di `app/Modules/{Nama}/`, supaya kerja paralel banyak dev/AI tidak
+saling tabrakan file. Ini keputusan arsitektur yang sudah dibuat dan
+di-scaffold — ikuti pola ini untuk semua kerja CMS berikutnya, jangan
+menciptakan pola baru.
+
+### Wireframe folder per modul
+
+```
+app/Modules/{Nama}/
+  Models/                  — Eloquent model milik modul ini
+  Http/Controllers/        — controller (kalau modul butuh, di luar Livewire)
+  Livewire/                — komponen Livewire (CP UI) milik modul ini
+  Actions/                 — action class satu-tugas (pola app/Actions/Fortify)
+  Policies/                — authorization policy milik modul ini
+  routes.php               — route modul ini SAJA (lihat isi provider di bawah)
+  database/migrations/     — migration BARU untuk modul ini (lihat catatan
+                              migration di bawah — migration lama TIDAK di sini)
+  resources/views/         — Blade view modul ini, di-load lewat view
+                              namespace sendiri (mis. `media::index`)
+  {Nama}ServiceProvider.php
+```
+
+`{Nama}ServiceProvider` sudah di-generate untuk semua modul dan didaftarkan
+di `bootstrap/providers.php`. Isinya (jangan diubah polanya tanpa alasan
+kuat):
+
+```php
+public function boot(): void
+{
+    $this->loadViewsFrom(__DIR__.'/resources/views', '{slug}');
+    $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+    Route::middleware(['web', 'auth', 'verified'])
+        ->prefix(config('cms.route'))
+        ->name('{slug}.')
+        ->group(__DIR__.'/routes.php');
+}
+```
+
+Artinya: `routes.php` di dalam modul **tidak boleh** panggil
+`->prefix()`/`->middleware()`/`->name()` sendiri lagi — itu sudah dipasang
+provider. Semua route modul otomatis ikut prefix CMS (`config('cms.route')`,
+lihat bagian "Konfigurasi route CMS") dan otomatis punya nama route
+`{slug}.{nama-route}` (mis. route `index` di modul Media → `media.index`).
+
+### Daftar modul & tabel yang dimiliki
+
+| Modul | Slug | Tabel yang dimiliki | Catatan |
+|---|---|---|---|
+| Collections | `collections` | `collections`, `entries` | Entry milik collection lewat kolom `collection` (handle), bukan FK id. |
+| Taxonomies | `taxonomies` | `taxonomies`, `taxonomy_terms` | |
+| Blueprints | `blueprints` | `blueprints`, `fieldsets` | Modul ini "dipakai" hampir semua modul lain (setiap konten punya blueprint) — modul lain boleh depend ke sini, tapi Blueprints tidak boleh depend balik ke modul konten manapun. |
+| Media | `media` | `asset_containers`, `assets_meta` | "Media library" yang diminta user. |
+| Globals | `globals` | `global_sets`, `global_set_variables` | |
+| Forms | `forms` | `forms`, `form_submissions` | |
+| Navigation | `navigation` | `navigations` | Struktur pohon menu didelegasikan ke modul Structure. |
+| Structure | `structure` | `trees` | Modul kecil khusus untuk hierarki/urutan (`trees.type`: `collection`\|`navigation`), dipakai Collections & Navigation. Jangan duplikasi logic tree di modul lain. |
+| Sites | `sites` | `sites` | Multi-site config. |
+| Sitemap | `sitemap` | `sitemaps` | |
+| Redirects | `redirects` | `redirects` | |
+
+`User`/auth tetap di luar sistem modul (lihat bagian struktur direktori di
+atas).
+
+### Aturan wajib kalau menambah kode ke sebuah modul
+
+1. **Satu tabel = satu modul pemilik**, sesuai tabel di atas. Model Eloquent
+   untuk tabel itu HANYA boleh didefinisikan di modul pemiliknya.
+2. **Jangan `use` model/class dari modul lain langsung ke internal-nya**
+   kalau bisa dihindari — modul lain boleh depend ke model publik modul lain
+   (mis. Collections boleh query `App\Modules\Blueprints\Models\Blueprint`),
+   tapi jangan menaruh business logic milik modul B di dalam modul A. Kalau
+   dua modul perlu berbagi logic, taruh logic itu di modul yang paling
+   relevan (contoh: Structure untuk tree) — jangan membuat modul baru tanpa
+   didiskusikan dulu ke user, dan jangan taruh di `app/Support` atau
+   sejenisnya tanpa persetujuan (belum ada folder itu).
+3. **Migration existing di `database/migrations/` TIDAK BOLEH dipindah** ke
+   folder modul. Itu sudah berjalan di database production/dev sekarang.
+   Migration BARU untuk tabel yang sudah ada (mis. menambah kolom) tetap
+   ditaruh di `app/Modules/{Nama}/database/migrations/` — Laravel akan
+   otomatis menemukannya lewat `loadMigrationsFrom()` di provider, tidak
+   perlu didaftarkan manual.
+4. **Route baru untuk modul ditaruh di `app/Modules/{Nama}/routes.php`**,
+   bukan di `routes/web.php`. `routes/web.php` hanya untuk route level
+   aplikasi (home, dashboard shell) yang bukan milik modul manapun.
+5. **View Blade modul ditaruh di `app/Modules/{Nama}/resources/views/`**,
+   diakses lewat namespace `{slug}::nama-view` (mis. `media::index`), bukan
+   ditaruh di `resources/views/` root.
+6. Kalau task minta fitur yang **belum ada modulnya** di tabel di atas
+   (fitur benar-benar baru, bukan salah satu dari 11 modul ini) → **tanya
+   user dulu** sebelum membuat modul baru. Jangan menebak nama/struktur
+   modul baru sendirian.
 
 ## Konfigurasi route CMS
 

@@ -7,10 +7,16 @@ DraftCMS adalah CMS flat-first ala **Statamic**, tapi datanya disimpan di
 asli). Dibangun di atas Laravel 13 + Livewire 4 + Flux UI + Tailwind v4.
 
 Status saat ini: **skema database sudah dirancang penuh** (lihat
-`database/migrations/`), tapi **belum ada model, controller, admin panel,
-maupun front-end rendering**. Baru fitur auth (register/login/2FA/passkey via
-Fortify) yang berjalan. Dokumen ini adalah acuan scope — jangan menambah
-fitur di luar sini tanpa persetujuan user.
+`database/migrations/`), dan **kerangka modul CMS sudah di-scaffold** di
+`app/Modules/{Nama}/` (satu folder per fitur — Collections, Taxonomies,
+Blueprints, Media, Globals, Forms, Navigation, Structure, Sites, Sitemap,
+Redirects — lihat `docs/AI-CONTEXT.md` § "Sistem modul CMS" untuk detail).
+Tapi **isi tiap modul masih kosong** — belum ada model, controller, atau UI
+nyata di dalamnya, cuma provider + folder wireframe. Yang benar-benar
+berjalan baru fitur auth (register/login/2FA/passkey via Fortify). Dokumen
+ini adalah acuan scope — jangan menambah fitur di luar sini tanpa
+persetujuan user, dan semua fitur CMS baru wajib masuk ke modul yang sesuai
+(lihat `docs/AI-CONSTRAINTS.md`).
 
 ## 2. Target pengguna
 
@@ -56,7 +62,8 @@ fitur di luar sini tanpa persetujuan user.
 
 ## 5. Yang BELUM ada (jangan diasumsikan sudah ada)
 
-- Model Eloquent untuk semua tabel CMS di atas (baru ada `User`).
+- Model Eloquent untuk semua tabel CMS di atas (baru ada `User`; folder
+  `Models/` tiap modul di `app/Modules/` masih kosong).
 - Admin panel / control panel UI (CRUD collection, entry editor, blueprint
   builder drag-drop, dsb).
 - Front-end rendering / templating engine untuk menampilkan entry ke publik

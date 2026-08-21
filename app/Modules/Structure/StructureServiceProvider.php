@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Modules\Structure;
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * Shared ordering/hierarchy trees used by Collections and Navigation.
+ * Owns tables: trees.
+ */
+class StructureServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        //
+    }
+
+    public function boot(): void
+    {
+        $this->loadViewsFrom(__DIR__.'/resources/views', 'structure');
+        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        Route::middleware(['web', 'auth', 'verified'])
+            ->prefix(config('cms.route'))
+            ->name('structure.')
+            ->group(__DIR__.'/routes.php');
+    }
+}
