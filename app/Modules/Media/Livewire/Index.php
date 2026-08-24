@@ -3,9 +3,11 @@
 namespace App\Modules\Media\Livewire;
 
 use App\Modules\Media\Exceptions\MediaException;
+use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Media\Services\MediaService;
 use Flux\Flux;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -18,7 +20,7 @@ class Index extends Component
     use WithFileUploads;
 
     #[Url]
-    public string $container = 'assets';
+    public string $container = '';
 
     #[Url]
     public string $path = '';
@@ -69,6 +71,13 @@ class Index extends Component
 
     public string $previewLoading = 'lazy';
 
+    public function mount(): void
+    {
+        if ($this->container === '' || ! AssetContainer::where('handle', $this->container)->exists()) {
+            $this->container = AssetContainer::orderBy('title')->value('handle') ?? '';
+        }
+    }
+
     public function updatedContainer(): void
     {
         $this->path = '';
@@ -78,8 +87,18 @@ class Index extends Component
     }
 
     #[Computed]
+    public function containers(): Collection
+    {
+        return AssetContainer::orderBy('title')->get();
+    }
+
+    #[Computed]
     public function listing(): array
     {
+        if ($this->container === '') {
+            return ['folders' => collect(), 'files' => collect()];
+        }
+
         $service = app(MediaService::class);
 
         if ($this->search !== '') {

@@ -16,23 +16,28 @@
                     <flux:button class="cursor-pointer" size="sm" :variant="$viewMode === 'list' ? 'primary' : 'ghost'" icon="list-bullet" wire:click="$set('viewMode', 'list')" />
                 </flux:button.group>
 
-                @if (!empty($clipboard))
-                    <flux:button class="cursor-pointer" size="sm" variant="filled" icon="clipboard-document" wire:click="paste">{{ __('Paste') }}</flux:button>
-                @endif
+                @if ($this->containers->isNotEmpty())
+                    @if (!empty($clipboard))
+                        <flux:button class="cursor-pointer" size="sm" variant="filled" icon="clipboard-document" wire:click="paste">{{ __('Paste') }}</flux:button>
+                    @endif
 
-                <flux:button class="cursor-pointer" size="sm" icon="folder-plus" wire:click="startCreateFolder">{{ __('New Folder') }}</flux:button>
-                <flux:button class="cursor-pointer" size="sm" variant="primary" icon="arrow-up-tray" x-on:click="$refs.fileInput.click()">{{ __('Upload') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" icon="folder-plus" wire:click="startCreateFolder">{{ __('New Folder') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" variant="primary" icon="arrow-up-tray" x-on:click="$refs.fileInput.click()">{{ __('Upload') }}</flux:button>
+                @endif
             </div>
         </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <flux:input wire:model.live.debounce.400ms="search" size="sm" icon="magnifying-glass" :placeholder="__('Search files & folders')" class="w-full sm:w-72" />
+        @if ($this->containers->isNotEmpty())
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <flux:input wire:model.live.debounce.400ms="search" size="sm" icon="magnifying-glass" :placeholder="__('Search files & folders')" class="w-full sm:w-72" />
 
-            <flux:select class="cursor-pointer sm:w-56" wire:model.live="container" size="sm">
-                <flux:select.option value="assets">{{ __('Assets') }}</flux:select.option>
-                <flux:select.option value="private_library">{{ __('Private Library') }}</flux:select.option>
-            </flux:select>
-        </div>
+                <flux:select class="cursor-pointer sm:w-56" wire:model.live="container" size="sm">
+                    @foreach ($this->containers as $availableContainer)
+                        <flux:select.option value="{{ $availableContainer->handle }}">{{ $availableContainer->title }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+        @endif
 
         <div x-show="uploading" x-cloak class="space-y-1">
             <div class="flex items-center justify-between text-xs text-zinc-500">
@@ -44,6 +49,11 @@
             </div>
         </div>
 
+        @if ($this->containers->isEmpty())
+            <div class="rounded-lg border border-dashed border-zinc-300 p-12 text-center text-zinc-400 dark:border-zinc-700">
+                {{ __('No media containers yet. Run') }} <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">php artisan make:media</code> {{ __('to create one.') }}
+            </div>
+        @else
         <div>
             <div class="overflow-x-auto rounded-t-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-800">
                 <flux:breadcrumbs class="w-max">
@@ -111,6 +121,7 @@
             @endif
             </div>
         </div>
+        @endif
 
         @error('uploads.*') <flux:text class="text-red-500">{{ $message }}</flux:text> @enderror
 

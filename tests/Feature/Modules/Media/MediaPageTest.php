@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 beforeEach(function () {
-    $this->artisan('make:media');
+    $this->artisan('make:media', ['title' => 'Assets', '--type' => 'public']);
+    $this->artisan('make:media', ['title' => 'Private Library', '--type' => 'private']);
     Storage::fake('public');
 });
 
