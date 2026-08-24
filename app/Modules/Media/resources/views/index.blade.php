@@ -193,7 +193,11 @@
                     </div>
 
                     <div class="space-y-4">
-                        <flux:heading size="lg">{{ $this->previewAsset->basename }}</flux:heading>
+                        <flux:heading size="lg" class="pr-8 break-words">{{ $this->previewAsset->basename }}</flux:heading>
+
+                        @if ($this->previewAsset->extension === 'pdf')
+                            <flux:button class="cursor-pointer" size="sm" icon="arrow-top-right-on-square" href="{{ $this->previewAsset->url }}" target="_blank">{{ __('Preview') }}</flux:button>
+                        @endif
 
                         <flux:input wire:model="previewTitle" :label="__('Title')" />
                         <flux:input wire:model="previewAlt" :label="__('Alt text')" />

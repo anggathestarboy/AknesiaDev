@@ -8,9 +8,11 @@
         wire:dblclick="goToPath('{{ $path }}')"
         x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'"
         x-on:dragstart="$event.dataTransfer.setData('text/plain', 'folder|{{ $path }}')"
-        x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); dragOver = true"
-        x-on:dragleave="dragOver = false"
+        x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = true"
+        x-on:dragleave="$event.stopPropagation(); dragOver = false"
         x-on:drop="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = false; const raw = $event.dataTransfer.getData('text/plain'); const i = raw.indexOf('|'); $wire.dropOnFolder(raw.slice(0, i), raw.slice(i + 1), '{{ $path }}')"
+        x-on:dragend.window="dragOver = false"
+        x-on:drop.window="dragOver = false"
     >
         <div class="flex aspect-square w-full items-center justify-center rounded-lg p-2 {{ $this->isSelected('folder', $path) ? 'ring-2 ring-blue-500' : '' }}" :class="dragOver ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950' : ''">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 80 66" class="size-full text-blue-400/90 group-hover:text-blue-400">

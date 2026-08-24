@@ -8,9 +8,11 @@
         wire:dblclick="goToPath('{{ $path }}')"
         x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'"
         x-on:dragstart="$event.dataTransfer.setData('text/plain', 'folder|{{ $path }}')"
-        x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); dragOver = true"
-        x-on:dragleave="dragOver = false"
+        x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = true"
+        x-on:dragleave="$event.stopPropagation(); dragOver = false"
         x-on:drop="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = false; const raw = $event.dataTransfer.getData('text/plain'); const i = raw.indexOf('|'); $wire.dropOnFolder(raw.slice(0, i), raw.slice(i + 1), '{{ $path }}')"
+        x-on:dragend.window="dragOver = false"
+        x-on:drop.window="dragOver = false"
         :class="dragOver ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950' : ''"
     >
         <div class="flex size-8 shrink-0 items-center justify-center">
