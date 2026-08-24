@@ -1,5 +1,6 @@
 @if ($type === 'folder')
     <div
+        wire:key="folder-{{ $path }}"
         class="group flex items-center gap-3 px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 {{ $this->isSelected('folder', $path) ? 'bg-blue-50 dark:bg-blue-950/40' : '' }}"
         x-data="{ dragOver: false }"
         draggable="true"
@@ -29,11 +30,11 @@
                 x-on:click.outside="contextMenu = null"
                 class="absolute top-0 right-0 z-10 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
             >
-                <button type="button" wire:click.stop="startRenameFolder('{{ $path }}')" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
-                <button type="button" wire:click.stop="duplicateFolder('{{ $path }}')" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
-                <button type="button" wire:click.stop="cutFolder('{{ $path }}')" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
-                <button type="button" wire:click.stop="downloadFolder('{{ $path }}')" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Download') }}</button>
-                <button type="button" wire:click.stop="askDeleteFolder('{{ $path }}')" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
+                <button type="button" wire:click.stop="startRenameFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
+                <button type="button" wire:click.stop="duplicateFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
+                <button type="button" wire:click.stop="cutFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
+                <button type="button" wire:click.stop="downloadFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Download') }}</button>
+                <button type="button" wire:click.stop="askDeleteFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
             </div>
 
             <button
@@ -47,6 +48,7 @@
     </div>
 @else
     <div
+        wire:key="file-{{ $asset->id }}"
         class="group flex items-center gap-3 px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 {{ $this->isSelected('file', (string) $asset->id) ? 'bg-blue-50 dark:bg-blue-950/40' : '' }}"
         draggable="true"
         wire:click="toggleSelect('file', '{{ $asset->id }}')"
@@ -69,12 +71,12 @@
                 x-on:click.outside="contextMenu = null"
                 class="absolute top-0 right-0 z-10 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
             >
-                <button type="button" wire:click.stop="openPreview({{ $asset->id }})" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('View / Edit') }}</button>
-                <button type="button" wire:click.stop="startRenameFile({{ $asset->id }})" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
-                <button type="button" wire:click.stop="duplicateFile({{ $asset->id }})" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
-                <button type="button" wire:click.stop="cutFile({{ $asset->id }})" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
-                <button type="button" wire:click.stop="downloadFile({{ $asset->id }})" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Download') }}</button>
-                <button type="button" wire:click.stop="deleteFile({{ $asset->id }})" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
+                <button type="button" wire:click.stop="openPreview({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('View / Edit') }}</button>
+                <button type="button" wire:click.stop="startRenameFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
+                <button type="button" wire:click.stop="duplicateFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
+                <button type="button" wire:click.stop="cutFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
+                <button type="button" wire:click.stop="downloadFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Download') }}</button>
+                <button type="button" wire:click.stop="deleteFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
             </div>
 
             <button

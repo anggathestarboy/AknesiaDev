@@ -118,7 +118,8 @@ test('renaming a file through the component persists the new basename', function
     Livewire::test(Index::class)
         ->call('startRenameFile', $asset->id)
         ->assertSet('showRenameFile', true)
-        ->set('renameFileValue', 'sunset.jpg')
+        ->assertSet('renameFileValue', 'hero')
+        ->set('renameFileValue', 'sunset')
         ->call('renameFile')
         ->assertHasNoErrors();
 
@@ -165,6 +166,19 @@ test('dragging a file onto a folder moves it there', function () {
     expect($asset->fresh()->folder)->toBe('banner');
 });
 
+test('dropping a file into its own current folder is a no-op', function () {
+    $this->actingAs(User::factory()->create());
+
+    $service = app(MediaService::class);
+    $asset = $service->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+    $originalPath = $asset->path;
+
+    Livewire::test(Index::class)->call('dropOnFolder', 'file', (string) $asset->id, '');
+
+    expect(AssetMeta::where('container', 'assets')->count())->toBe(1)
+        ->and($asset->fresh()->path)->toBe($originalPath);
+});
+
 test('dragging a folder onto another folder moves it there', function () {
     $this->actingAs(User::factory()->create());
 
@@ -201,7 +215,7 @@ test('renaming via the bulk toolbar opens the rename modal for a single selectio
         ->call('toggleSelect', 'file', (string) $asset->id)
         ->call('renameSelected')
         ->assertSet('showRenameFile', true)
-        ->assertSet('renameFileValue', 'hero.jpg');
+        ->assertSet('renameFileValue', 'hero');
 });
 
 test('list view renders a pdf thumbnail without error', function () {

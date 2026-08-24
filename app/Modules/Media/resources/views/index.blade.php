@@ -1,4 +1,12 @@
-<div class="space-y-6 p-4 sm:p-6" x-data="{ contextMenu: null }" @click="contextMenu = null">
+<div
+    class="space-y-6 p-4 sm:p-6"
+    x-data="{ contextMenu: null, uploading: false, uploadProgress: 0 }"
+    @click="contextMenu = null"
+    x-on:livewire-upload-start.window="uploading = true; uploadProgress = 0"
+    x-on:livewire-upload-progress.window="uploadProgress = $event.detail.progress"
+    x-on:livewire-upload-finish.window="uploading = false"
+    x-on:livewire-upload-error.window="uploading = false"
+>
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <flux:heading size="xl">{{ __('Media Library') }}</flux:heading>
 
@@ -24,6 +32,16 @@
                 <flux:select.option value="assets">{{ __('Assets') }}</flux:select.option>
                 <flux:select.option value="private_library">{{ __('Private Library') }}</flux:select.option>
             </flux:select>
+        </div>
+
+        <div x-show="uploading" x-cloak class="space-y-1">
+            <div class="flex items-center justify-between text-xs text-zinc-500">
+                <span>{{ __('Uploading...') }}</span>
+                <span x-text="uploadProgress + '%'"></span>
+            </div>
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+                <div class="h-full rounded-full bg-blue-500 transition-[width] duration-300 ease-out" :style="`width: ${uploadProgress}%`"></div>
+            </div>
         </div>
 
         <div>
@@ -136,7 +154,7 @@
 
         <flux:modal name="rename-file" wire:model="showRenameFile" class="space-y-6">
             <flux:heading size="lg">{{ __('Rename File') }}</flux:heading>
-            <flux:input wire:model="renameFileValue" :label="__('File name')" autofocus />
+            <flux:input wire:model="renameFileValue" :label="__('File name')" :description="$renameFileExtension !== '' ? '.'.$renameFileExtension.' '.__('will be kept automatically') : null" autofocus />
             <div class="flex justify-end gap-2">
                 <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showRenameFile', false)">{{ __('Cancel') }}</flux:button>
                 <flux:button class="cursor-pointer" variant="primary" wire:click="renameFile">{{ __('Rename') }}</flux:button>

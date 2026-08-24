@@ -55,6 +55,8 @@ class Index extends Component
 
     public string $renameFileValue = '';
 
+    public string $renameFileExtension = '';
+
     public bool $showRenameFile = false;
 
     public ?int $previewAssetId = null;
@@ -245,7 +247,8 @@ class Index extends Component
     {
         $asset = AssetMeta::where('container', $this->container)->findOrFail($assetId);
         $this->renameFileId = $asset->id;
-        $this->renameFileValue = $asset->basename;
+        $this->renameFileValue = $asset->filename;
+        $this->renameFileExtension = $asset->extension;
         $this->showRenameFile = true;
     }
 
@@ -254,9 +257,10 @@ class Index extends Component
         $this->validate(['renameFileValue' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
 
         $asset = AssetMeta::where('container', $this->container)->findOrFail($this->renameFileId);
+        $newBasename = $asset->extension !== '' ? "{$this->renameFileValue}.{$asset->extension}" : $this->renameFileValue;
 
         try {
-            app(MediaService::class)->renameFile($this->container, $asset, $this->renameFileValue);
+            app(MediaService::class)->renameFile($this->container, $asset, $newBasename);
             $this->showRenameFile = false;
             $this->clearSelection();
             unset($this->listing);
@@ -273,6 +277,7 @@ class Index extends Component
         }
 
         $service = app(MediaService::class);
+        $moved = false;
 
         try {
             if ($draggedType === 'file') {
@@ -280,17 +285,21 @@ class Index extends Component
 
                 if ($asset && $asset->folder !== $targetPath) {
                     $service->moveFile($this->container, $asset, $targetPath);
+                    $moved = true;
                 }
             } else {
                 $to = trim($targetPath.'/'.basename($draggedKey), '/');
 
                 if ($to !== $draggedKey) {
                     $service->moveFolder($this->container, $draggedKey, $to);
+                    $moved = true;
                 }
             }
 
-            unset($this->listing);
-            Flux::toast(text: 'Moved.', variant: 'success');
+            if ($moved) {
+                unset($this->listing);
+                Flux::toast(text: 'Moved.', variant: 'success');
+            }
         } catch (MediaException $e) {
             Flux::toast(text: $e->getMessage(), variant: 'danger');
         }
