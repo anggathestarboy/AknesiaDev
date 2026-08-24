@@ -1,0 +1,184 @@
+<?php
+
+use App\Models\User;
+use App\Modules\Media\Livewire\Index;
+use App\Modules\Media\Models\AssetMeta;
+use App\Modules\Media\Services\MediaService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
+
+beforeEach(function () {
+    Storage::fake('public');
+});
+
+test('media page is displayed', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('media.index'))->assertOk();
+});
+
+test('creating a folder shows it in the listing', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(Index::class)
+        ->set('newFolderName', 'banner')
+        ->call('createFolder')
+        ->assertHasNoErrors();
+
+    expect(Storage::disk('public')->directories(''))->toContain('banner');
+});
+
+test('selecting a file uploads it and persists an assets_meta row', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(Index::class)
+        ->set('uploads', [UploadedFile::fake()->image('hero.jpg')])
+        ->assertHasNoErrors();
+
+    expect(AssetMeta::where('container', 'assets')->where('basename', 'hero.jpg')->exists())->toBeTrue();
+});
+
+test('single click toggles selection without navigating into the folder', function () {
+    $this->actingAs(User::factory()->create());
+    Storage::disk('public')->makeDirectory('banner');
+
+    Livewire::test(Index::class)
+        ->call('toggleSelect', 'folder', 'banner')
+        ->assertSet('path', '')
+        ->assertSet('selected', ['folder:banner']);
+});
+
+test('opening a folder twice does not duplicate the path segment', function () {
+    $this->actingAs(User::factory()->create());
+    Storage::disk('public')->makeDirectory('banner');
+
+    Livewire::test(Index::class)
+        ->call('openFolder', 'banner')
+        ->assertSet('path', 'banner')
+        ->call('openFolder', 'banner')
+        ->assertSet('path', 'banner/banner');
+});
+
+test('bulk delete removes selected files and folders', function () {
+    $this->actingAs(User::factory()->create());
+
+    $asset = app(MediaService::class)
+        ->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+    Storage::disk('public')->makeDirectory('banner');
+
+    Livewire::test(Index::class)
+        ->call('toggleSelect', 'file', (string) $asset->id)
+        ->call('toggleSelect', 'folder', 'banner')
+        ->call('confirmDeleteSelected');
+
+    expect(AssetMeta::find($asset->id))->toBeNull()
+        ->and(Storage::disk('public')->directories(''))->not->toContain('banner');
+});
+
+test('cut and paste moves a file into another folder', function () {
+    $this->actingAs(User::factory()->create());
+
+    $asset = app(MediaService::class)
+        ->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+    Storage::disk('public')->makeDirectory('banner');
+
+    Livewire::test(Index::class)
+        ->call('toggleSelect', 'file', (string) $asset->id)
+        ->call('cutSelected')
+        ->call('goToPath', 'banner')
+        ->call('paste');
+
+    expect($asset->fresh()->folder)->toBe('banner');
+});
+
+test('copy and paste duplicates a file into another folder without removing the original', function () {
+    $this->actingAs(User::factory()->create());
+
+    $asset = app(MediaService::class)
+        ->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+    Storage::disk('public')->makeDirectory('banner');
+
+    Livewire::test(Index::class)
+        ->call('toggleSelect', 'file', (string) $asset->id)
+        ->call('copySelected')
+        ->call('goToPath', 'banner')
+        ->call('paste');
+
+    expect(AssetMeta::where('container', 'assets')->where('folder', '')->where('id', $asset->id)->exists())->toBeTrue()
+        ->and(AssetMeta::where('container', 'assets')->where('folder', 'banner')->where('basename', 'hero.jpg')->exists())->toBeTrue();
+});
+
+test('renaming a file through the component persists the new basename', function () {
+    $this->actingAs(User::factory()->create());
+
+    $asset = app(MediaService::class)
+        ->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+
+    Livewire::test(Index::class)
+        ->call('startRenameFile', $asset->id)
+        ->assertSet('showRenameFile', true)
+        ->set('renameFileValue', 'sunset.jpg')
+        ->call('renameFile')
+        ->assertHasNoErrors();
+
+    expect($asset->fresh()->basename)->toBe('sunset.jpg');
+});
+
+test('search filters files and folders by name', function () {
+    $this->actingAs(User::factory()->create());
+
+    app(MediaService::class)->uploadFile('assets', '', UploadedFile::fake()->image('hero-banner.jpg'));
+    app(MediaService::class)->uploadFile('assets', '', UploadedFile::fake()->image('team-photo.jpg'));
+    Storage::disk('public')->makeDirectory('banner-assets');
+    Storage::disk('public')->makeDirectory('team-docs');
+
+    $component = Livewire::test(Index::class)->set('search', 'banner');
+
+    expect($component->get('listing')['files']->pluck('basename')->all())->toBe(['hero-banner.jpg'])
+        ->and($component->get('listing')['folders']->all())->toBe(['banner-assets']);
+});
+
+test('renaming via the bulk toolbar opens the rename modal for a single selection', function () {
+    $this->actingAs(User::factory()->create());
+
+    $asset = app(MediaService::class)->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+
+    Livewire::test(Index::class)
+        ->call('toggleSelect', 'file', (string) $asset->id)
+        ->call('renameSelected')
+        ->assertSet('showRenameFile', true)
+        ->assertSet('renameFileValue', 'hero.jpg');
+});
+
+test('list view renders a pdf thumbnail without error', function () {
+    $this->actingAs(User::factory()->create());
+
+    app(MediaService::class)->uploadFile('assets', '', UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'));
+
+    Livewire::test(Index::class)
+        ->set('viewMode', 'list')
+        ->assertSee('document.pdf')
+        ->assertSee('asset-thumbnail', false);
+});
+
+test('double-clicking a file opens the preview and saved metadata persists to assets_meta', function () {
+    $this->actingAs(User::factory()->create());
+
+    $asset = app(MediaService::class)
+        ->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+
+    Livewire::test(Index::class)
+        ->call('openPreview', $asset->id)
+        ->assertSet('showPreview', true)
+        ->set('previewTitle', 'Hero banner')
+        ->set('previewAlt', 'A hero banner')
+        ->set('previewLoading', 'eager')
+        ->call('savePreviewMeta');
+
+    $asset->refresh();
+
+    expect($asset->title)->toBe('Hero banner')
+        ->and($asset->alt)->toBe('A hero banner')
+        ->and($asset->loading)->toBe('eager');
+});
