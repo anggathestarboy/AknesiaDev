@@ -266,6 +266,36 @@ class Index extends Component
         }
     }
 
+    public function dropOnFolder(string $draggedType, string $draggedKey, string $targetPath): void
+    {
+        if ($draggedType === 'folder' && ($draggedKey === $targetPath || str_starts_with($targetPath, $draggedKey.'/'))) {
+            return;
+        }
+
+        $service = app(MediaService::class);
+
+        try {
+            if ($draggedType === 'file') {
+                $asset = AssetMeta::where('container', $this->container)->find((int) $draggedKey);
+
+                if ($asset && $asset->folder !== $targetPath) {
+                    $service->moveFile($this->container, $asset, $targetPath);
+                }
+            } else {
+                $to = trim($targetPath.'/'.basename($draggedKey), '/');
+
+                if ($to !== $draggedKey) {
+                    $service->moveFolder($this->container, $draggedKey, $to);
+                }
+            }
+
+            unset($this->listing);
+            Flux::toast(text: 'Moved.', variant: 'success');
+        } catch (MediaException $e) {
+            Flux::toast(text: $e->getMessage(), variant: 'danger');
+        }
+    }
+
     public function renameSelected(): void
     {
         $items = $this->selectedItems();

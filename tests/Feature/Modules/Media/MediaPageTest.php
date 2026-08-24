@@ -153,6 +153,45 @@ test('search reaches files nested inside subfolders', function () {
         ->and($component->get('listing')['files']->first()->folder)->toBe('banner/2024');
 });
 
+test('dragging a file onto a folder moves it there', function () {
+    $this->actingAs(User::factory()->create());
+
+    $service = app(MediaService::class);
+    $service->createFolder('assets', 'banner');
+    $asset = $service->uploadFile('assets', '', UploadedFile::fake()->image('hero.jpg'));
+
+    Livewire::test(Index::class)->call('dropOnFolder', 'file', (string) $asset->id, 'banner');
+
+    expect($asset->fresh()->folder)->toBe('banner');
+});
+
+test('dragging a folder onto another folder moves it there', function () {
+    $this->actingAs(User::factory()->create());
+
+    $service = app(MediaService::class);
+    $service->createFolder('assets', 'banner');
+    $service->createFolder('assets', 'archive');
+
+    Livewire::test(Index::class)->call('dropOnFolder', 'folder', 'banner', 'archive');
+
+    expect(Storage::disk('public')->directories(''))->not->toContain('banner')
+        ->and(Storage::disk('public')->directories('archive'))->toContain('archive/banner');
+});
+
+test('dragging a folder onto itself or its own descendant is a no-op', function () {
+    $this->actingAs(User::factory()->create());
+
+    $service = app(MediaService::class);
+    $service->createFolder('assets', 'banner');
+    $service->createFolder('assets', 'banner/2024');
+
+    $component = Livewire::test(Index::class);
+    $component->call('dropOnFolder', 'folder', 'banner', 'banner');
+    $component->call('dropOnFolder', 'folder', 'banner', 'banner/2024');
+
+    expect(Storage::disk('public')->directories(''))->toContain('banner');
+});
+
 test('renaming via the bulk toolbar opens the rename modal for a single selection', function () {
     $this->actingAs(User::factory()->create());
 

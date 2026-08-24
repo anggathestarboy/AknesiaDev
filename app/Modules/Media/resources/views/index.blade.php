@@ -17,15 +17,6 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-800">
-            <flux:breadcrumbs class="w-max">
-                <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToPath('')" :current="$path === ''">{{ __('Home') }}</flux:breadcrumbs.item>
-                @foreach ($this->breadcrumbs as $crumb)
-                    <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToPath('{{ $crumb['path'] }}')" :current="$crumb['path'] === $path">{{ $crumb['name'] }}</flux:breadcrumbs.item>
-                @endforeach
-            </flux:breadcrumbs>
-        </div>
-
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <flux:input wire:model.live.debounce.400ms="search" size="sm" icon="magnifying-glass" :placeholder="__('Search files & folders')" class="w-full sm:w-72" />
 
@@ -35,14 +26,24 @@
             </flux:select>
         </div>
 
-        <div
-            class="rounded-lg border border-dashed border-zinc-300 p-6 dark:border-zinc-700"
-            x-data="{ dragging: false }"
-            x-on:dragover.prevent="dragging = true"
-            x-on:dragleave.prevent="dragging = false"
-            x-on:drop.prevent="dragging = false; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change'))"
-            :class="dragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : ''"
-        >
+        <div>
+            <div class="overflow-x-auto rounded-t-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-800">
+                <flux:breadcrumbs class="w-max">
+                    <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToPath('')" :current="$path === ''">{{ __('Home') }}</flux:breadcrumbs.item>
+                    @foreach ($this->breadcrumbs as $crumb)
+                        <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToPath('{{ $crumb['path'] }}')" :current="$crumb['path'] === $path">{{ $crumb['name'] }}</flux:breadcrumbs.item>
+                    @endforeach
+                </flux:breadcrumbs>
+            </div>
+
+            <div
+                class="rounded-b-lg border border-t-0 border-dashed border-zinc-300 p-6 dark:border-zinc-700"
+                x-data="{ dragging: false }"
+                x-on:dragover.prevent="dragging = true"
+                x-on:dragleave.prevent="dragging = false"
+                x-on:drop.prevent="dragging = false; $refs.fileInput.files = $event.dataTransfer.files; $refs.fileInput.dispatchEvent(new Event('change'))"
+                :class="dragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : ''"
+            >
             @if ($viewMode === 'grid')
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9">
                     @forelse ($this->listing['folders'] as $folder)
@@ -90,6 +91,7 @@
                     @endif
                 </div>
             @endif
+            </div>
         </div>
 
         @error('uploads.*') <flux:text class="text-red-500">{{ $message }}</flux:text> @enderror
