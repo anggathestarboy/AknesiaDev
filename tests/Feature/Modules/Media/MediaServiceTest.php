@@ -8,6 +8,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
+    $this->artisan('make:media');
     Storage::fake('public');
     $this->service = app(MediaService::class);
 });

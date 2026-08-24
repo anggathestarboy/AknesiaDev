@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 beforeEach(function () {
+    $this->artisan('make:media');
     Storage::fake('public');
 });
 

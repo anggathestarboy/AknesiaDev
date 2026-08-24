@@ -2,6 +2,7 @@
 
 namespace App\Modules\Media;
 
+use App\Modules\Media\Console\Commands\MakeMediaCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
@@ -23,6 +24,10 @@ class MediaServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         Livewire::addNamespace('media', classNamespace: 'App\\Modules\\Media\\Livewire');
+
+        $this->commands([
+            MakeMediaCommand::class,
+        ]);
 
         Route::middleware(['web', 'auth', 'verified'])
             ->prefix(config('cms.route'))

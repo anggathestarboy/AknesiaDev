@@ -1,11 +1,17 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+namespace App\Modules\Media\Console\Commands;
+
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
+class MakeMediaCommand extends Command
 {
-    public function up(): void
+    protected $signature = 'make:media';
+
+    protected $description = 'Seed the default Media Library asset containers (assets, private_library)';
+
+    public function handle(): int
     {
         DB::table('asset_containers')->insertOrIgnore([
             [
@@ -25,10 +31,9 @@ return new class extends Migration
                 'updated_at' => now(),
             ],
         ]);
-    }
 
-    public function down(): void
-    {
-        DB::table('asset_containers')->whereIn('handle', ['assets', 'private_library'])->delete();
+        $this->info('Media containers seeded: assets, private_library.');
+
+        return self::SUCCESS;
     }
-};
+}
