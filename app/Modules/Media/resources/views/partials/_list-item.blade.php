@@ -2,7 +2,7 @@
     <div
         class="group flex items-center gap-3 px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 {{ $this->isSelected('folder', $path) ? 'bg-blue-50 dark:bg-blue-950/40' : '' }}"
         wire:click="toggleSelect('folder', '{{ $path }}')"
-        wire:dblclick="openFolder('{{ $name }}')"
+        wire:dblclick="goToPath('{{ $path }}')"
         x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'"
     >
         <div class="flex size-8 shrink-0 items-center justify-center">

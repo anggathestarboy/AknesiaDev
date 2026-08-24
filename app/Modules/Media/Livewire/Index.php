@@ -70,6 +70,7 @@ class Index extends Component
     public function updatedContainer(): void
     {
         $this->path = '';
+        $this->search = '';
         $this->selected = [];
         unset($this->listing);
     }
@@ -77,19 +78,18 @@ class Index extends Component
     #[Computed]
     public function listing(): array
     {
-        $listing = app(MediaService::class)->listFolder($this->container, $this->path);
+        $service = app(MediaService::class);
 
         if ($this->search !== '') {
-            $term = strtolower($this->search);
-
-            $listing['folders'] = $listing['folders']
-                ->filter(fn (string $name) => str_contains(strtolower($name), $term))
-                ->values();
-
-            $listing['files'] = $listing['files']
-                ->filter(fn (AssetMeta $asset) => str_contains(strtolower($asset->basename), $term))
-                ->values();
+            return $service->search($this->container, $this->search);
         }
+
+        $listing = $service->listFolder($this->container, $this->path);
+
+        $listing['folders'] = $listing['folders']->map(fn (string $name) => [
+            'name' => $name,
+            'path' => trim($this->path.'/'.$name, '/'),
+        ]);
 
         return $listing;
     }
@@ -126,16 +126,10 @@ class Index extends Component
             : null;
     }
 
-    public function openFolder(string $name): void
-    {
-        $this->path = trim($this->path.'/'.$name, '/');
-        $this->selected = [];
-        unset($this->listing);
-    }
-
     public function goToPath(string $path): void
     {
         $this->path = $path;
+        $this->search = '';
         $this->selected = [];
         unset($this->listing);
     }

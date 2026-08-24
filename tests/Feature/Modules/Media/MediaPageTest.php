@@ -54,10 +54,10 @@ test('opening a folder twice does not duplicate the path segment', function () {
     Storage::disk('public')->makeDirectory('banner');
 
     Livewire::test(Index::class)
-        ->call('openFolder', 'banner')
+        ->call('goToPath', 'banner')
         ->assertSet('path', 'banner')
-        ->call('openFolder', 'banner')
-        ->assertSet('path', 'banner/banner');
+        ->call('goToPath', 'banner')
+        ->assertSet('path', 'banner');
 });
 
 test('bulk delete removes selected files and folders', function () {
@@ -136,7 +136,21 @@ test('search filters files and folders by name', function () {
     $component = Livewire::test(Index::class)->set('search', 'banner');
 
     expect($component->get('listing')['files']->pluck('basename')->all())->toBe(['hero-banner.jpg'])
-        ->and($component->get('listing')['folders']->all())->toBe(['banner-assets']);
+        ->and($component->get('listing')['folders']->pluck('name')->all())->toBe(['banner-assets']);
+});
+
+test('search reaches files nested inside subfolders', function () {
+    $this->actingAs(User::factory()->create());
+
+    $service = app(MediaService::class);
+    $service->createFolder('assets', 'banner');
+    $service->createFolder('assets', 'banner/2024');
+    $service->uploadFile('assets', 'banner/2024', UploadedFile::fake()->image('sunset.jpg'));
+
+    $component = Livewire::test(Index::class)->set('search', 'sunset');
+
+    expect($component->get('listing')['files']->pluck('basename')->all())->toBe(['sunset.jpg'])
+        ->and($component->get('listing')['files']->first()->folder)->toBe('banner/2024');
 });
 
 test('renaming via the bulk toolbar opens the rename modal for a single selection', function () {

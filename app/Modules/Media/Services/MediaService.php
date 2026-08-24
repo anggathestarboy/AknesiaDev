@@ -35,6 +35,29 @@ class MediaService
         return ['folders' => $folders, 'files' => $files];
     }
 
+    /**
+     * Search the whole container (all folders, recursively) by name.
+     *
+     * @return array{folders: Collection<int, array{name: string, path: string}>, files: Collection<int, AssetMeta>}
+     */
+    public function search(string $container, string $term): array
+    {
+        $disk = $this->diskFor($container);
+
+        $folders = collect(Storage::disk($disk)->allDirectories())
+            ->filter(fn (string $dir) => str_contains(strtolower(basename($dir)), strtolower($term)))
+            ->map(fn (string $dir) => ['name' => basename($dir), 'path' => $dir])
+            ->sortBy('name')
+            ->values();
+
+        $files = AssetMeta::where('container', $container)
+            ->where('basename', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], $term).'%')
+            ->orderBy('basename')
+            ->get();
+
+        return ['folders' => $folders, 'files' => $files];
+    }
+
     public function createFolder(string $container, string $path): void
     {
         $disk = $this->diskFor($container);
@@ -99,7 +122,7 @@ class MediaService
             Storage::disk($disk)->makeDirectory($newPath);
         }
 
-        $this->assetsWithinFolder($container, $path)->each(function (AssetMeta $asset) use ($path, $newPath) {
+        $this->assetsWithinFolder($container, $path)->each(function (AssetMeta $asset) use ($container, $path, $newPath) {
             $newFolder = $this->replacePrefix($asset->folder, $path, $newPath);
             $basename = $this->uniqueBasename($container, $newFolder, $asset->basename);
 

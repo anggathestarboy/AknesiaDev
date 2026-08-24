@@ -3,34 +3,36 @@
             <flux:heading size="xl">{{ __('Media Library') }}</flux:heading>
 
             <div class="flex flex-wrap items-center gap-2">
-                <flux:select wire:model.live="container" size="sm">
-                    <flux:select.option value="assets">{{ __('Assets') }}</flux:select.option>
-                    <flux:select.option value="private_library">{{ __('Private Library') }}</flux:select.option>
-                </flux:select>
-
-                <flux:input wire:model.live.debounce.400ms="search" size="sm" icon="magnifying-glass" :placeholder="__('Search files & folders')" class="w-full sm:w-56" />
-
                 <flux:button.group>
-                    <flux:button size="sm" :variant="$viewMode === 'grid' ? 'primary' : 'ghost'" icon="squares-2x2" wire:click="$set('viewMode', 'grid')" />
-                    <flux:button size="sm" :variant="$viewMode === 'list' ? 'primary' : 'ghost'" icon="list-bullet" wire:click="$set('viewMode', 'list')" />
+                    <flux:button class="cursor-pointer" size="sm" :variant="$viewMode === 'grid' ? 'primary' : 'ghost'" icon="squares-2x2" wire:click="$set('viewMode', 'grid')" />
+                    <flux:button class="cursor-pointer" size="sm" :variant="$viewMode === 'list' ? 'primary' : 'ghost'" icon="list-bullet" wire:click="$set('viewMode', 'list')" />
                 </flux:button.group>
 
                 @if (!empty($clipboard))
-                    <flux:button size="sm" variant="filled" icon="clipboard-document" wire:click="paste">{{ __('Paste') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" variant="filled" icon="clipboard-document" wire:click="paste">{{ __('Paste') }}</flux:button>
                 @endif
 
-                <flux:button size="sm" icon="folder-plus" wire:click="startCreateFolder">{{ __('New Folder') }}</flux:button>
-                <flux:button size="sm" variant="primary" icon="arrow-up-tray" x-on:click="$refs.fileInput.click()">{{ __('Upload') }}</flux:button>
+                <flux:button class="cursor-pointer" size="sm" icon="folder-plus" wire:click="startCreateFolder">{{ __('New Folder') }}</flux:button>
+                <flux:button class="cursor-pointer" size="sm" variant="primary" icon="arrow-up-tray" x-on:click="$refs.fileInput.click()">{{ __('Upload') }}</flux:button>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-lg bg-zinc-100 px-4 py-2 dark:bg-zinc-800">
             <flux:breadcrumbs class="w-max">
-                <flux:breadcrumbs.item wire:click="goToPath('')" :current="$path === ''">{{ __('Root') }}</flux:breadcrumbs.item>
+                <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToPath('')" :current="$path === ''">{{ __('Home') }}</flux:breadcrumbs.item>
                 @foreach ($this->breadcrumbs as $crumb)
-                    <flux:breadcrumbs.item wire:click="goToPath('{{ $crumb['path'] }}')" :current="$crumb['path'] === $path">{{ $crumb['name'] }}</flux:breadcrumbs.item>
+                    <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToPath('{{ $crumb['path'] }}')" :current="$crumb['path'] === $path">{{ $crumb['name'] }}</flux:breadcrumbs.item>
                 @endforeach
             </flux:breadcrumbs>
+        </div>
+
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <flux:input wire:model.live.debounce.400ms="search" size="sm" icon="magnifying-glass" :placeholder="__('Search files & folders')" class="w-full sm:w-72" />
+
+            <flux:select class="cursor-pointer sm:w-56" wire:model.live="container" size="sm">
+                <flux:select.option value="assets">{{ __('Assets') }}</flux:select.option>
+                <flux:select.option value="private_library">{{ __('Private Library') }}</flux:select.option>
+            </flux:select>
         </div>
 
         <div
@@ -44,7 +46,7 @@
             @if ($viewMode === 'grid')
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9">
                     @forelse ($this->listing['folders'] as $folder)
-                        @include('media::partials._grid-item', ['type' => 'folder', 'name' => $folder, 'path' => trim($path.'/'.$folder, '/')])
+                        @include('media::partials._grid-item', ['type' => 'folder', 'name' => $folder['name'], 'path' => $folder['path']])
                     @empty
                     @endforelse
 
@@ -72,7 +74,7 @@
                     @endif
 
                     @forelse ($this->listing['folders'] as $folder)
-                        @include('media::partials._list-item', ['type' => 'folder', 'name' => $folder, 'path' => trim($path.'/'.$folder, '/')])
+                        @include('media::partials._list-item', ['type' => 'folder', 'name' => $folder['name'], 'path' => $folder['path']])
                     @empty
                     @endforelse
 
@@ -100,14 +102,14 @@
                     <flux:text>{{ count($selected) }} {{ __('selected') }}</flux:text>
 
                     @if (count($selected) === 1)
-                        <flux:button size="sm" icon="pencil" wire:click="renameSelected">{{ __('Rename') }}</flux:button>
+                        <flux:button class="cursor-pointer" size="sm" icon="pencil" wire:click="renameSelected">{{ __('Rename') }}</flux:button>
                     @endif
 
-                    <flux:button size="sm" icon="clipboard-document" wire:click="copySelected">{{ __('Copy') }}</flux:button>
-                    <flux:button size="sm" icon="scissors" wire:click="cutSelected">{{ __('Cut') }}</flux:button>
-                    <flux:button size="sm" icon="document-duplicate" wire:click="duplicateSelected">{{ __('Duplicate') }}</flux:button>
-                    <flux:button size="sm" variant="danger" icon="trash" wire:click="askDeleteSelected">{{ __('Delete') }}</flux:button>
-                    <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="clearSelection" />
+                    <flux:button class="cursor-pointer" size="sm" icon="clipboard-document" wire:click="copySelected">{{ __('Copy') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" icon="scissors" wire:click="cutSelected">{{ __('Cut') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" icon="document-duplicate" wire:click="duplicateSelected">{{ __('Duplicate') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" variant="danger" icon="trash" wire:click="askDeleteSelected">{{ __('Delete') }}</flux:button>
+                    <flux:button class="cursor-pointer" size="sm" variant="ghost" icon="x-mark" wire:click="clearSelection" />
                 </div>
             </div>
         @endif
@@ -116,8 +118,8 @@
             <flux:heading size="lg">{{ __('New Folder') }}</flux:heading>
             <flux:input wire:model="newFolderName" :label="__('Folder name')" autofocus />
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="$set('showCreateFolder', false)">{{ __('Cancel') }}</flux:button>
-                <flux:button variant="primary" wire:click="createFolder">{{ __('Create') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showCreateFolder', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="primary" wire:click="createFolder">{{ __('Create') }}</flux:button>
             </div>
         </flux:modal>
 
@@ -125,8 +127,8 @@
             <flux:heading size="lg">{{ __('Rename Folder') }}</flux:heading>
             <flux:input wire:model="renameFolderValue" :label="__('Folder name')" autofocus />
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="$set('showRenameFolder', false)">{{ __('Cancel') }}</flux:button>
-                <flux:button variant="primary" wire:click="renameFolder">{{ __('Rename') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showRenameFolder', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="primary" wire:click="renameFolder">{{ __('Rename') }}</flux:button>
             </div>
         </flux:modal>
 
@@ -134,8 +136,8 @@
             <flux:heading size="lg">{{ __('Rename File') }}</flux:heading>
             <flux:input wire:model="renameFileValue" :label="__('File name')" autofocus />
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="$set('showRenameFile', false)">{{ __('Cancel') }}</flux:button>
-                <flux:button variant="primary" wire:click="renameFile">{{ __('Rename') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showRenameFile', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="primary" wire:click="renameFile">{{ __('Rename') }}</flux:button>
             </div>
         </flux:modal>
 
@@ -149,8 +151,8 @@
                 @endif
             </flux:text>
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="$set('showDeleteFolder', false)">{{ __('Cancel') }}</flux:button>
-                <flux:button variant="danger" wire:click="confirmDeleteFolder">{{ __('Delete') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showDeleteFolder', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="danger" wire:click="confirmDeleteFolder">{{ __('Delete') }}</flux:button>
             </div>
         </flux:modal>
 
@@ -158,8 +160,8 @@
             <flux:heading size="lg">{{ __('Delete Selected') }}</flux:heading>
             <flux:text>{{ __('This will permanently delete the selected items, including the contents of any selected folders. This cannot be undone.') }}</flux:text>
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="$set('showBulkDelete', false)">{{ __('Cancel') }}</flux:button>
-                <flux:button variant="danger" wire:click="confirmDeleteSelected">{{ __('Delete') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showBulkDelete', false)">{{ __('Cancel') }}</flux:button>
+                <flux:button class="cursor-pointer" variant="danger" wire:click="confirmDeleteSelected">{{ __('Delete') }}</flux:button>
             </div>
         </flux:modal>
 
@@ -176,14 +178,14 @@
                         <flux:input wire:model="previewTitle" :label="__('Title')" />
                         <flux:input wire:model="previewAlt" :label="__('Alt text')" />
 
-                        <flux:select wire:model="previewLoading" :label="__('Loading')">
+                        <flux:select class="cursor-pointer" wire:model="previewLoading" :label="__('Loading')">
                             <flux:select.option value="lazy">{{ __('Lazy') }}</flux:select.option>
                             <flux:select.option value="eager">{{ __('Eager') }}</flux:select.option>
                         </flux:select>
 
                         <div class="flex justify-end gap-2">
-                            <flux:button variant="ghost" wire:click="$set('showPreview', false)">{{ __('Close') }}</flux:button>
-                            <flux:button variant="primary" wire:click="savePreviewMeta">{{ __('Save') }}</flux:button>
+                            <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showPreview', false)">{{ __('Close') }}</flux:button>
+                            <flux:button class="cursor-pointer" variant="primary" wire:click="savePreviewMeta">{{ __('Save') }}</flux:button>
                         </div>
                     </div>
                 </div>

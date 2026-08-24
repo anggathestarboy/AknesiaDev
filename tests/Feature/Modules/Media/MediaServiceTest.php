@@ -74,3 +74,14 @@ test('rename file rejects a name that collides with an existing file', function 
 
     $this->service->renameFile('assets', $asset, 'sunset.jpg');
 })->throws(MediaException::class);
+
+test('duplicate folder copies its files without throwing', function () {
+    $this->service->createFolder('assets', 'banner');
+    $this->service->uploadFile('assets', 'banner', UploadedFile::fake()->image('hero.jpg'));
+    $this->service->uploadFile('assets', 'banner', UploadedFile::fake()->image('logo.jpg'));
+
+    $this->service->duplicateFolder('assets', 'banner');
+
+    expect(Storage::disk('public')->directories(''))->toContain('banner (1)')
+        ->and(AssetMeta::where('container', 'assets')->where('folder', 'banner (1)')->count())->toBe(2);
+});

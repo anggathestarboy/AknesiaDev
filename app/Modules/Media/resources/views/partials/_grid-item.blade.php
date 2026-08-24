@@ -2,7 +2,7 @@
     <div
         class="group relative flex flex-col items-center gap-1 rounded-lg p-1"
         wire:click="toggleSelect('folder', '{{ $path }}')"
-        wire:dblclick="openFolder('{{ $name }}')"
+        wire:dblclick="goToPath('{{ $path }}')"
         x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'"
     >
         <div class="flex aspect-square w-full items-center justify-center rounded-lg p-2 {{ $this->isSelected('folder', $path) ? 'ring-2 ring-blue-500' : '' }}">
