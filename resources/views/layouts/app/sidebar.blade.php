@@ -13,6 +13,9 @@
         <flux:sidebar.nav>
             <flux:sidebar.group heading="CMS General" class="grid">
                 <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate> {{ __("Dashboard") }} </flux:sidebar.item>
+                <flux:sidebar.item icon="rectangle-stack" :href="route('collections.index')" :current="request()->routeIs('collections.*')" wire:navigate> {{ __("Collections") }} </flux:sidebar.item>
+                <flux:sidebar.item icon="document-text" :href="route('blueprints.index')" :current="request()->routeIs('blueprints.*')" wire:navigate> {{ __("Blueprints") }} </flux:sidebar.item>
+                <flux:sidebar.item icon="globe-alt" :href="route('sites.sites.index')" :current="request()->routeIs('sites.*')" wire:navigate> {{ __("Sites") }} </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

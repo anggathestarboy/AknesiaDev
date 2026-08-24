@@ -90,7 +90,7 @@ lihat bagian "Konfigurasi route CMS") dan otomatis punya nama route
 |---|---|---|---|
 | Collections | `collections` | `collections`, `entries` | Entry milik collection lewat kolom `collection` (handle), bukan FK id. |
 | Taxonomies | `taxonomies` | `taxonomies`, `taxonomy_terms` | |
-| Blueprints | `blueprints` | `blueprints`, `fieldsets` | Modul ini "dipakai" hampir semua modul lain (setiap konten punya blueprint) — modul lain boleh depend ke sini, tapi Blueprints tidak boleh depend balik ke modul konten manapun. |
+| Blueprints | `blueprints` | `blueprints`, `fieldsets` | Modul ini "dipakai" hampir semua modul lain (setiap konten punya blueprint) — modul lain boleh depend ke sini. **Pengecualian yang disetujui:** Blueprints juga boleh depend ke `App\Modules\Collections\Models\Collection` (read-only, hanya untuk populate dropdown "Namespace" di form Blueprint dari daftar collection yang ada — mis. `collections.blog`). Selain pengecualian ini, Blueprints tetap tidak boleh depend ke modul konten manapun. |
 | Media | `media` | `asset_containers`, `assets_meta` | "Media library" yang diminta user. |
 | Globals | `globals` | `global_sets`, `global_set_variables` | |
 | Forms | `forms` | `forms`, `form_submissions` | |
