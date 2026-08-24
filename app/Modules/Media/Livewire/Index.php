@@ -448,6 +448,7 @@ class Index extends Component
 
         $asset->update(['meta' => $meta]);
 
+        $this->showPreview = false;
         unset($this->listing);
         Flux::toast(text: 'Saved.', variant: 'success');
     }

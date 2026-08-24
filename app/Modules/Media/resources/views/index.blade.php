@@ -1,6 +1,6 @@
 <div
     class="space-y-6 p-4 sm:p-6"
-    x-data="{ contextMenu: null, uploading: false, uploadProgress: 0 }"
+    x-data="{ contextMenu: null, contextMenuX: 0, contextMenuY: 0, uploading: false, uploadProgress: 0 }"
     @click="contextMenu = null"
     x-on:livewire-upload-start.window="uploading = true; uploadProgress = 0"
     x-on:livewire-upload-progress.window="uploadProgress = $event.detail.progress"
@@ -145,7 +145,7 @@
 
         <flux:modal name="rename-folder" wire:model="showRenameFolder" class="space-y-6">
             <flux:heading size="lg">{{ __('Rename Folder') }}</flux:heading>
-            <flux:input wire:model="renameFolderValue" :label="__('Folder name')" autofocus />
+            <flux:input wire:model="renameFolderValue" wire:keydown.enter="renameFolder" :label="__('Folder name')" autofocus />
             <div class="flex justify-end gap-2">
                 <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showRenameFolder', false)">{{ __('Cancel') }}</flux:button>
                 <flux:button class="cursor-pointer" variant="primary" wire:click="renameFolder">{{ __('Rename') }}</flux:button>
@@ -154,7 +154,7 @@
 
         <flux:modal name="rename-file" wire:model="showRenameFile" class="space-y-6">
             <flux:heading size="lg">{{ __('Rename File') }}</flux:heading>
-            <flux:input wire:model="renameFileValue" :label="__('File name')" :description="$renameFileExtension !== '' ? '.'.$renameFileExtension.' '.__('will be kept automatically') : null" autofocus />
+            <flux:input wire:model="renameFileValue" wire:keydown.enter="renameFile" :label="__('File name')" :description="$renameFileExtension !== '' ? '.'.$renameFileExtension.' '.__('will be kept automatically') : null" autofocus />
             <div class="flex justify-end gap-2">
                 <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showRenameFile', false)">{{ __('Cancel') }}</flux:button>
                 <flux:button class="cursor-pointer" variant="primary" wire:click="renameFile">{{ __('Rename') }}</flux:button>
@@ -199,8 +199,8 @@
                             <flux:button class="cursor-pointer" size="sm" icon="arrow-top-right-on-square" href="{{ $this->previewAsset->url }}" target="_blank">{{ __('Preview') }}</flux:button>
                         @endif
 
-                        <flux:input wire:model="previewTitle" :label="__('Title')" />
-                        <flux:input wire:model="previewAlt" :label="__('Alt text')" />
+                        <flux:input wire:model="previewTitle" wire:keydown.enter="savePreviewMeta" :label="__('Title')" />
+                        <flux:input wire:model="previewAlt" wire:keydown.enter="savePreviewMeta" :label="__('Alt text')" />
 
                         <flux:select class="cursor-pointer" wire:model="previewLoading" :label="__('Loading')">
                             <flux:select.option value="lazy">{{ __('Lazy') }}</flux:select.option>

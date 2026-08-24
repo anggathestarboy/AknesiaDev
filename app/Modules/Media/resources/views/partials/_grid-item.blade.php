@@ -6,7 +6,7 @@
         draggable="true"
         wire:click="toggleSelect('folder', '{{ $path }}')"
         wire:dblclick="goToPath('{{ $path }}')"
-        x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'"
+        x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
         x-on:dragstart="$event.dataTransfer.setData('text/plain', 'folder|{{ $path }}')"
         x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = true"
         x-on:dragleave="$event.stopPropagation(); dragOver = false"
@@ -26,7 +26,8 @@
             x-show="contextMenu === 'folder-{{ $path }}'"
             x-cloak
             x-on:click.outside="contextMenu = null"
-            class="absolute top-1 right-1 z-10 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+            :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+            class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
         >
             <button type="button" wire:click.stop="startRenameFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
             <button type="button" wire:click.stop="duplicateFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
@@ -37,7 +38,7 @@
 
         <button
             type="button"
-            x-on:click.stop="contextMenu = contextMenu === 'folder-{{ $path }}' ? null : 'folder-{{ $path }}'"
+            x-on:click.stop="contextMenu = contextMenu === 'folder-{{ $path }}' ? null : 'folder-{{ $path }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
             class="absolute top-1 right-1 hidden rounded bg-white/80 p-1 hover:bg-zinc-200 group-hover:block dark:bg-zinc-900/80 dark:hover:bg-zinc-700"
         >
             <flux:icon.ellipsis-vertical class="size-4" />
@@ -50,7 +51,7 @@
         draggable="true"
         wire:click="toggleSelect('file', '{{ $asset->id }}')"
         wire:dblclick="openPreview({{ $asset->id }})"
-        x-on:contextmenu.prevent.stop="contextMenu = 'file-{{ $asset->id }}'"
+        x-on:contextmenu.prevent.stop="contextMenu = 'file-{{ $asset->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
         x-on:dragstart="$event.dataTransfer.setData('text/plain', 'file|{{ $asset->id }}')"
     >
         <div class="flex aspect-square w-full items-center justify-center overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
@@ -63,7 +64,8 @@
             x-show="contextMenu === 'file-{{ $asset->id }}'"
             x-cloak
             x-on:click.outside="contextMenu = null"
-            class="absolute top-1 right-1 z-10 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+            :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+            class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
         >
             <button type="button" wire:click.stop="openPreview({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('View / Edit') }}</button>
             <button type="button" wire:click.stop="startRenameFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
@@ -75,7 +77,7 @@
 
         <button
             type="button"
-            x-on:click.stop="contextMenu = contextMenu === 'file-{{ $asset->id }}' ? null : 'file-{{ $asset->id }}'"
+            x-on:click.stop="contextMenu = contextMenu === 'file-{{ $asset->id }}' ? null : 'file-{{ $asset->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
             class="absolute top-1 right-1 hidden rounded bg-white/80 p-1 hover:bg-zinc-200 group-hover:block dark:bg-zinc-900/80 dark:hover:bg-zinc-700"
         >
             <flux:icon.ellipsis-vertical class="size-4" />

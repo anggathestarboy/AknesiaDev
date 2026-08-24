@@ -241,7 +241,8 @@ test('double-clicking a file opens the preview and saved metadata persists to as
         ->set('previewTitle', 'Hero banner')
         ->set('previewAlt', 'A hero banner')
         ->set('previewLoading', 'eager')
-        ->call('savePreviewMeta');
+        ->call('savePreviewMeta')
+        ->assertSet('showPreview', false);
 
     $asset->refresh();
 
