@@ -136,7 +136,7 @@
 
         <flux:modal name="create-folder" wire:model="showCreateFolder" class="space-y-6">
             <flux:heading size="lg">{{ __('New Folder') }}</flux:heading>
-            <flux:input wire:model="newFolderName" :label="__('Folder name')" autofocus />
+            <flux:input wire:model="newFolderName" wire:keydown.enter="createFolder" :label="__('Folder name')" autofocus />
             <div class="flex justify-end gap-2">
                 <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showCreateFolder', false)">{{ __('Cancel') }}</flux:button>
                 <flux:button class="cursor-pointer" variant="primary" wire:click="createFolder">{{ __('Create') }}</flux:button>
