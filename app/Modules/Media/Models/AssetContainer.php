@@ -22,4 +22,13 @@ class AssetContainer extends Model
     {
         return $this->hasMany(AssetMeta::class, 'container', 'handle');
     }
+
+    /**
+     * Every container has its own root folder on disk, named after its handle,
+     * so containers sharing a disk never collide on the same physical path.
+     */
+    public static function scopedPath(string $handle, string $path): string
+    {
+        return trim($handle.'/'.$path, '/');
+    }
 }

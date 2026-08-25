@@ -22,7 +22,7 @@ class MediaService
     {
         $disk = $this->diskFor($container);
 
-        $folders = collect(Storage::disk($disk)->directories($path))
+        $folders = collect(Storage::disk($disk)->directories($this->scopedPath($container, $path)))
             ->map(fn (string $dir) => basename($dir))
             ->sort()
             ->values();
@@ -43,10 +43,11 @@ class MediaService
     public function search(string $container, string $term): array
     {
         $disk = $this->diskFor($container);
+        $root = $this->scopedPath($container, '');
 
-        $folders = collect(Storage::disk($disk)->allDirectories())
+        $folders = collect(Storage::disk($disk)->allDirectories($root))
             ->filter(fn (string $dir) => str_contains(strtolower(basename($dir)), strtolower($term)))
-            ->map(fn (string $dir) => ['name' => basename($dir), 'path' => $dir])
+            ->map(fn (string $dir) => ['name' => basename($dir), 'path' => ltrim(Str::after($dir, $root), '/')])
             ->sortBy('name')
             ->values();
 
@@ -61,12 +62,13 @@ class MediaService
     public function createFolder(string $container, string $path): void
     {
         $disk = $this->diskFor($container);
+        $scoped = $this->scopedPath($container, $path);
 
-        if (Storage::disk($disk)->exists($path)) {
+        if (Storage::disk($disk)->exists($scoped)) {
             throw new MediaException("A folder or file already exists at \"{$path}\".");
         }
 
-        Storage::disk($disk)->makeDirectory($path);
+        Storage::disk($disk)->makeDirectory($scoped);
     }
 
     public function renameFolder(string $container, string $oldPath, string $newPath): void
@@ -77,12 +79,13 @@ class MediaService
     public function moveFolder(string $container, string $fromPath, string $toPath): void
     {
         $disk = $this->diskFor($container);
+        $scopedTo = $this->scopedPath($container, $toPath);
 
-        if (Storage::disk($disk)->exists($toPath)) {
+        if (Storage::disk($disk)->exists($scopedTo)) {
             throw new MediaException("A folder or file already exists at \"{$toPath}\".");
         }
 
-        Storage::disk($disk)->move($fromPath, $toPath);
+        Storage::disk($disk)->move($this->scopedPath($container, $fromPath), $scopedTo);
 
         $this->assetsWithinFolder($container, $fromPath)->each(function (AssetMeta $asset) use ($fromPath, $toPath) {
             $newFolder = $this->replacePrefix($asset->folder, $fromPath, $toPath);
@@ -98,7 +101,7 @@ class MediaService
     {
         $disk = $this->diskFor($container);
 
-        Storage::disk($disk)->deleteDirectory($path);
+        Storage::disk($disk)->deleteDirectory($this->scopedPath($container, $path));
 
         $this->assetsWithinFolder($container, $path)->each->delete();
     }
@@ -112,14 +115,15 @@ class MediaService
     {
         $disk = $this->diskFor($container);
         $newPath = $this->uniqueFolderName($container, $toParent, basename($path));
+        $scopedPath = $this->scopedPath($container, $path);
 
-        foreach (Storage::disk($disk)->allFiles($path) as $file) {
-            $relative = ltrim(Str::after($file, $path), '/');
-            Storage::disk($disk)->copy($file, trim($newPath.'/'.$relative, '/'));
+        foreach (Storage::disk($disk)->allFiles($scopedPath) as $file) {
+            $relative = ltrim(Str::after($file, $scopedPath), '/');
+            Storage::disk($disk)->copy($file, $this->scopedPath($container, trim($newPath.'/'.$relative, '/')));
         }
 
-        if (empty(Storage::disk($disk)->allFiles($path)) && empty(Storage::disk($disk)->directories($path))) {
-            Storage::disk($disk)->makeDirectory($newPath);
+        if (empty(Storage::disk($disk)->allFiles($scopedPath)) && empty(Storage::disk($disk)->directories($scopedPath))) {
+            Storage::disk($disk)->makeDirectory($this->scopedPath($container, $newPath));
         }
 
         $this->assetsWithinFolder($container, $path)->each(function (AssetMeta $asset) use ($container, $path, $newPath) {
@@ -159,7 +163,7 @@ class MediaService
         $basename = $this->uniqueBasename($container, $folder, $file->getClientOriginalName());
         $filename = pathinfo($basename, PATHINFO_FILENAME);
 
-        Storage::disk($disk)->putFileAs($folder, $file, $basename);
+        Storage::disk($disk)->putFileAs($this->scopedPath($container, $folder), $file, $basename);
 
         $meta = ['size' => $file->getSize(), 'mime_type' => $file->getMimeType()];
 
@@ -194,7 +198,7 @@ class MediaService
         $basename = $this->uniqueBasename($container, $toFolder, $asset->basename);
         $newPath = trim($toFolder.'/'.$basename, '/');
 
-        Storage::disk($disk)->copy($asset->path, $newPath);
+        Storage::disk($disk)->copy($this->scopedPath($container, $asset->path), $this->scopedPath($container, $newPath));
 
         return AssetMeta::create([
             'container' => $container,
@@ -220,7 +224,7 @@ class MediaService
         $disk = $this->diskFor($container);
         $newPath = trim($asset->folder.'/'.$newBasename, '/');
 
-        Storage::disk($disk)->move($asset->path, $newPath);
+        Storage::disk($disk)->move($this->scopedPath($container, $asset->path), $this->scopedPath($container, $newPath));
 
         $asset->update([
             'basename' => $newBasename,
@@ -241,7 +245,7 @@ class MediaService
             throw new MediaException("A file named \"{$asset->basename}\" already exists in the destination folder.");
         }
 
-        Storage::disk($disk)->move($asset->path, $newPath);
+        Storage::disk($disk)->move($this->scopedPath($container, $asset->path), $this->scopedPath($container, $newPath));
 
         $asset->update(['folder' => $toFolder, 'path' => $newPath]);
 
@@ -250,27 +254,28 @@ class MediaService
 
     public function deleteFile(string $container, AssetMeta $asset): void
     {
-        Storage::disk($this->diskFor($container))->delete($asset->path);
+        Storage::disk($this->diskFor($container))->delete($this->scopedPath($container, $asset->path));
 
         $asset->delete();
     }
 
     public function downloadFile(AssetMeta $asset): StreamedResponse
     {
-        return Storage::disk($this->diskFor($asset->container))->download($asset->path, $asset->basename);
+        return Storage::disk($this->diskFor($asset->container))->download($this->scopedPath($asset->container, $asset->path), $asset->basename);
     }
 
     public function downloadFolder(string $container, string $path): BinaryFileResponse
     {
         $disk = $this->diskFor($container);
-        $files = Storage::disk($disk)->allFiles($path);
+        $scopedPath = $this->scopedPath($container, $path);
+        $files = Storage::disk($disk)->allFiles($scopedPath);
 
         $tmp = tempnam(sys_get_temp_dir(), 'media-zip');
         $zip = new ZipArchive;
         $zip->open($tmp, ZipArchive::OVERWRITE);
 
         foreach ($files as $file) {
-            $zip->addFromString(ltrim(Str::after($file, $path), '/'), Storage::disk($disk)->get($file));
+            $zip->addFromString(ltrim(Str::after($file, $scopedPath), '/'), Storage::disk($disk)->get($file));
         }
 
         $zip->close();
@@ -301,7 +306,7 @@ class MediaService
         $name = $desiredName;
         $counter = 1;
 
-        while (Storage::disk($disk)->exists(trim($parent.'/'.$name, '/'))) {
+        while (Storage::disk($disk)->exists($this->scopedPath($container, trim($parent.'/'.$name, '/')))) {
             $name = "{$desiredName} ({$counter})";
             $counter++;
         }
@@ -335,5 +340,10 @@ class MediaService
     protected function diskFor(string $container): string
     {
         return $this->containerFor($container)->disk;
+    }
+
+    protected function scopedPath(string $container, string $path): string
+    {
+        return AssetContainer::scopedPath($container, $path);
     }
 }

@@ -33,14 +33,15 @@ class AssetMeta extends Model
     public function getUrlAttribute(): string
     {
         $disk = $this->containerModel?->disk ?? 'public';
+        $scopedPath = AssetContainer::scopedPath($this->container, $this->path);
 
         if ($disk === 'public') {
-            return Storage::disk($disk)->url($this->path);
+            return Storage::disk($disk)->url($scopedPath);
         }
 
         // Non-public disks are served through Laravel's local disk serving route,
         // which validates a *relative* signature, so the URL must be signed as relative too.
-        return URL::temporarySignedRoute('storage.'.$disk, now()->addMinutes(5), ['path' => $this->path], absolute: false);
+        return URL::temporarySignedRoute('storage.'.$disk, now()->addMinutes(5), ['path' => $scopedPath], absolute: false);
     }
 
     public function getSizeAttribute()

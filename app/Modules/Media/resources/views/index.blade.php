@@ -203,7 +203,7 @@
                         @include('media::partials._thumbnail', ['asset' => $this->previewAsset, 'fit' => 'object-contain'])
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="min-w-0 space-y-4">
                         <flux:heading size="lg" class="pr-8 break-words">{{ $this->previewAsset->basename }}</flux:heading>
 
                         @if ($this->previewAsset->extension === 'pdf')

@@ -4,6 +4,7 @@ namespace App\Modules\Media\Console\Commands;
 
 use App\Modules\Media\Models\AssetContainer;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MakeMediaCommand extends Command
@@ -37,6 +38,8 @@ class MakeMediaCommand extends Command
             'disk' => $disk,
             'settings' => null,
         ]);
+
+        Storage::disk($disk)->makeDirectory($handle);
 
         $this->info("Container \"{$title}\" ({$handle}) created on the \"{$disk}\" disk.");
 
