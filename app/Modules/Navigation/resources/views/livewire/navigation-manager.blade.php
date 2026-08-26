@@ -1,0 +1,54 @@
+<section class="w-full space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <flux:heading size="lg">{{ __('Navigation') }}</flux:heading>
+            <flux:subheading>{{ __('Menus shown around the site.') }}</flux:subheading>
+        </div>
+
+        <flux:button variant="primary" wire:click="create">{{ __('Add navigation') }}</flux:button>
+    </div>
+
+    <flux:table>
+        <flux:table.columns>
+            <flux:table.column>{{ __('Title') }}</flux:table.column>
+            <flux:table.column>{{ __('Handle') }}</flux:table.column>
+            <flux:table.column></flux:table.column>
+        </flux:table.columns>
+
+        <flux:table.rows>
+            @forelse ($this->navigations as $navigation)
+                <flux:table.row wire:key="navigation-{{ $navigation->id }}">
+                    <flux:table.cell>{{ $navigation->title }}</flux:table.cell>
+                    <flux:table.cell>{{ $navigation->handle }}</flux:table.cell>
+                    <flux:table.cell class="flex justify-end gap-1">
+                        <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ __('Edit tree') }}</flux:button>
+                        <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __('Edit') }}</flux:button>
+                        <flux:button size="sm" variant="danger" wire:click="delete({{ $navigation->id }})" wire:confirm="{{ __('Delete this navigation?') }}">{{ __('Delete') }}</flux:button>
+                    </flux:table.cell>
+                </flux:table.row>
+            @empty
+                <flux:table.row>
+                    <flux:table.cell colspan="3">{{ __('No navigations yet.') }}</flux:table.cell>
+                </flux:table.row>
+            @endforelse
+        </flux:table.rows>
+    </flux:table>
+
+    <flux:modal name="navigation-form" class="max-w-lg" :show="$errors->isNotEmpty()">
+        <form wire:submit="save" class="space-y-6">
+            <flux:heading size="lg">{{ $editingId ? __('Edit navigation') : __('Add navigation') }}</flux:heading>
+
+            <div class="space-y-4">
+                <flux:input wire:model="title" :label="__('Title')" placeholder="Main menu" required autofocus />
+                <flux:input wire:model="handle" :label="__('Handle')" placeholder="main" required />
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button variant="primary" type="submit">{{ __('Save') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+</section>
