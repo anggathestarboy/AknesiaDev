@@ -6,6 +6,7 @@ use App\Modules\Blueprints\Livewire\FieldsetManager;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
+use App\Modules\Media\Models\AssetContainer;
 use Livewire\Livewire;
 
 test('blueprints page is displayed', function () {
@@ -651,4 +652,80 @@ test('fieldset handle must be unique', function () {
         ->set('data', '{}')
         ->call('save')
         ->assertHasErrors(['handle']);
+});
+
+test('assets field can be created scoped to an asset container', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('assets');
+    expect($field['options'])->toBe('photos');
+});
+
+test('assets field requires an asset container to be selected', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
+});
+
+test('assets field container must reference an existing asset container', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'does-not-exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
+});
+
+test('assets field can be given a min and max item count', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '1', 'max_items' => '3'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['min_items'])->toBe(1);
+    expect($field['max_items'])->toBe(3);
+});
+
+test('assets field max items cannot be less than min items', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '5', 'max_items' => '2'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.max_items']);
 });

@@ -77,6 +77,7 @@
                                 'siblings' => $fields,
                                 'fieldtypes' => $fieldtypes,
                                 'conditionOperators' => $conditionOperators,
+                                'assetContainers' => $assetContainers,
                             ])
                         @endforeach
                     </div>

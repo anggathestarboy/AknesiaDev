@@ -37,10 +37,37 @@
         <div class="mt-3">
             <flux:input wire:model.live="{{ $prefix }}.options" :label="__('Options (comma separated)')" placeholder="draft, published, archived" size="sm" />
         </div>
+    @elseif ($field['type'] === 'assets')
+        <div class="mt-3 grid grid-cols-3 gap-3">
+            <div class="col-span-1">
+                <flux:select wire:model="{{ $prefix }}.options" :label="__('Asset container')" placeholder="{{ __('Select a container') }}" size="sm">
+                    @foreach ($assetContainers as $container)
+                        <flux:select.option value="{{ $container->handle }}">{{ $container->title }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                @error("{$prefix}.options")
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
+            </div>
+
+            <div>
+                <flux:input type="number" min="0" wire:model="{{ $prefix }}.min_items" :label="__('Min items')" placeholder="{{ __('No minimum') }}" size="sm" />
+                @error("{$prefix}.min_items")
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
+            </div>
+
+            <div>
+                <flux:input type="number" min="0" wire:model="{{ $prefix }}.max_items" :label="__('Max items')" placeholder="{{ __('No maximum') }}" size="sm" />
+                @error("{$prefix}.max_items")
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
+            </div>
+        </div>
     @endif
 
     <div class="mt-3 grid grid-cols-4 gap-3">
-        @if ($field['type'] === 'replicator')
+        @if ($field['type'] === 'replicator' || $field['type'] === 'assets')
             <flux:input :label="__('Placeholder')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
             <flux:input :label="__('Default value')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
         @else
@@ -122,6 +149,7 @@
                     'siblings' => $field['replicator_fields'],
                     'fieldtypes' => $fieldtypes,
                     'conditionOperators' => $conditionOperators,
+                    'assetContainers' => $assetContainers,
                 ])
             @endforeach
         </div>

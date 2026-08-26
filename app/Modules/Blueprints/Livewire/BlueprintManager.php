@@ -4,6 +4,7 @@ namespace App\Modules\Blueprints\Livewire;
 
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
+use App\Modules\Media\Models\AssetContainer;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Validator as ValidatorFacade;
@@ -35,6 +36,7 @@ class BlueprintManager extends Component
         'date' => 'Date',
         'select' => 'Select',
         'replicator' => 'Replicator',
+        'assets' => 'Assets',
     ];
 
     /**
@@ -67,6 +69,7 @@ class BlueprintManager extends Component
      *     handle: string, display: string, type: string, required: bool, options: string,
      *     placeholder: string, default: string, validation: string, instructions: string, sometimes: bool,
      *     condition_mode: string, condition_field: string, condition_operator: string, condition_value: string,
+     *     min_items: string, max_items: string,
      *     replicator_fields: array<int, mixed>,
      * }>
      */
@@ -91,6 +94,16 @@ class BlueprintManager extends Component
                 'value' => "collections.{$collection->handle}",
                 'label' => "{$collection->title} (collections.{$collection->handle})",
             ]);
+    }
+
+    /**
+     * Asset containers an "assets" field can be scoped to (see the Media
+     * module's asset_containers table).
+     */
+    #[Computed]
+    public function availableAssetContainers()
+    {
+        return AssetContainer::orderBy('title')->get();
     }
 
     public function create(): void
@@ -126,7 +139,7 @@ class BlueprintManager extends Component
             'display' => $field['display'] ?? '',
             'type' => $field['type'] ?? 'text',
             'required' => (bool) ($field['required'] ?? false),
-            'options' => implode(', ', $field['options'] ?? []),
+            'options' => is_array($field['options'] ?? null) ? implode(', ', $field['options']) : (string) ($field['options'] ?? ''),
             'placeholder' => $field['placeholder'] ?? '',
             'default' => $field['default'] ?? '',
             'validation' => $field['validation'] ?? '',
@@ -136,6 +149,8 @@ class BlueprintManager extends Component
             'condition_field' => $field['conditions']['field'] ?? '',
             'condition_operator' => $field['conditions']['operator'] ?? 'equals',
             'condition_value' => $field['conditions']['value'] ?? '',
+            'min_items' => isset($field['min_items']) ? (string) $field['min_items'] : '',
+            'max_items' => isset($field['max_items']) ? (string) $field['max_items'] : '',
             'replicator_fields' => collect($field['replicator_fields'] ?? [])
                 ->map(fn (array $sub): array => $this->mapFieldFromStorage($sub))
                 ->all(),
@@ -241,12 +256,16 @@ class BlueprintManager extends Component
 
             $field['default'] = '';
 
-            if (in_array($type, ['toggle', 'date', 'replicator'], true)) {
+            if (in_array($type, ['toggle', 'date', 'replicator', 'assets'], true)) {
                 $field['placeholder'] = '';
             }
 
             if ($type !== 'replicator') {
                 $field['replicator_fields'] = [];
+            }
+
+            if (! in_array($type, ['select', 'assets'], true)) {
+                $field['options'] = '';
             }
 
             return;
@@ -341,6 +360,7 @@ class BlueprintManager extends Component
             'handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '',
             'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false,
             'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => '',
+            'min_items' => '', 'max_items' => '',
             'replicator_fields' => [],
         ];
     }
@@ -375,6 +395,8 @@ class BlueprintManager extends Component
             'condition_field' => ['nullable', 'string', 'max:255'],
             'condition_operator' => ['nullable', Rule::in(array_keys(self::CONDITION_OPERATORS))],
             'condition_value' => ['nullable', 'string', 'max:255'],
+            'min_items' => ['nullable', 'integer', 'min:0'],
+            'max_items' => ['nullable', 'integer', 'min:0'],
         ];
     }
 
@@ -428,6 +450,27 @@ class BlueprintManager extends Component
                 }
             }
 
+            if ($field['type'] === 'assets') {
+                if (! isset($errors["{$errorKey}.options"])) {
+                    $container = trim($field['options'] ?? '');
+
+                    if ($container === '') {
+                        $errors["{$errorKey}.options"] = __('Select an asset container.');
+                    } elseif (! in_array($container, $this->availableAssetContainers->pluck('handle')->all(), true)) {
+                        $errors["{$errorKey}.options"] = __('That asset container does not exist.');
+                    }
+                }
+
+                if (
+                    ! isset($errors["{$errorKey}.max_items"])
+                    && ($field['min_items'] ?? '') !== ''
+                    && ($field['max_items'] ?? '') !== ''
+                    && (int) $field['max_items'] < (int) $field['min_items']
+                ) {
+                    $errors["{$errorKey}.max_items"] = __('Maximum items must be greater than or equal to minimum items.');
+                }
+            }
+
             if ($field['type'] === 'replicator') {
                 if (empty($field['replicator_fields'])) {
                     $errors["{$errorKey}.replicator_fields"] = __('Add at least one field to the replicator.');
@@ -447,10 +490,10 @@ class BlueprintManager extends Component
             'display' => $field['display'] ?: Str::headline($field['handle']),
             'type' => $field['type'],
             'required' => (bool) $field['required'],
-            'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator'], true)
+            'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator', 'assets'], true)
                 ? null
                 : (($field['placeholder'] ?? '') ?: null),
-            'default' => $field['type'] === 'replicator' ? null : (($field['default'] ?? '') ?: null),
+            'default' => in_array($field['type'], ['replicator', 'assets'], true) ? null : (($field['default'] ?? '') ?: null),
             'validation' => ($field['validation'] ?? '') ?: null,
             'instructions' => ($field['instructions'] ?? '') ?: null,
             'validate_sometimes' => (bool) ($field['sometimes'] ?? false),
@@ -468,6 +511,12 @@ class BlueprintManager extends Component
                 ->filter()
                 ->values()
                 ->all();
+        }
+
+        if ($field['type'] === 'assets') {
+            $normalized['options'] = trim($field['options'] ?? '') ?: null;
+            $normalized['min_items'] = ($field['min_items'] ?? '') !== '' ? (int) $field['min_items'] : null;
+            $normalized['max_items'] = ($field['max_items'] ?? '') !== '' ? (int) $field['max_items'] : null;
         }
 
         if ($field['type'] === 'replicator') {
@@ -534,6 +583,7 @@ class BlueprintManager extends Component
         return view('blueprints::livewire.blueprint-manager', [
             'fieldtypes' => self::FIELDTYPES,
             'conditionOperators' => self::CONDITION_OPERATORS,
+            'assetContainers' => $this->availableAssetContainers,
         ]);
     }
 }

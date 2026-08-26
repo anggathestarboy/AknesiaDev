@@ -5,11 +5,13 @@ namespace App\Modules\Collections\Livewire;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -202,6 +204,12 @@ class EntryForm extends Component
                 continue;
             }
 
+            if ($field['type'] === 'assets') {
+                $data[$field['handle']] = $existingData[$field['handle']] ?? [];
+
+                continue;
+            }
+
             $data[$field['handle']] = $existingData[$field['handle']]
                 ?? $field['default']
                 ?? ($field['type'] === 'toggle' ? false : '');
@@ -233,6 +241,45 @@ class EntryForm extends Component
         $rows = &$this->dataAt($path);
         unset($rows[$rowIndex]);
         $rows = array_values($rows);
+    }
+
+    /**
+     * Remove a single asset id from the "assets" field located at $path —
+     * used by the "x" button on a selected asset's thumbnail.
+     */
+    public function removeAsset(array $path, int $assetId): void
+    {
+        $ids = &$this->dataAt($path);
+        $ids = collect($ids ?? [])->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => $id === $assetId)->values()->all();
+    }
+
+    /**
+     * Receives the result of the global asset picker modal (see
+     * App\Modules\Media\Livewire\AssetPicker) and writes it into the
+     * "assets" field it was opened for.
+     *
+     * @param  array<int, string|int>  $path
+     * @param  array<int, int>  $ids
+     */
+    #[On('assets-selected')]
+    public function assetsSelected(array $path, array $ids): void
+    {
+        $ref = &$this->dataAt($path);
+        $ref = array_values($ids);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, AssetMeta>
+     */
+    public function selectedAssets(array $ids)
+    {
+        if (empty($ids)) {
+            return collect();
+        }
+
+        $assets = AssetMeta::whereIn('id', $ids)->get()->keyBy('id');
+
+        return collect($ids)->map(fn ($id) => $assets->get((int) $id))->filter()->values();
     }
 
     /**
@@ -307,6 +354,30 @@ class EntryForm extends Component
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($field['type'] === 'assets') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+                $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
 
                 continue;
             }

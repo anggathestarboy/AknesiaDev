@@ -12,6 +12,7 @@
                         'field' => $field,
                         'path' => [$field['handle']],
                         'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
+                        'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
                     ])
                 </div>
             @empty
@@ -68,4 +69,6 @@
             </div>
         </div>
     </form>
+
+    @livewire('media::asset-picker')
 </section>

@@ -6,6 +6,8 @@ use App\Modules\Collections\Livewire\EntryForm;
 use App\Modules\Collections\Livewire\EntryManager;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Media\Models\AssetContainer;
+use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Livewire\Livewire;
 
@@ -99,6 +101,135 @@ test('entry can be created with dynamic fields from the collection blueprint', f
         'status' => 'published',
         'title' => 'Hello World',
     ]);
+});
+
+test('entry create page renders the currently selected asset and an add button', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => ['mime_type' => 'image/webp']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'x', 'gallery' => [$asset->id]]]);
+
+    $this->get("/admin-panel/collections/blog/entries/{$entry->id}")
+        ->assertOk()
+        ->assertSee('sunset.webp', false);
+});
+
+test('entry receives the asset ids dispatched back by the asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => ['mime_type' => 'image/webp']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->dispatch('assets-selected', path: ['gallery'], ids: [$asset->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['gallery'])->toBe([$asset->id]);
+});
+
+test('removing a selected asset clears it from the field', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$asset->id])
+        ->call('removeAsset', ['gallery'], $asset->id)
+        ->assertSet('data.gallery', []);
+});
+
+test('assets field requires at least one asset when marked required', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
+});
+
+test('an asset id from a different container is rejected', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    AssetContainer::create(['handle' => 'documents', 'title' => 'Documents', 'disk' => 'public']);
+    $otherAsset = AssetMeta::create(['container' => 'documents', 'folder' => '', 'basename' => 'file.pdf', 'filename' => 'file', 'extension' => 'pdf', 'path' => 'file.pdf', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$otherAsset->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0']);
+});
+
+test('assets field enforces its configured minimum item count', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos', 'min_items' => 2, 'max_items' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$asset->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
+});
+
+test('assets field enforces its configured maximum item count', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $first = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'one.webp', 'filename' => 'one', 'extension' => 'webp', 'path' => 'one.webp', 'meta' => []]);
+    $second = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'two.webp', 'filename' => 'two', 'extension' => 'webp', 'path' => 'two.webp', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos', 'min_items' => null, 'max_items' => 1],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$first->id, $second->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
 });
 
 test('entry can store rows of data for a replicator field', function () {
