@@ -72,6 +72,51 @@ test('the blueprint query string parameter pre-selects the blueprint on the crea
     $response->assertDontSee('Headline');
 });
 
+test('entry form only shows fields belonging to the active tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'sidebar', 'display' => 'Sidebar'],
+        ],
+        'fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'sidebar'],
+        ],
+    ]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Headline')
+        ->assertDontSee('Seo Title')
+        ->call('setActiveTab', 'sidebar')
+        ->assertSee('Seo Title')
+        ->assertDontSee('Headline');
+});
+
+test('entry form shows a section heading and its fields, both grouped and ungrouped', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'seo', 'display' => 'SEO Settings'],
+            ]],
+        ],
+        'fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => ''],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => 'seo'],
+        ],
+    ]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Headline')
+        ->assertSee('SEO Settings')
+        ->assertSee('Seo Title');
+});
+
 test('entry can be created with dynamic fields from the collection blueprint', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();

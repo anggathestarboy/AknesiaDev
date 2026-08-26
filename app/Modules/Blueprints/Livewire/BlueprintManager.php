@@ -73,14 +73,47 @@ class BlueprintManager extends Component
     public string $handle = '';
 
     /**
+     * Groups top-level fields for display, mirroring Statamic's blueprint
+     * tabs. The first tab is always the reserved "main" tab (handle fixed,
+     * not user-editable, cannot be removed) — every field defaults there.
+     * Each tab may further group its own fields into "sections" — a
+     * sub-heading within the tab (a field's "section" is only meaningful
+     * within its own tab; an empty section means "ungrouped").
+     *
+     * @var array<int, array{handle: string, display: string, sections: array<int, array{handle: string, display: string}>}>
+     */
+    public array $tabs = [
+        ['handle' => 'main', 'display' => 'Main', 'sections' => [
+            ['handle' => 'main', 'display' => 'Main'],
+        ]],
+    ];
+
+    /**
+     * Index into $tabs currently shown in edit mode (handle/display inputs)
+     * instead of as a plain button — null when no tab is being edited.
+     */
+    public ?int $editingTabIndex = null;
+
+    /**
+     * [tabIndex, sectionIndex] of the section currently shown in edit mode
+     * — null when no section is being edited.
+     *
+     * @var array{0: int, 1: int}|null
+     */
+    public ?array $editingSection = null;
+
+    /**
      * A field tree: each field may itself contain a "replicator_fields"
-     * array of the same shape, recursively, to any depth.
+     * array of the same shape, recursively, to any depth. "tab" is only
+     * meaningful on top-level fields (which tab they display under) —
+     * nested replicator sub-fields carry it too for shape consistency but
+     * it's ignored there.
      *
      * @var array<int, array{
      *     handle: string, display: string, type: string, required: bool, options: string,
      *     placeholder: string, default: string, validation: string, instructions: string, sometimes: bool,
      *     condition_mode: string, condition_field: string, condition_operator: string, condition_value: string,
-     *     min_items: string, max_items: string,
+     *     min_items: string, max_items: string, tab: string,
      *     replicator_fields: array<int, mixed>,
      * }>
      */
@@ -128,8 +161,8 @@ class BlueprintManager extends Component
 
     public function create(): void
     {
-        $this->reset(['editingId', 'namespace', 'handle', 'fields']);
-        $this->addField();
+        $this->reset(['editingId', 'namespace', 'handle', 'fields', 'tabs', 'editingTabIndex', 'editingSection']);
+        $this->addField('main', 'main');
         Flux::modal('blueprint-form')->show();
     }
 
@@ -141,6 +174,23 @@ class BlueprintManager extends Component
         $this->namespace = (string) $blueprint->namespace;
         $this->handle = $blueprint->handle;
 
+        $this->tabs = collect($blueprint->data['tabs'] ?? [])
+            ->map(fn (array $tab): array => [
+                'handle' => $tab['handle'] ?? '',
+                'display' => $tab['display'] ?? '',
+                'sections' => collect($tab['sections'] ?? [])
+                    ->map(fn (array $section): array => ['handle' => $section['handle'] ?? '', 'display' => $section['display'] ?? ''])
+                    ->all(),
+            ])
+            ->all();
+
+        if ($this->tabs === [] || ($this->tabs[0]['handle'] ?? null) !== 'main') {
+            array_unshift($this->tabs, ['handle' => 'main', 'display' => 'Main', 'sections' => []]);
+        }
+
+        $this->editingTabIndex = null;
+        $this->editingSection = null;
+
         $this->fields = collect($blueprint->data['fields'] ?? [])
             ->map(fn (array $field): array => $this->mapFieldFromStorage($field))
             ->all();
@@ -150,6 +200,74 @@ class BlueprintManager extends Component
         }
 
         Flux::modal('blueprint-form')->show();
+    }
+
+    public function addTab(): void
+    {
+        $this->tabs[] = ['handle' => '', 'display' => '', 'sections' => []];
+        $this->editingTabIndex = count($this->tabs) - 1;
+    }
+
+    /**
+     * Removing a tab reassigns any top-level fields in it back to "main" so
+     * they're never orphaned under a tab that no longer exists.
+     */
+    public function removeTab(int $index): void
+    {
+        if ($index === 0) {
+            return;
+        }
+
+        $handle = $this->tabs[$index]['handle'] ?? null;
+
+        foreach ($this->fields as &$field) {
+            if (($field['tab'] ?? 'main') === $handle) {
+                $field['tab'] = 'main';
+                $field['section'] = '';
+            }
+        }
+        unset($field);
+
+        unset($this->tabs[$index]);
+        $this->tabs = array_values($this->tabs);
+
+        if ($this->editingTabIndex === $index) {
+            $this->editingTabIndex = null;
+        }
+
+        if ($this->editingSection !== null && $this->editingSection[0] === $index) {
+            $this->editingSection = null;
+        }
+    }
+
+    public function addSection(int $tabIndex): void
+    {
+        $this->tabs[$tabIndex]['sections'][] = ['handle' => '', 'display' => ''];
+        $this->editingSection = [$tabIndex, count($this->tabs[$tabIndex]['sections']) - 1];
+    }
+
+    /**
+     * Removing a section ungroups any fields in it (within that tab) back
+     * to no section, rather than orphaning them.
+     */
+    public function removeSection(int $tabIndex, int $sectionIndex): void
+    {
+        $tabHandle = $this->tabs[$tabIndex]['handle'] ?? null;
+        $sectionHandle = $this->tabs[$tabIndex]['sections'][$sectionIndex]['handle'] ?? null;
+
+        foreach ($this->fields as &$field) {
+            if (($field['tab'] ?? 'main') === $tabHandle && ($field['section'] ?? '') === $sectionHandle) {
+                $field['section'] = '';
+            }
+        }
+        unset($field);
+
+        unset($this->tabs[$tabIndex]['sections'][$sectionIndex]);
+        $this->tabs[$tabIndex]['sections'] = array_values($this->tabs[$tabIndex]['sections']);
+
+        if ($this->editingSection === [$tabIndex, $sectionIndex]) {
+            $this->editingSection = null;
+        }
     }
 
     protected function mapFieldFromStorage(array $field): array
@@ -171,15 +289,17 @@ class BlueprintManager extends Component
             'condition_value' => $field['conditions']['value'] ?? '',
             'min_items' => isset($field['min_items']) ? (string) $field['min_items'] : '',
             'max_items' => isset($field['max_items']) ? (string) $field['max_items'] : '',
+            'tab' => $field['tab'] ?? 'main',
+            'section' => $field['section'] ?? '',
             'replicator_fields' => collect($field['replicator_fields'] ?? [])
                 ->map(fn (array $sub): array => $this->mapFieldFromStorage($sub))
                 ->all(),
         ];
     }
 
-    public function addField(): void
+    public function addField(string $tab = 'main', string $section = ''): void
     {
-        $this->fields[] = $this->fieldDefaults();
+        $this->fields[] = array_merge($this->fieldDefaults(), ['tab' => $tab, 'section' => $section]);
     }
 
     /**
@@ -203,6 +323,12 @@ class BlueprintManager extends Component
 
     public function moveFieldUp(array $path): void
     {
+        if (count($path) === 1) {
+            $this->moveTopLevelField($path[0], -1);
+
+            return;
+        }
+
         $index = array_pop($path);
 
         if ($index === 0) {
@@ -214,6 +340,12 @@ class BlueprintManager extends Component
 
     public function moveFieldDown(array $path): void
     {
+        if (count($path) === 1) {
+            $this->moveTopLevelField($path[0], 1);
+
+            return;
+        }
+
         $index = array_pop($path);
         $siblings = &$this->siblingsAt($path);
 
@@ -222,6 +354,33 @@ class BlueprintManager extends Component
         }
 
         $this->swapFieldsAt($path, $index, $index + 1);
+    }
+
+    /**
+     * Top-level fields are grouped into tabs (and, within a tab, sections)
+     * in the UI, so "move up/down" there reorders within the field's own
+     * group — swapping with the flat array's adjacent index would
+     * otherwise jump across tabs or sections.
+     */
+    protected function moveTopLevelField(int $index, int $direction): void
+    {
+        $tab = $this->fields[$index]['tab'] ?? 'main';
+        $section = $this->fields[$index]['section'] ?? '';
+
+        $sameGroupIndexes = array_values(array_filter(
+            array_keys($this->fields),
+            fn (int $i): bool => ($this->fields[$i]['tab'] ?? 'main') === $tab && ($this->fields[$i]['section'] ?? '') === $section
+        ));
+
+        $position = array_search($index, $sameGroupIndexes, true);
+        $swapPosition = $position + $direction;
+
+        if ($swapPosition < 0 || $swapPosition >= count($sameGroupIndexes)) {
+            return;
+        }
+
+        $otherIndex = $sameGroupIndexes[$swapPosition];
+        [$this->fields[$index], $this->fields[$otherIndex]] = [$this->fields[$otherIndex], $this->fields[$index]];
     }
 
     /**
@@ -287,6 +446,12 @@ class BlueprintManager extends Component
             if (! in_array($type, [...self::OPTION_BASED_TYPES, 'assets', 'link'], true)) {
                 $field['options'] = '';
             }
+
+            return;
+        }
+
+        if (preg_match('/^fields\.(\d+)\.tab$/', $name, $matches)) {
+            $this->fields[(int) $matches[1]]['section'] = '';
 
             return;
         }
@@ -380,7 +545,7 @@ class BlueprintManager extends Component
             'handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '',
             'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false,
             'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => '',
-            'min_items' => '', 'max_items' => '',
+            'min_items' => '', 'max_items' => '', 'tab' => 'main', 'section' => '',
             'replicator_fields' => [],
         ];
     }
@@ -417,6 +582,8 @@ class BlueprintManager extends Component
             'condition_value' => ['nullable', 'string', 'max:255'],
             'min_items' => ['nullable', 'integer', 'min:0'],
             'max_items' => ['nullable', 'integer', 'min:0'],
+            'tab' => ['nullable', 'string'],
+            'section' => ['nullable', 'string'],
         ];
     }
 
@@ -429,7 +596,7 @@ class BlueprintManager extends Component
      *
      * @return array<string, string>
      */
-    protected function validateFieldsTree(array $fields, string $prefix): array
+    protected function validateFieldsTree(array $fields, string $prefix, array $tabHandles = [], array $sectionHandlesByTab = []): array
     {
         $errors = [];
         $handles = array_column($fields, 'handle');
@@ -493,6 +660,16 @@ class BlueprintManager extends Component
                 }
             }
 
+            if ($tabHandles !== [] && ! in_array($field['tab'] ?? 'main', $tabHandles, true)) {
+                $errors["{$errorKey}.tab"] = __('That tab does not exist.');
+            } elseif (
+                $tabHandles !== []
+                && ($field['section'] ?? '') !== ''
+                && ! in_array($field['section'], $sectionHandlesByTab[$field['tab'] ?? 'main'] ?? [], true)
+            ) {
+                $errors["{$errorKey}.section"] = __('That section does not exist in this tab.');
+            }
+
             if (
                 in_array($field['type'], ['assets', 'checkbox'], true)
                 && ! isset($errors["{$errorKey}.max_items"])
@@ -515,7 +692,7 @@ class BlueprintManager extends Component
         return $errors;
     }
 
-    protected function normalizeFieldForStorage(array $field): array
+    protected function normalizeFieldForStorage(array $field, bool $topLevel = true): array
     {
         $normalized = [
             'handle' => $field['handle'],
@@ -572,12 +749,68 @@ class BlueprintManager extends Component
 
         if ($field['type'] === 'replicator') {
             $normalized['replicator_fields'] = array_map(
-                fn (array $sub): array => $this->normalizeFieldForStorage($sub),
+                fn (array $sub): array => $this->normalizeFieldForStorage($sub, topLevel: false),
                 $field['replicator_fields'] ?? []
             );
         }
 
+        if ($topLevel) {
+            $normalized['tab'] = $field['tab'] ?? 'main';
+            $normalized['section'] = ($field['section'] ?? '') ?: null;
+        }
+
         return $normalized;
+    }
+
+    /**
+     * Validate $this->tabs (forcing index 0 to always be the reserved
+     * "main" tab, not user-editable) and each tab's own sections, requiring
+     * unique, valid handles throughout.
+     *
+     * @return array{0: array<string, string>, 1: array<int, string>, 2: array<string, array<int, string>>}
+     */
+    protected function validateTabs(): array
+    {
+        $this->tabs[0]['handle'] = 'main';
+        $this->tabs[0]['display'] = 'Main';
+
+        $errors = [];
+        $tabHandles = ['main'];
+        $sectionHandlesByTab = [];
+
+        foreach ($this->tabs as $index => $tab) {
+            if ($index !== 0) {
+                $tabHandle = trim($tab['handle'] ?? '');
+
+                if ($tabHandle === '' || ! preg_match('/^[a-z][a-z0-9_]*$/', $tabHandle) || $tabHandle === 'main') {
+                    $errors["tabs.{$index}.handle"] = __('Tab handle must be lowercase letters, numbers and underscores, starting with a letter, and not "main".');
+                } elseif (in_array($tabHandle, $tabHandles, true)) {
+                    $errors["tabs.{$index}.handle"] = __('Tab handles must be unique.');
+                } else {
+                    $tabHandles[] = $tabHandle;
+                }
+            } else {
+                $tabHandle = 'main';
+            }
+
+            $sectionHandles = [];
+
+            foreach ($tab['sections'] ?? [] as $sectionIndex => $section) {
+                $sectionHandle = trim($section['handle'] ?? '');
+
+                if ($sectionHandle === '' || ! preg_match('/^[a-z][a-z0-9_]*$/', $sectionHandle)) {
+                    $errors["tabs.{$index}.sections.{$sectionIndex}.handle"] = __('Section handle must be lowercase letters, numbers and underscores, starting with a letter.');
+                } elseif (in_array($sectionHandle, $sectionHandles, true)) {
+                    $errors["tabs.{$index}.sections.{$sectionIndex}.handle"] = __('Section handles must be unique within a tab.');
+                } else {
+                    $sectionHandles[] = $sectionHandle;
+                }
+            }
+
+            $sectionHandlesByTab[$tabHandle] = $sectionHandles;
+        }
+
+        return [$errors, $tabHandles, $sectionHandlesByTab];
     }
 
     public function save(): void
@@ -597,14 +830,24 @@ class BlueprintManager extends Component
             ],
         ]);
 
+        [$tabErrors, $tabHandles, $sectionHandlesByTab] = $this->validateTabs();
+
         $fieldErrors = $this->fields === [] ? ['fields' => __('Add at least one field.')] : [];
-        $fieldErrors = array_merge($fieldErrors, $this->validateFieldsTree($this->fields, 'fields'));
+        $fieldErrors = array_merge($tabErrors, $fieldErrors, $this->validateFieldsTree($this->fields, 'fields', $tabHandles, $sectionHandlesByTab));
 
         if ($fieldErrors !== []) {
             throw ValidationException::withMessages($fieldErrors);
         }
 
         $data = [
+            'tabs' => array_map(fn (array $tab): array => [
+                'handle' => $tab['handle'],
+                'display' => $tab['display'] ?: Str::headline($tab['handle']),
+                'sections' => array_map(fn (array $section): array => [
+                    'handle' => $section['handle'],
+                    'display' => $section['display'] ?: Str::headline($section['handle']),
+                ], $tab['sections'] ?? []),
+            ], $this->tabs),
             'fields' => array_map(fn (array $field): array => $this->normalizeFieldForStorage($field), $this->fields),
         ];
 

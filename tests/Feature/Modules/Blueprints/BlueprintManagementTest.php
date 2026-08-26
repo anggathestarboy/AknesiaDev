@@ -79,17 +79,22 @@ test('blueprint can be created with fields via the field builder', function () {
     expect($blueprint->namespace)->toBe('collections.blog');
     expect($blueprint->handle)->toBe('post');
     expect($blueprint->data)->toBe([
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'main', 'display' => 'Main'],
+            ]],
+        ],
         'fields' => [
             [
                 'handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => true,
                 'placeholder' => 'Enter a headline', 'default' => null, 'validation' => 'max:255', 'instructions' => 'Shown in listings.',
-                'validate_sometimes' => false, 'conditions' => null,
+                'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => null,
             ],
             [
                 'handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false,
                 'placeholder' => null, 'default' => 'draft', 'validation' => null, 'instructions' => null,
                 'validate_sometimes' => false, 'conditions' => null,
-                'options' => ['draft', 'published', 'archived'],
+                'options' => ['draft', 'published', 'archived'], 'tab' => 'main', 'section' => null,
             ],
         ],
     ]);
@@ -114,6 +119,7 @@ test('blueprint field can show when another field matches a value', function () 
         'placeholder' => null, 'default' => null, 'validation' => 'url', 'instructions' => null,
         'validate_sometimes' => true,
         'conditions' => ['mode' => 'show', 'field' => 'type', 'operator' => 'equals', 'value' => 'video'],
+        'tab' => 'main', 'section' => null,
     ]);
 });
 
@@ -545,6 +551,265 @@ test('changing a field type resets its stale default value', function () {
         ->assertSet('fields.0.default', '');
 });
 
+test('blueprint always has a reserved "main" tab that new fields default to', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->assertSet('tabs', [['handle' => 'main', 'display' => 'Main', 'sections' => [
+            ['handle' => 'main', 'display' => 'Main'],
+        ]]])
+        ->assertSet('fields.0.tab', 'main')
+        ->assertSet('fields.0.section', 'main');
+});
+
+test('blueprint can add a tab and assign a field to it', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'sidebar', 'display' => 'Sidebar'],
+        ])
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'sidebar'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    expect($blueprint->data['tabs'])->toBe([
+        ['handle' => 'main', 'display' => 'Main', 'sections' => []],
+        ['handle' => 'sidebar', 'display' => 'Sidebar', 'sections' => []],
+    ]);
+    expect($blueprint->data['fields'][0]['tab'])->toBe('main');
+    expect($blueprint->data['fields'][1]['tab'])->toBe('sidebar');
+});
+
+test('adding a field via a specific tab assigns it to that tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->call('addField', 'sidebar')
+        ->assertSet('fields.1.tab', 'sidebar')
+        ->assertSet('fields.0.tab', 'main');
+});
+
+test('moving a top-level field up or down only reorders within its own tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('fields.0.handle', 'main_one')
+        ->call('addField', 'sidebar')
+        ->set('fields.1.handle', 'sidebar_one')
+        ->call('addField')
+        ->set('fields.2.handle', 'main_two')
+        ->call('addField', 'sidebar')
+        ->set('fields.3.handle', 'sidebar_two')
+        // fields: [0]=main_one(main) [1]=sidebar_one(sidebar) [2]=main_two(main) [3]=sidebar_two(sidebar)
+        ->call('moveFieldDown', [1])
+        ->assertSet('fields.1.handle', 'sidebar_two')
+        ->assertSet('fields.3.handle', 'sidebar_one')
+        ->assertSet('fields.0.handle', 'main_one')
+        ->assertSet('fields.2.handle', 'main_two');
+});
+
+test('the "main" tab cannot be renamed or removed', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('tabs.0.handle', 'renamed')
+        ->call('removeTab', 0)
+        ->assertCount('tabs', 1)
+        ->set('handle', 'post')
+        ->set('fields.0.handle', 'headline')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Blueprint::sole()->data['tabs'])->toBe([
+        ['handle' => 'main', 'display' => 'Main', 'sections' => [
+            ['handle' => 'main', 'display' => 'Main'],
+        ]],
+    ]);
+});
+
+test('removing a tab reassigns its fields back to main', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('tabs.1.display', 'Sidebar')
+        ->set('fields.0.handle', 'seo_title')
+        ->set('fields.0.tab', 'sidebar')
+        ->call('removeTab', 1)
+        ->assertCount('tabs', 1)
+        ->assertSet('fields.0.tab', 'main');
+});
+
+test('a newly added tab opens in edit mode and can be closed once named', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->assertSet('editingTabIndex', null)
+        ->call('addTab')
+        ->assertSet('editingTabIndex', 1)
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('tabs.1.display', 'Sidebar')
+        ->set('editingTabIndex', null)
+        ->assertSet('editingTabIndex', null)
+        ->assertSet('tabs.1.handle', 'sidebar');
+});
+
+test('removing the tab currently being edited exits edit mode', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->assertSet('editingTabIndex', 1)
+        ->call('removeTab', 1)
+        ->assertSet('editingTabIndex', null);
+});
+
+test('a section can be added to a tab and a field assigned to it', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'seo', 'display' => 'SEO'],
+            ]],
+        ])
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => ''],
+            ['handle' => 'seo_title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'seo'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    expect($blueprint->data['tabs'][0]['sections'])->toBe([
+        ['handle' => 'seo', 'display' => 'SEO'],
+    ]);
+    expect($blueprint->data['fields'][0]['section'])->toBeNull();
+    expect($blueprint->data['fields'][1]['section'])->toBe('seo');
+});
+
+test('a freshly added, not-yet-named section does not duplicate ungrouped fields in the builder', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('fields.0.handle', 'headline')
+        ->set('fields.0.section', '')
+        ->call('addSection', 0);
+
+    $handleOccurrences = substr_count($component->html(), 'wire:model="fields.0.handle"');
+
+    expect($handleOccurrences)->toBe(1);
+});
+
+test('a newly added section opens in edit mode', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->assertSet('editingSection', null)
+        ->call('addSection', 0)
+        ->assertSet('editingSection', [0, 1])
+        ->set('tabs.0.sections.1.handle', 'seo')
+        ->set('editingSection', null)
+        ->assertSet('editingSection', null)
+        ->assertSet('tabs.0.sections.1.handle', 'seo');
+});
+
+test('removing a section ungroups its fields back to no section', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addSection', 0)
+        ->set('tabs.0.sections.1.handle', 'seo')
+        ->set('fields.0.handle', 'seo_title')
+        ->set('fields.0.section', 'seo')
+        ->call('removeSection', 0, 1)
+        ->assertCount('tabs.0.sections', 1)
+        ->assertSet('fields.0.section', '');
+});
+
+test('a field cannot be assigned to a section that does not exist in its tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'does_not_exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.section']);
+});
+
+test('a section handle must be unique within its tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'seo', 'display' => 'SEO'],
+                ['handle' => 'seo', 'display' => 'Duplicate'],
+            ]],
+        ])
+        ->call('save')
+        ->assertHasErrors(['tabs.0.sections.1.handle']);
+});
+
+test('a new tab requires a unique, valid handle other than "main"', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'main', 'display' => 'Duplicate'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['tabs.1.handle']);
+});
+
+test('a field cannot be assigned to a tab that does not exist', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'does_not_exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.tab']);
+});
+
 test('field builder can add, reorder and remove fields', function () {
     $this->actingAs(User::factory()->create());
 
@@ -555,6 +820,7 @@ test('field builder can add, reorder and remove fields', function () {
         ->assertCount('fields', 2)
         ->set('fields.0.handle', 'first')
         ->set('fields.1.handle', 'second')
+        ->set('fields.1.section', 'main')
         ->call('moveFieldDown', [0])
         ->assertSet('fields.0.handle', 'second')
         ->assertSet('fields.1.handle', 'first')

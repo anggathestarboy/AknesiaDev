@@ -52,6 +52,12 @@ class EntryForm extends Component
     public string $blueprintHandle = '';
 
     /**
+     * Which of the selected blueprint's tabs is currently shown — see
+     * blueprintTabs().
+     */
+    public string $activeTab = 'main';
+
+    /**
      * The entry this one is a localization of — self-referencing, so
      * switching sites can find (or create) the sibling entry for that site.
      */
@@ -171,6 +177,23 @@ class EntryForm extends Component
     public function blueprintFields(): array
     {
         return $this->selectedBlueprint?->data['fields'] ?? [];
+    }
+
+    /**
+     * Tabs the selected blueprint's top-level fields are grouped under —
+     * see App\Modules\Blueprints\Livewire\BlueprintManager for how these
+     * are defined. Falls back to a single "Main" tab for blueprints saved
+     * before tabs existed.
+     */
+    #[Computed]
+    public function blueprintTabs(): array
+    {
+        return $this->selectedBlueprint?->data['tabs'] ?? [['handle' => 'main', 'display' => 'Main']];
+    }
+
+    public function setActiveTab(string $handle): void
+    {
+        $this->activeTab = $handle;
     }
 
     protected function defaultBlueprintHandle(): string
@@ -345,6 +368,7 @@ class EntryForm extends Component
     {
         if ($name === 'blueprintHandle') {
             $this->fillData(null);
+            $this->activeTab = 'main';
         }
     }
 
