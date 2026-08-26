@@ -32,7 +32,13 @@
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="3">{{ __('No navigations yet.') }}</flux:table.cell>
+                   <flux:table.cell colspan="3">
+    {{ __('No navigations yet. Run') }}
+    <code class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+        php artisan admin:sidebar
+    </code>
+    {{ __('to create the default admin navigation.') }}
+</flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
