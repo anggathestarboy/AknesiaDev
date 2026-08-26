@@ -1,19 +1,15 @@
 <?php
 
-namespace App\Models;
+namespace App\Modules\Media\Models;
 
-use App\Models\Concerns\HasFlexibleData;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class AssetMeta extends Model
 {
-    // use HasFlexibleData;
-
     protected $table = 'assets_meta';
-
-    protected string $dataColumn = 'meta';
 
     protected $fillable = [
         'container',
@@ -29,15 +25,23 @@ class AssetMeta extends Model
         'meta' => 'array',
     ];
 
-    public function container(): BelongsTo
+    public function containerModel(): BelongsTo
     {
         return $this->belongsTo(AssetContainer::class, 'container', 'handle');
     }
 
     public function getUrlAttribute(): string
     {
-        return Storage::disk($this->container?->disk ?? 'public')
-            ->url($this->path);
+        $disk = $this->containerModel?->disk ?? 'public';
+        $scopedPath = AssetContainer::scopedPath($this->container, $this->path);
+
+        if ($disk === 'public') {
+            return Storage::disk($disk)->url($scopedPath);
+        }
+
+        // Non-public disks are served through Laravel's local disk serving route,
+        // which validates a *relative* signature, so the URL must be signed as relative too.
+        return URL::temporarySignedRoute('storage.'.$disk, now()->addMinutes(5), ['path' => $scopedPath], absolute: false);
     }
 
     public function getSizeAttribute()
@@ -68,5 +72,10 @@ class AssetMeta extends Model
     public function getAltAttribute()
     {
         return data_get($this->meta, 'data.alt') ?: '';
+    }
+
+    public function getLoadingAttribute()
+    {
+        return data_get($this->meta, 'data.loading') ?: 'lazy';
     }
 }

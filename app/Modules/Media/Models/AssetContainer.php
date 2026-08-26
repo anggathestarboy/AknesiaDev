@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Modules\Media\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,23 +23,12 @@ class AssetContainer extends Model
         return $this->hasMany(AssetMeta::class, 'container', 'handle');
     }
 
-    public function getSizeAttribute()
+    /**
+     * Every container has its own root folder on disk, named after its handle,
+     * so containers sharing a disk never collide on the same physical path.
+     */
+    public static function scopedPath(string $handle, string $path): string
     {
-        return data_get($this->meta, 'size');
-    }
-
-    public function getMimeTypeAttribute()
-    {
-        return data_get($this->meta, 'mime_type');
-    }
-
-    public function getWidthAttribute()
-    {
-        return data_get($this->meta, 'width');
-    }
-
-    public function getHeightAttribute()
-    {
-        return data_get($this->meta, 'height');
+        return trim($handle.'/'.$path, '/');
     }
 }
