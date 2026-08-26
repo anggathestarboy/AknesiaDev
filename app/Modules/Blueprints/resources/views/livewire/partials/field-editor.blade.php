@@ -84,10 +84,22 @@
                 @enderror
             </div>
         </div>
+    @elseif ($field['type'] === 'link')
+        <div class="mt-3">
+            <flux:input wire:model.live="{{ $prefix }}.options" :label="__('Allowed collections (comma separated, blank = any)')" placeholder="pages, blog" size="sm" />
+            @error("{$prefix}.options")
+                <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+            @enderror
+            @if ($linkableCollections->isNotEmpty())
+                <flux:text class="mt-1 block text-xs text-zinc-500">
+                    {{ __('Available: :handles', ['handles' => $linkableCollections->pluck('handle')->implode(', ')]) }}
+                </flux:text>
+            @endif
+        </div>
     @endif
 
     <div class="mt-3 grid grid-cols-4 gap-3">
-        @if ($field['type'] === 'replicator' || $field['type'] === 'assets')
+        @if ($field['type'] === 'replicator' || $field['type'] === 'assets' || $field['type'] === 'link')
             <flux:input :label="__('Placeholder')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
             <flux:input :label="__('Default value')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
         @else
@@ -172,6 +184,7 @@
                     'fieldtypes' => $fieldtypes,
                     'conditionOperators' => $conditionOperators,
                     'assetContainers' => $assetContainers,
+                    'linkableCollections' => $linkableCollections,
                 ])
             @endforeach
         </div>

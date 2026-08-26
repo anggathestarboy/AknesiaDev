@@ -794,3 +794,50 @@ test('checkbox field max selections cannot be less than min selections', functio
         ->call('save')
         ->assertHasErrors(['fields.0.max_items']);
 });
+
+test('link field can be scoped to allowed collections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => []]);
+    Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'pages, blog'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('link');
+    expect($field['options'])->toBe(['pages', 'blog']);
+    expect($field['default'])->toBeNull();
+});
+
+test('link field can be left unrestricted (any collection allowed)', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Blueprint::sole()->data['fields'][0]['options'])->toBe([]);
+});
+
+test('link field rejects an allowed-collection handle that does not exist', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'does-not-exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
+});

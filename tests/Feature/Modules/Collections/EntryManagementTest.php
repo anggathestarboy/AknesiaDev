@@ -303,6 +303,59 @@ test('checkbox field enforces its configured minimum and maximum selection count
         ->assertHasErrors(['data.toppings']);
 });
 
+test('link field can store a plain URL', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'CTA', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => []],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.cta', 'https://example.com')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->data['cta'])->toBe('https://example.com');
+});
+
+test('link field can store a reference to an allowed entry', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'CTA', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['blog']],
+    ]]]);
+    $collection = makeBlogCollection();
+    $target = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Target Post']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.cta', "entry::{$target->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $newEntry = Entry::where('data->title', 'Hello World')->sole();
+
+    expect($newEntry->data['cta'])->toBe("entry::{$target->id}");
+});
+
+test('link field rejects an entry outside its allowed collections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'CTA', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['pages']],
+    ]]]);
+    $collection = makeBlogCollection();
+    $target = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Target Post']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.cta', "entry::{$target->id}")
+        ->call('save')
+        ->assertHasErrors(['data.cta']);
+});
+
 test('entry can store rows of data for a replicator field', function () {
     $this->actingAs(User::factory()->create());
 

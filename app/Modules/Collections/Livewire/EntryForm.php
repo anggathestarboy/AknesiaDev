@@ -269,6 +269,22 @@ class EntryForm extends Component
     }
 
     /**
+     * Entries a "link" field may point to — every entry on this site,
+     * scoped to the field's allowed collections when configured.
+     *
+     * @param  array<int, string>  $allowedCollectionHandles
+     * @return \Illuminate\Support\Collection<int, Entry>
+     */
+    public function linkableEntries(array $allowedCollectionHandles)
+    {
+        return Entry::where('site', $this->site)
+            ->when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+            ->orderBy('collection')
+            ->orderBy('slug')
+            ->get();
+    }
+
+    /**
      * @return \Illuminate\Support\Collection<int, AssetMeta>
      */
     public function selectedAssets(array $ids)
@@ -402,6 +418,42 @@ class EntryForm extends Component
 
                 $rules[$key] = $arrayRules;
                 $rules["{$key}.*"] = [Rule::in($field['options'] ?? [])];
+
+                continue;
+            }
+
+            if ($field['type'] === 'link') {
+                $linkRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $linkRules[] = 'sometimes';
+                }
+
+                $linkRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $linkRules[] = 'string';
+                $linkRules[] = 'max:2048';
+
+                $allowedCollections = $field['options'] ?? [];
+
+                $linkRules[] = function (string $attribute, mixed $value, \Closure $fail) use ($allowedCollections): void {
+                    if (! is_string($value) || ! str_starts_with($value, 'entry::')) {
+                        return;
+                    }
+
+                    $linkedEntry = Entry::find(substr($value, 7));
+
+                    if (! $linkedEntry) {
+                        $fail(__('The linked entry no longer exists.'));
+                    } elseif (! empty($allowedCollections) && ! in_array($linkedEntry->collection, $allowedCollections, true)) {
+                        $fail(__('The linked entry is not in an allowed collection.'));
+                    }
+                };
+
+                if (! empty($field['validation'])) {
+                    $linkRules[] = $field['validation'];
+                }
+
+                $rules[$key] = $linkRules;
 
                 continue;
             }

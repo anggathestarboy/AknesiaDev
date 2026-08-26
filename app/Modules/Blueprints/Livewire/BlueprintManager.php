@@ -39,6 +39,7 @@ class BlueprintManager extends Component
         'checkbox' => 'Checkbox',
         'replicator' => 'Replicator',
         'assets' => 'Assets',
+        'link' => 'Link',
     ];
 
     /**
@@ -114,6 +115,15 @@ class BlueprintManager extends Component
     public function availableAssetContainers()
     {
         return AssetContainer::orderBy('title')->get();
+    }
+
+    /**
+     * Collections a "link" field's allow-list can be scoped to.
+     */
+    #[Computed]
+    public function availableCollections()
+    {
+        return Collection::orderBy('title')->get();
     }
 
     public function create(): void
@@ -274,7 +284,7 @@ class BlueprintManager extends Component
                 $field['replicator_fields'] = [];
             }
 
-            if (! in_array($type, [...self::OPTION_BASED_TYPES, 'assets'], true)) {
+            if (! in_array($type, [...self::OPTION_BASED_TYPES, 'assets', 'link'], true)) {
                 $field['options'] = '';
             }
 
@@ -470,6 +480,19 @@ class BlueprintManager extends Component
                 }
             }
 
+            if ($field['type'] === 'link' && ! isset($errors["{$errorKey}.options"])) {
+                $validHandles = $this->availableCollections->pluck('handle')->all();
+
+                foreach (explode(',', $field['options'] ?? '') as $collectionHandle) {
+                    $collectionHandle = trim($collectionHandle);
+
+                    if ($collectionHandle !== '' && ! in_array($collectionHandle, $validHandles, true)) {
+                        $errors["{$errorKey}.options"] = __('":handle" is not a valid collection.', ['handle' => $collectionHandle]);
+                        break;
+                    }
+                }
+            }
+
             if (
                 in_array($field['type'], ['assets', 'checkbox'], true)
                 && ! isset($errors["{$errorKey}.max_items"])
@@ -502,7 +525,7 @@ class BlueprintManager extends Component
             'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator', 'assets'], true)
                 ? null
                 : (($field['placeholder'] ?? '') ?: null),
-            'default' => in_array($field['type'], ['replicator', 'assets'], true) ? null : (($field['default'] ?? '') ?: null),
+            'default' => in_array($field['type'], ['replicator', 'assets', 'link'], true) ? null : (($field['default'] ?? '') ?: null),
             'validation' => ($field['validation'] ?? '') ?: null,
             'instructions' => ($field['instructions'] ?? '') ?: null,
             'validate_sometimes' => (bool) ($field['sometimes'] ?? false),
@@ -532,6 +555,14 @@ class BlueprintManager extends Component
 
         if ($field['type'] === 'assets') {
             $normalized['options'] = trim($field['options'] ?? '') ?: null;
+        }
+
+        if ($field['type'] === 'link') {
+            $normalized['options'] = collect(explode(',', $field['options'] ?? ''))
+                ->map(fn (string $collectionHandle): string => trim($collectionHandle))
+                ->filter()
+                ->values()
+                ->all();
         }
 
         if (in_array($field['type'], ['assets', 'checkbox'], true)) {
@@ -604,6 +635,7 @@ class BlueprintManager extends Component
             'fieldtypes' => self::FIELDTYPES,
             'conditionOperators' => self::CONDITION_OPERATORS,
             'assetContainers' => $this->availableAssetContainers,
+            'linkableCollections' => $this->availableCollections,
         ]);
     }
 }

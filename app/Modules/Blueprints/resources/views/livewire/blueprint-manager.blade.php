@@ -78,6 +78,7 @@
                                 'fieldtypes' => $fieldtypes,
                                 'conditionOperators' => $conditionOperators,
                                 'assetContainers' => $assetContainers,
+                                'linkableCollections' => $linkableCollections,
                             ])
                         @endforeach
                     </div>

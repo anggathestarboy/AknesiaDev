@@ -36,6 +36,31 @@
     <flux:input type="number" wire:model="{{ $prefix }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
 @elseif ($field['type'] === 'textarea' || $field['type'] === 'markdown')
     <flux:textarea wire:model="{{ $prefix }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" rows="4" />
+@elseif ($field['type'] === 'link')
+    @php $isEntryLink = str_starts_with((string) ($linkValue ?? ''), 'entry::'); @endphp
+    <div x-data="{ mode: '{{ $isEntryLink ? 'entry' : 'url' }}' }">
+        <flux:text class="text-sm font-medium">{{ $field['display'] }}</flux:text>
+        @if ($field['instructions'])
+            <flux:text class="block text-xs text-zinc-500">{{ $field['instructions'] }}</flux:text>
+        @endif
+
+        <div class="mt-1 mb-2 inline-flex overflow-hidden rounded border border-zinc-200 text-xs dark:border-zinc-700">
+            <button type="button" x-on:click="mode = 'url'" x-bind:class="mode === 'url' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __('URL') }}</button>
+            <button type="button" x-on:click="mode = 'entry'" x-bind:class="mode === 'entry' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __('Entry') }}</button>
+        </div>
+
+        <div x-show="mode === 'url'">
+            <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?: __('https://...')" size="sm" />
+        </div>
+
+        <div x-show="mode === 'entry'" x-cloak>
+            <flux:select wire:model="{{ $prefix }}" placeholder="{{ __('Select an entry') }}" size="sm">
+                @foreach ($this->linkableEntries($field['options'] ?? []) as $linkableEntry)
+                    <flux:select.option value="entry::{{ $linkableEntry->id }}">{{ $linkableEntry->collection }}: {{ $linkableEntry->data['title'] ?? $linkableEntry->slug ?? $linkableEntry->id }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        </div>
+    </div>
 @elseif ($field['type'] === 'replicator')
     <div>
         <flux:text class="text-sm font-medium">{{ $field['display'] }}</flux:text>
@@ -54,6 +79,7 @@
                                     'path' => [...$path, $rowIndex, $sub['handle']],
                                     'rows' => $sub['type'] === 'replicator' ? ($row[$sub['handle']] ?? []) : null,
                                     'assetIds' => $sub['type'] === 'assets' ? ($row[$sub['handle']] ?? []) : null,
+                                    'linkValue' => $sub['type'] === 'link' ? ($row[$sub['handle']] ?? '') : null,
                                 ])
                             </div>
                         @endforeach
