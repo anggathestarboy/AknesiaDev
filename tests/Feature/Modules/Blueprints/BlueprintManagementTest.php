@@ -312,6 +312,228 @@ test('blueprint field handle cannot be "title" — it is a reserved default fiel
         ->assertHasErrors(['fields.0.handle']);
 });
 
+test('replicator field can be created with sub-fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => true],
+                    ['handle' => 'featured', 'display' => '', 'type' => 'toggle', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+    $field = $blueprint->data['fields'][0];
+
+    expect($field['type'])->toBe('replicator');
+    expect($field['replicator_fields'])->toHaveCount(2);
+    expect($field['replicator_fields'][0])->toMatchArray(['handle' => 'caption', 'type' => 'text', 'required' => true]);
+});
+
+test('replicator field requires at least one sub-field', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields']);
+});
+
+test('replicator sub-field handle cannot be "title"', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.handle']);
+});
+
+test('replicator sub-field default value, placeholder and instructions round-trip through the blueprint builder', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => false,
+                        'placeholder' => 'Enter a caption', 'default' => 'Untitled', 'validation' => 'max:100', 'instructions' => 'Shown under the image',
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sub = Blueprint::sole()->data['fields'][0]['replicator_fields'][0];
+
+    expect($sub)->toMatchArray([
+        'placeholder' => 'Enter a caption',
+        'default' => 'Untitled',
+        'validation' => 'max:100',
+        'instructions' => 'Shown under the image',
+    ]);
+});
+
+test('replicator sub-field with an invalid validation rule string fails', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => false, 'validation' => 'not_a_real_rule'],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.validation']);
+});
+
+test('replicator field can contain another replicator, nested to any depth', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'sections', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'items', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                        'replicator_fields' => [
+                            ['handle' => 'label', 'display' => '', 'type' => 'text', 'required' => true],
+                        ],
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sections = Blueprint::sole()->data['fields'][0];
+
+    expect($sections['type'])->toBe('replicator');
+    expect($sections['replicator_fields'][0]['type'])->toBe('replicator');
+    expect($sections['replicator_fields'][0]['replicator_fields'][0])->toMatchArray([
+        'handle' => 'label', 'type' => 'text', 'required' => true,
+    ]);
+});
+
+test('nested replicator requires at least one sub-field, with an error at the correct depth', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'sections', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'items', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.replicator_fields']);
+});
+
+test('replicator sub-field can be a select with options and sometimes', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'size', 'display' => '', 'type' => 'select', 'required' => false,
+                        'options' => 'small, medium, large', 'sometimes' => true,
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sub = Blueprint::sole()->data['fields'][0]['replicator_fields'][0];
+
+    expect($sub['options'])->toBe(['small', 'medium', 'large']);
+    expect($sub['validate_sometimes'])->toBeTrue();
+});
+
+test('replicator sub-field can have a show-when condition scoped to its own sibling sub-fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'kind', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'image, video'],
+                    [
+                        'handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false,
+                        'condition_mode' => 'show', 'condition_field' => 'kind', 'condition_operator' => 'equals', 'condition_value' => 'video',
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sub = Blueprint::sole()->data['fields'][0]['replicator_fields'][1];
+
+    expect($sub['conditions'])->toBe([
+        'mode' => 'show',
+        'field' => 'kind',
+        'operator' => 'equals',
+        'value' => 'video',
+    ]);
+});
+
+test('replicator sub-field condition cannot reference a field outside the replicator', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false,
+                        'condition_mode' => 'show', 'condition_field' => 'does_not_exist', 'condition_operator' => 'equals', 'condition_value' => 'video',
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.condition_field']);
+});
+
 test('changing a field type resets its stale default value', function () {
     $this->actingAs(User::factory()->create());
 
@@ -332,12 +554,34 @@ test('field builder can add, reorder and remove fields', function () {
         ->assertCount('fields', 2)
         ->set('fields.0.handle', 'first')
         ->set('fields.1.handle', 'second')
-        ->call('moveFieldDown', 0)
+        ->call('moveFieldDown', [0])
         ->assertSet('fields.0.handle', 'second')
         ->assertSet('fields.1.handle', 'first')
-        ->call('removeField', 0)
+        ->call('removeField', [0])
         ->assertCount('fields', 1)
         ->assertSet('fields.0.handle', 'first');
+});
+
+test('field builder can add, reorder and remove fields nested inside a replicator, to any depth', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('fields.0.type', 'replicator')
+        ->call('addReplicatorField', [0])
+        ->assertCount('fields.0.replicator_fields', 1)
+        ->set('fields.0.replicator_fields.0.type', 'replicator')
+        ->call('addReplicatorField', [0, 0])
+        ->assertCount('fields.0.replicator_fields.0.replicator_fields', 1)
+        ->set('fields.0.replicator_fields.0.replicator_fields.0.handle', 'deep_field')
+        ->call('addReplicatorField', [0, 0])
+        ->set('fields.0.replicator_fields.0.replicator_fields.1.handle', 'deep_field_two')
+        ->call('moveFieldDown', [0, 0, 0])
+        ->assertSet('fields.0.replicator_fields.0.replicator_fields.0.handle', 'deep_field_two')
+        ->assertSet('fields.0.replicator_fields.0.replicator_fields.1.handle', 'deep_field')
+        ->call('removeField', [0, 0, 0])
+        ->assertCount('fields.0.replicator_fields.0.replicator_fields', 1)
+        ->assertSet('fields.0.replicator_fields.0.replicator_fields.0.handle', 'deep_field');
 });
 
 test('blueprint can be updated and fields round-trip through edit, including conditions', function () {

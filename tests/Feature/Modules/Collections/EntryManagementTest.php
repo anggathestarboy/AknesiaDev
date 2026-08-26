@@ -101,6 +101,173 @@ test('entry can be created with dynamic fields from the collection blueprint', f
     ]);
 });
 
+test('entry can store rows of data for a replicator field', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+                ['handle' => 'featured', 'display' => 'Featured', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.0.caption', 'First image')
+        ->set('data.gallery.0.featured', true)
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.1.caption', 'Second image')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['gallery'])->toBe([
+        ['caption' => 'First image', 'featured' => true],
+        ['caption' => 'Second image', 'featured' => false],
+    ]);
+});
+
+test('replicator row requires its required sub-fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['gallery'])
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0.caption']);
+});
+
+test('replicator select sub-field must be one of its options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'size', 'display' => 'Size', 'type' => 'select', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'options' => ['small', 'medium', 'large']],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.0.size', 'huge')
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0.size']);
+});
+
+test('replicator sub-field marked sometimes is not required when the row is absent', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => true],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('save')
+        ->assertHasNoErrors();
+});
+
+test('entry can store data for a replicator nested inside another replicator', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                [
+                    'handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false,
+                    'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+                    'validate_sometimes' => false, 'conditions' => null,
+                    'replicator_fields' => [
+                        ['handle' => 'label', 'display' => 'Label', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+                    ],
+                ],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['sections'])
+        ->call('addReplicatorRow', ['sections', 0, 'items'])
+        ->set('data.sections.0.items.0.label', 'First item')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['sections'])->toBe([
+        ['items' => [['label' => 'First item']]],
+    ]);
+});
+
+test('required label deep inside a nested replicator is still validated', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                [
+                    'handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false,
+                    'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+                    'validate_sometimes' => false, 'conditions' => null,
+                    'replicator_fields' => [
+                        ['handle' => 'label', 'display' => 'Label', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+                    ],
+                ],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['sections'])
+        ->call('addReplicatorRow', ['sections', 0, 'items'])
+        ->call('save')
+        ->assertHasErrors(['data.sections.0.items.0.label']);
+});
+
 test('title is always required, regardless of the blueprint', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();

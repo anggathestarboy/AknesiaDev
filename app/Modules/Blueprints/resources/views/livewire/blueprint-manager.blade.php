@@ -68,94 +68,16 @@
 
                     <div class="space-y-3">
                         @foreach ($fields as $index => $field)
-                            <div wire:key="field-{{ $index }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                                <div class="grid grid-cols-12 gap-3">
-                                    <div class="col-span-3">
-                                        <flux:input wire:model="fields.{{ $index }}.handle" :label="__('Handle')" placeholder="title" size="sm" />
-                                    </div>
-                                    <div class="col-span-3">
-                                        <flux:input wire:model="fields.{{ $index }}.display" :label="__('Label')" placeholder="Title" size="sm" />
-                                    </div>
-                                    <div class="col-span-3">
-                                        <flux:select wire:model.live="fields.{{ $index }}.type" :label="__('Type')" size="sm">
-                                            @foreach ($fieldtypes as $value => $label)
-                                                <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-                                    </div>
-                                    <div class="col-span-2 flex items-end pb-2">
-                                        <flux:checkbox wire:model="fields.{{ $index }}.required" :label="__('Required')" />
-                                    </div>
-                                    <div class="col-span-1 flex items-end justify-end gap-1 pb-1">
-                                        <flux:button size="sm" variant="ghost" icon="chevron-up" type="button" wire:click="moveFieldUp({{ $index }})" :disabled="$index === 0" />
-                                        <flux:button size="sm" variant="ghost" icon="chevron-down" type="button" wire:click="moveFieldDown({{ $index }})" :disabled="$index === count($fields) - 1" />
-                                        <flux:button size="sm" variant="ghost" icon="trash" type="button" wire:click="removeField({{ $index }})" />
-                                    </div>
-                                </div>
-
-                                @if ($field['type'] === 'select')
-                                    <div class="mt-3">
-                                        <flux:input wire:model.live="fields.{{ $index }}.options" :label="__('Options (comma separated)')" placeholder="draft, published, archived" size="sm" />
-                                    </div>
-                                @endif
-
-                                <div class="mt-3 grid grid-cols-4 gap-3">
-                                    @if ($field['type'] === 'toggle' || $field['type'] === 'date')
-                                        <flux:input :label="__('Placeholder')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
-                                    @else
-                                        <flux:input wire:model="fields.{{ $index }}.placeholder" :label="__('Placeholder')" placeholder="{{ __('e.g. Enter a title') }}" size="sm" />
-                                    @endif
-
-                                    @if ($field['type'] === 'toggle')
-                                        <flux:radio.group wire:model="fields.{{ $index }}.default" :label="__('Default value')">
-                                            <flux:radio value="true" label="{{ __('True') }}" />
-                                            <flux:radio value="false" label="{{ __('False') }}" />
-                                        </flux:radio.group>
-                                    @elseif ($field['type'] === 'select')
-                                        <flux:select wire:model="fields.{{ $index }}.default" :label="__('Default value')" placeholder="{{ __('None') }}" size="sm">
-                                            @foreach (collect(explode(',', $field['options'] ?? ''))->map(fn (string $option): string => trim($option))->filter() as $option)
-                                                <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-                                    @elseif ($field['type'] === 'date')
-                                        <flux:input type="date" wire:model="fields.{{ $index }}.default" :label="__('Default value')" size="sm" />
-                                    @else
-                                        <flux:input wire:model="fields.{{ $index }}.default" :label="__('Default value')" size="sm" />
-                                    @endif
-
-                                    <flux:input wire:model="fields.{{ $index }}.validation" :label="__('Validation rules')" placeholder="max:255|email" size="sm" />
-                                    <flux:input wire:model="fields.{{ $index }}.instructions" :label="__('Instructions')" placeholder="{{ __('Help text shown to editors') }}" size="sm" />
-                                </div>
-
-                                <div class="mt-3">
-                                    <flux:checkbox wire:model="fields.{{ $index }}.sometimes" :label="__('Sometimes')" :description="__('Only validate when this field is visible or submitted.')" />
-                                </div>
-
-                                <div class="mt-3 grid grid-cols-4 items-end gap-3 rounded-md bg-zinc-50 p-3 dark:bg-zinc-800/50">
-                                    <flux:select wire:model.live="fields.{{ $index }}.condition_mode" :label="__('Condition')" size="sm">
-                                        <flux:select.option value="always">{{ __('Always show') }}</flux:select.option>
-                                        <flux:select.option value="show">{{ __('Show when') }}</flux:select.option>
-                                        <flux:select.option value="hide">{{ __('Hide when') }}</flux:select.option>
-                                    </flux:select>
-
-                                    @if (($field['condition_mode'] ?? 'always') !== 'always')
-                                        <flux:select wire:model="fields.{{ $index }}.condition_field" :label="__('Field')" placeholder="{{ __('Select a field') }}" size="sm">
-                                            @foreach ($fields as $otherIndex => $otherField)
-                                                @continue($otherIndex === $index || $otherField['handle'] === '')
-                                                <flux:select.option value="{{ $otherField['handle'] }}">{{ $otherField['handle'] }}</flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-
-                                        <flux:select wire:model="fields.{{ $index }}.condition_operator" :label="__('Operator')" size="sm">
-                                            @foreach ($conditionOperators as $value => $label)
-                                                <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-
-                                        <flux:input wire:model="fields.{{ $index }}.condition_value" :label="__('Value')" size="sm" />
-                                    @endif
-                                </div>
-                            </div>
+                            @include('blueprints::livewire.partials.field-editor', [
+                                'field' => $field,
+                                'path' => [$index],
+                                'prefix' => "fields.{$index}",
+                                'index' => $index,
+                                'isLast' => $index === count($fields) - 1,
+                                'siblings' => $fields,
+                                'fieldtypes' => $fieldtypes,
+                                'conditionOperators' => $conditionOperators,
+                            ])
                         @endforeach
                     </div>
                 </div>

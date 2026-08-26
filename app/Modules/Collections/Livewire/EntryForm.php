@@ -179,13 +179,98 @@ class EntryForm extends Component
 
     protected function fillData(?Entry $entry): void
     {
-        $this->data = [];
+        $this->data = $this->fillFieldsData($this->blueprintFields(), $entry?->data);
+    }
 
-        foreach ($this->blueprintFields() as $field) {
-            $this->data[$field['handle']] = $entry?->data[$field['handle']]
+    /**
+     * Recursively build a data array matching a field tree: a scalar value
+     * (or its default) per field, or — for a replicator — one filled row
+     * per existing entry, each row itself built the same way, to any depth.
+     */
+    protected function fillFieldsData(array $fields, ?array $existingData): array
+    {
+        $data = [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator') {
+                $existingRows = $existingData[$field['handle']] ?? [];
+                $data[$field['handle']] = array_map(
+                    fn (array $row): array => $this->fillFieldsData($field['replicator_fields'] ?? [], $row),
+                    $existingRows
+                );
+
+                continue;
+            }
+
+            $data[$field['handle']] = $existingData[$field['handle']]
                 ?? $field['default']
                 ?? ($field['type'] === 'toggle' ? false : '');
         }
+
+        return $data;
+    }
+
+    /**
+     * Append a new, default-filled row to the replicator field located at
+     * $path — a list of field handles and row indexes describing where it
+     * lives in $this->data, e.g. ["sections", 2, "items"] for the "items"
+     * replicator inside row 2 of the top-level "sections" replicator.
+     */
+    public function addReplicatorRow(array $path): void
+    {
+        $field = $this->replicatorFieldAt($path);
+
+        if (! $field) {
+            return;
+        }
+
+        $rows = &$this->dataAt($path);
+        $rows[] = $this->fillFieldsData($field['replicator_fields'] ?? [], null);
+    }
+
+    public function removeReplicatorRow(array $path, int $rowIndex): void
+    {
+        $rows = &$this->dataAt($path);
+        unset($rows[$rowIndex]);
+        $rows = array_values($rows);
+    }
+
+    /**
+     * The blueprint definition of the replicator field located at $path,
+     * found by walking the field tree using only the handle segments (row
+     * indexes don't affect which field definition applies).
+     */
+    protected function replicatorFieldAt(array $path): ?array
+    {
+        $fields = $this->blueprintFields();
+        $field = null;
+
+        foreach ($path as $segment) {
+            if (is_int($segment)) {
+                continue;
+            }
+
+            $field = collect($fields)->firstWhere('handle', $segment);
+
+            if (! $field) {
+                return null;
+            }
+
+            $fields = $field['replicator_fields'] ?? [];
+        }
+
+        return $field;
+    }
+
+    protected function &dataAt(array $path)
+    {
+        $ref = &$this->data;
+
+        foreach ($path as $segment) {
+            $ref = &$ref[$segment];
+        }
+
+        return $ref;
     }
 
     /**
@@ -202,14 +287,30 @@ class EntryForm extends Component
 
     /**
      * Build Laravel validation rules per blueprint field, using the field's
-     * type, required flag, "sometimes" flag and custom rule string. Field
-     * conditions (show/hide) are not evaluated here — see docs/AI-CONTEXT.md.
+     * type, required flag, "sometimes" flag and custom rule string. A
+     * replicator recurses into its own sub-fields under a "*" wildcard per
+     * row, to any nesting depth. Field conditions (show/hide) are not
+     * evaluated here — see docs/AI-CONTEXT.md.
      */
     protected function fieldRules(): array
     {
+        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+    }
+
+    protected function fieldRulesFor(array $fields, string $prefix): array
+    {
         $rules = [];
 
-        foreach ($this->blueprintFields() as $field) {
+        foreach ($fields as $field) {
+            $key = "{$prefix}.{$field['handle']}";
+
+            if ($field['type'] === 'replicator') {
+                $rules[$key] = ['array'];
+                $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
             $fieldRules = [];
 
             if ($field['validate_sometimes'] ?? false) {
@@ -230,7 +331,7 @@ class EntryForm extends Component
                 $fieldRules[] = $field['validation'];
             }
 
-            $rules["data.{$field['handle']}"] = $fieldRules;
+            $rules[$key] = $fieldRules;
         }
 
         return $rules;

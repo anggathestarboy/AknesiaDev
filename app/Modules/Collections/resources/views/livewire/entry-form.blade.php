@@ -8,23 +8,11 @@
         <div class="col-span-2 space-y-6">
             @forelse ($this->blueprintFields() as $field)
                 <div>
-                    @if ($field["type"] === "toggle")
-                        <flux:checkbox wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :description="$field['instructions']" />
-                    @elseif ($field["type"] === "select")
-                        <flux:select wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :description="$field['instructions']" :placeholder="$field['placeholder'] ?? __('Select an option')">
-                            @foreach ($field["options"] ?? [] as $option)
-                                <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                    @elseif ($field["type"] === "date")
-                        <flux:input type="date" wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :description="$field['instructions']" />
-                    @elseif ($field["type"] === "number")
-                        <flux:input type="number" wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
-                    @elseif ($field["type"] === "textarea" || $field["type"] === "markdown")
-                        <flux:textarea wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" rows="6" />
-                    @else
-                        <flux:input wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
-                    @endif
+                    @include('collections::livewire.partials.entry-field', [
+                        'field' => $field,
+                        'path' => [$field['handle']],
+                        'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
+                    ])
                 </div>
             @empty
                 <flux:text class="text-zinc-500">{{ __("This blueprint has no fields yet.") }}</flux:text>
