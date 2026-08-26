@@ -86,3 +86,14 @@ test('navigation can be deleted', function () {
 
     expect(Navigation::find($navigation->id))->toBeNull();
 });
+
+test('protected navigations cannot be deleted', function () {
+    $this->actingAs(User::factory()->create());
+
+    config(['cms.protected_navigations' => ['sidebar-admin']]);
+    $navigation = Navigation::create(['title' => 'Sidebar Admin', 'handle' => 'sidebar-admin']);
+
+    Livewire::test(NavigationManager::class)->call('delete', $navigation->id);
+
+    expect(Navigation::find($navigation->id))->not->toBeNull();
+});

@@ -79,11 +79,24 @@ class NavigationManager extends Component
 
     public function delete(int $id): void
     {
-        Navigation::findOrFail($id)->delete();
+        $navigation = Navigation::findOrFail($id);
+
+        if ($this->isProtected($navigation)) {
+            Flux::toast(variant: 'danger', text: __('This navigation is protected and cannot be deleted.'));
+
+            return;
+        }
+
+        $navigation->delete();
 
         Flux::toast(variant: 'success', text: __('Navigation deleted.'));
 
         unset($this->navigations);
+    }
+
+    public function isProtected(Navigation $navigation): bool
+    {
+        return in_array($navigation->handle, config('cms.protected_navigations', []), true);
     }
 
     public function render(): View

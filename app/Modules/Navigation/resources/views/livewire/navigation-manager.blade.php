@@ -23,7 +23,11 @@
                     <flux:table.cell class="flex justify-end gap-1">
                         <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ __('Edit tree') }}</flux:button>
                         <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __('Edit') }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $navigation->id }})" wire:confirm="{{ __('Delete this navigation?') }}">{{ __('Delete') }}</flux:button>
+                        @if ($this->isProtected($navigation))
+                            <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __('Delete') }}</flux:button>
+                        @else
+                            <flux:button size="sm" variant="danger" wire:click="delete({{ $navigation->id }})" wire:confirm="{{ __('Delete this navigation?') }}">{{ __('Delete') }}</flux:button>
+                        @endif
                     </flux:table.cell>
                 </flux:table.row>
             @empty
