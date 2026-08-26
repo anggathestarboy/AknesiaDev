@@ -5,6 +5,7 @@ namespace App\Modules\Navigation\Livewire;
 use App\Modules\Navigation\Models\Navigation;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -19,6 +20,13 @@ class NavigationManager extends Component
 
     public string $title = '';
 
+    /**
+     * Once the user types into the handle field directly, it stops
+     * auto-following the title (matches Statamic's slug-follows-title
+     * behavior).
+     */
+    public bool $handleManuallyEdited = false;
+
     #[Computed]
     public function navigations()
     {
@@ -27,7 +35,7 @@ class NavigationManager extends Component
 
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title']);
+        $this->reset(['editingId', 'handle', 'title', 'handleManuallyEdited']);
         Flux::modal('navigation-form')->show();
     }
 
@@ -38,8 +46,20 @@ class NavigationManager extends Component
         $this->editingId = $navigation->id;
         $this->handle = $navigation->handle;
         $this->title = $navigation->title;
+        $this->handleManuallyEdited = true;
 
         Flux::modal('navigation-form')->show();
+    }
+
+    public function updated(string $name): void
+    {
+        if ($name === 'title' && ! $this->handleManuallyEdited) {
+            $this->handle = Str::slug($this->title);
+        }
+
+        if ($name === 'handle') {
+            $this->handleManuallyEdited = true;
+        }
     }
 
     public function save(): void

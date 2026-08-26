@@ -39,8 +39,8 @@
             <flux:heading size="lg">{{ $editingId ? __('Edit navigation') : __('Add navigation') }}</flux:heading>
 
             <div class="space-y-4">
-                <flux:input wire:model="title" :label="__('Title')" placeholder="Main menu" required autofocus />
-                <flux:input wire:model="handle" :label="__('Handle')" placeholder="main" required />
+                <flux:input wire:model.live="title" :label="__('Title')" placeholder="Main menu" required autofocus />
+                <flux:input wire:model.live="handle" :label="__('Handle')" placeholder="main" required />
             </div>
 
             <div class="flex justify-end gap-2">

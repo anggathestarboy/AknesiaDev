@@ -70,6 +70,11 @@ class NavigationTreeEditor extends Component
         $this->tree = $this->treeService()->withAddedItem($this->tree, $parentId, $this->blankAttributes());
 
         $children = $this->treeService()->findItem($this->tree, $parentId)['children'];
+
+        if (! in_array($parentId, $this->expanded, true)) {
+            $this->expanded[] = $parentId;
+        }
+
         $this->expanded[] = $children[array_key_last($children)]['id'];
     }
 

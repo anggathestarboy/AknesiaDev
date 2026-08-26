@@ -58,7 +58,7 @@ test('adding a child auto-expands it and save persists the whole tree', function
 
     $childId = $component->get('tree')[0]['children'][0]['id'];
 
-    $component->assertSet('expanded', [$childId])
+    $component->assertSet('expanded', [$rootId, $childId])
         ->set('tree.0.children.0.title', 'Sub page')
         ->set('tree.0.children.0.url', '/sub')
         ->call('save');

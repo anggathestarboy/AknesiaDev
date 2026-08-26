@@ -1,3 +1,18 @@
+@php
+    $sidebarTreeService = app(\App\Modules\Navigation\Services\NavigationTreeService::class);
+    $sidebarNavigation = \App\Modules\Navigation\Models\Navigation::where('handle', 'sidebar-admin')->first();
+    $sidebarItems = $sidebarNavigation ? $sidebarTreeService->load($sidebarNavigation) : [];
+
+    $sidebarIsCurrent = function (?string $url): bool {
+        if (! $url) {
+            return false;
+        }
+
+        $path = ltrim($url, '/');
+
+        return request()->is($path === '' ? '/' : "{$path}*");
+    };
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
@@ -12,11 +27,51 @@
 
         <flux:sidebar.nav>
             <flux:sidebar.group heading="CMS General" class="grid">
-                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate> {{ __("Dashboard") }} </flux:sidebar.item>
-                <flux:sidebar.item icon="rectangle-stack" :href="route('media.index')" :current="request()->routeIs('media.*')" wire:navigate> {{ __("Media Library") }} </flux:sidebar.item>
-                <flux:sidebar.item icon="rectangle-stack" :href="route('collections.index')" :current="request()->routeIs('collections.*')" wire:navigate> {{ __("Collections") }} </flux:sidebar.item>
-                <flux:sidebar.item icon="document-text" :href="route('blueprints.index')" :current="request()->routeIs('blueprints.*')" wire:navigate> {{ __("Blueprints") }} </flux:sidebar.item>
-                <flux:sidebar.item icon="globe-alt" :href="route('sites.sites.index')" :current="request()->routeIs('sites.*')" wire:navigate> {{ __("Sites") }} </flux:sidebar.item>
+                @foreach ($sidebarItems as $item)
+                    @if (($item['children'] ?? []) !== [])
+                        @php
+                            $parentIsCurrent = collect($item['children'])
+                                ->contains(fn ($child) => $sidebarIsCurrent($sidebarTreeService->resolveUrl($child)));
+                        @endphp
+                        <div x-data="{ open: {{ $parentIsCurrent ? 'true' : 'false' }} }" class="flex flex-col">
+                            <button
+                                type="button"
+                                x-on:click="open = !open"
+                                @if ($parentIsCurrent) data-current @endif
+                                class="my-px flex h-8 w-full items-center gap-3 rounded-lg border border-transparent px-3 text-start text-sm font-medium text-zinc-500 hover:bg-zinc-800/5 hover:text-zinc-800 data-current:border-zinc-200 data-current:bg-white data-current:text-(--color-accent-content) dark:text-white/80 dark:hover:bg-white/7 dark:hover:text-white dark:data-current:border-transparent dark:data-current:bg-white/7"
+                            >
+                                <span class="flex-1 truncate text-start">{{ $item['title'] }}</span>
+                                <flux:icon.chevron-right x-show="!open" x-cloak class="size-4 shrink-0 text-zinc-500 dark:text-white/80" />
+                                <flux:icon.chevron-down x-show="open" x-cloak class="size-4 shrink-0 text-zinc-500 dark:text-white/80" />
+                            </button>
+
+                            <div x-show="open" x-cloak class="flex flex-col">
+                                @foreach ($item['children'] as $child)
+                                    @php $childUrl = $sidebarTreeService->resolveUrl($child); @endphp
+                                    <a
+                                        href="{{ $childUrl ?? '#' }}"
+                                        target="{{ $child['target'] }}"
+                                        wire:navigate
+                                        @if ($sidebarIsCurrent($childUrl)) data-current @endif
+                                        class="my-px flex h-7 w-full items-center rounded-lg border border-transparent ps-8 pe-3 text-xs text-zinc-500 hover:bg-zinc-800/5 hover:text-zinc-800 data-current:border-zinc-200 data-current:bg-white data-current:text-(--color-accent-content) dark:text-white/80 dark:hover:bg-white/7 dark:hover:text-white dark:data-current:border-transparent dark:data-current:bg-white/7"
+                                    >
+                                        {{ $child['title'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @else
+                        @php $itemUrl = $sidebarTreeService->resolveUrl($item); @endphp
+                        <flux:sidebar.item
+                            :href="$itemUrl ?? '#'"
+                            :current="$sidebarIsCurrent($itemUrl)"
+                            target="{{ $item['target'] }}"
+                            wire:navigate
+                        >
+                            {{ $item['title'] }}
+                        </flux:sidebar.item>
+                    @endif
+                @endforeach
             </flux:sidebar.group>
         </flux:sidebar.nav>
 
