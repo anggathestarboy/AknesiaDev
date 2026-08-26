@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <section class="mx-auto mt-8 w-full max-w-4xl space-y-4 rounded-lg border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
+<section class="mx-auto mt-17 w-full max-w-6xl space-y-4 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-zinc-900">
         <ul wire:sort="sortItem" wire:sort:group="items" wire:sort:group-id="root" class="space-y-2">
             @forelse ($tree as $i => $item)
                 <li wire:key="item-{{ $item['id'] }}" wire:sort:item="{{ $item['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
@@ -32,7 +32,7 @@
 
                             <button
                                 type="button"
-                                x-on:click.stop="contextMenu = contextMenu === 'item-{{ $item['id'] }}' ? null : 'item-{{ $item['id'] }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
+                                x-on:click.stop="contextMenu = contextMenu === 'item-{{ $item['id'] }}' ? null : 'item-{{ $item['id'] }}'; contextMenuX = $event.clientX - 170; contextMenuY = $event.clientY + 10"
                                 class="rounded p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                             >
                                 <flux:icon.ellipsis-horizontal class="size-4" />
@@ -46,7 +46,7 @@
                                 class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
                             >
                                 <button type="button" wire:click.stop="duplicateItem('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate item') }}</button>
-                                <button type="button" wire:click.stop="delete('{{ $item['id'] }}')" wire:confirm="{{ __('Delete this item and its children?') }}" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete item') }}</button>
+                                <button type="button" wire:click.stop="askDelete('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete item') }}</button>
                             </div>
                         </div>
                     </div>
@@ -92,7 +92,7 @@
                                             <div class="relative flex flex-wrap items-center gap-1">
                                                 <button
                                                     type="button"
-                                                    x-on:click.stop="contextMenu = contextMenu === 'item-{{ $child['id'] }}' ? null : 'item-{{ $child['id'] }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
+                                                    x-on:click.stop="contextMenu = contextMenu === 'item-{{ $child['id'] }}' ? null : 'item-{{ $child['id'] }}'; contextMenuX = $event.clientX - 170; contextMenuY = $event.clientY + 10"
                                                     class="rounded p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700"
                                                 >
                                                     <flux:icon.ellipsis-horizontal class="size-4" />
@@ -106,7 +106,7 @@
                                                     class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
                                                 >
                                                     <button type="button" wire:click.stop="duplicateItem('{{ $child['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate item') }}</button>
-                                                    <button type="button" wire:click.stop="delete('{{ $child['id'] }}')" wire:confirm="{{ __('Delete this item?') }}" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete item') }}</button>
+                                                    <button type="button" wire:click.stop="askDelete('{{ $child['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete item') }}</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -149,4 +149,18 @@
             @endforelse
         </ul>
     </section>
+
+    <flux:modal name="confirm-delete-item" class="max-w-sm">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('Delete this item?') }}</flux:heading>
+            <flux:text>{{ __('This will also delete any children under it.') }}</flux:text>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button variant="danger" wire:click="confirmDelete">{{ __('Delete') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

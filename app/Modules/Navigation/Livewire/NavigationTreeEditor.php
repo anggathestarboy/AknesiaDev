@@ -31,6 +31,11 @@ class NavigationTreeEditor extends Component
      */
     public array $expanded = [];
 
+    /**
+     * Id of the item pending confirmation in the delete modal.
+     */
+    public ?string $deletingId = null;
+
     public function mount(Navigation $navigation): void
     {
         $this->navigation = $navigation;
@@ -73,9 +78,22 @@ class NavigationTreeEditor extends Component
         $this->tree = $this->treeService()->withDuplicatedItem($this->tree, $id);
     }
 
-    public function delete(string $id): void
+    public function askDelete(string $id): void
     {
-        $this->tree = $this->treeService()->withRemovedItem($this->tree, $id);
+        $this->deletingId = $id;
+        Flux::modal('confirm-delete-item')->show();
+    }
+
+    public function confirmDelete(): void
+    {
+        if ($this->deletingId === null) {
+            return;
+        }
+
+        $this->tree = $this->treeService()->withRemovedItem($this->tree, $this->deletingId);
+        $this->deletingId = null;
+
+        Flux::modal('confirm-delete-item')->close();
     }
 
     public function sortItem($id, $position, $groupId): void

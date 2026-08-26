@@ -97,7 +97,9 @@ test('root items can be deleted with their children once saved', function () {
     $service->addItem($navigation, $rootId, ['type' => 'internal', 'title' => 'Sub page', 'url' => '/sub']);
 
     Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
-        ->call('delete', $rootId)
+        ->call('askDelete', $rootId)
+        ->assertSet('deletingId', $rootId)
+        ->call('confirmDelete')
         ->call('save');
 
     expect($service->load($navigation->fresh()))->toBe([]);
@@ -194,16 +196,21 @@ test('opening the item menu and duplicating copies the item as the next sibling'
     expect($tree)->toHaveCount(2);
 });
 
-test('the item context menu deletes the selected item', function () {
+test('deleting an item requires confirming the delete modal', function () {
     $this->actingAs(User::factory()->create());
 
     $navigation = makeNavigation();
     app(NavigationTreeService::class)->addItem($navigation, null, ['type' => 'internal', 'title' => 'Home', 'url' => '/']);
     $rootId = app(NavigationTreeService::class)->load($navigation)[0]['id'];
 
-    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
-        ->call('delete', $rootId)
+    $component = Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->call('askDelete', $rootId);
+
+    expect($component->get('tree'))->toHaveCount(1);
+
+    $component->call('confirmDelete')
         ->assertSet('tree', [])
+        ->assertSet('deletingId', null)
         ->call('save');
 
     expect(app(NavigationTreeService::class)->load($navigation->fresh()))->toBe([]);
