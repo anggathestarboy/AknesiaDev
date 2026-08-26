@@ -10,6 +10,26 @@
             <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
         @endforeach
     </flux:select>
+@elseif ($field['type'] === 'radio')
+    <flux:radio.group wire:model="{{ $prefix }}" :label="$field['display']" :description="$field['instructions']">
+        @foreach ($field['options'] ?? [] as $option)
+            <flux:radio value="{{ $option }}" label="{{ $option }}" />
+        @endforeach
+    </flux:radio.group>
+@elseif ($field['type'] === 'checkbox')
+    @php
+        $checkboxHint = match (true) {
+            ($field['min_items'] ?? null) !== null && ($field['max_items'] ?? null) !== null => __(':min–:max selections', ['min' => $field['min_items'], 'max' => $field['max_items']]),
+            ($field['min_items'] ?? null) !== null => __('At least :min selections', ['min' => $field['min_items']]),
+            ($field['max_items'] ?? null) !== null => __('Up to :max selections', ['max' => $field['max_items']]),
+            default => null,
+        };
+    @endphp
+    <flux:checkbox.group wire:model="{{ $prefix }}" :label="$field['display']" :description="trim(($field['instructions'] ?? '').' '.($checkboxHint ?? ''))">
+        @foreach ($field['options'] ?? [] as $option)
+            <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
+        @endforeach
+    </flux:checkbox.group>
 @elseif ($field['type'] === 'date')
     <flux:input type="date" wire:model="{{ $prefix }}" :label="$field['display']" :description="$field['instructions']" />
 @elseif ($field['type'] === 'number')

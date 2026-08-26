@@ -35,9 +35,19 @@ class BlueprintManager extends Component
         'toggle' => 'Toggle',
         'date' => 'Date',
         'select' => 'Select',
+        'radio' => 'Radio',
+        'checkbox' => 'Checkbox',
         'replicator' => 'Replicator',
         'assets' => 'Assets',
     ];
+
+    /**
+     * Fieldtypes whose value is picked from a comma-separated option list
+     * (single value for select/radio, multiple for checkbox).
+     *
+     * @var array<int, string>
+     */
+    const OPTION_BASED_TYPES = ['select', 'radio', 'checkbox'];
 
     /**
      * Operators available for the "show when / hide when" field condition,
@@ -141,7 +151,7 @@ class BlueprintManager extends Component
             'required' => (bool) ($field['required'] ?? false),
             'options' => is_array($field['options'] ?? null) ? implode(', ', $field['options']) : (string) ($field['options'] ?? ''),
             'placeholder' => $field['placeholder'] ?? '',
-            'default' => $field['default'] ?? '',
+            'default' => is_array($field['default'] ?? null) ? implode(', ', $field['default']) : (string) ($field['default'] ?? ''),
             'validation' => $field['validation'] ?? '',
             'instructions' => $field['instructions'] ?? '',
             'sometimes' => (bool) ($field['validate_sometimes'] ?? false),
@@ -264,7 +274,7 @@ class BlueprintManager extends Component
                 $field['replicator_fields'] = [];
             }
 
-            if (! in_array($type, ['select', 'assets'], true)) {
+            if (! in_array($type, [...self::OPTION_BASED_TYPES, 'assets'], true)) {
                 $field['options'] = '';
             }
 
@@ -450,25 +460,24 @@ class BlueprintManager extends Component
                 }
             }
 
-            if ($field['type'] === 'assets') {
-                if (! isset($errors["{$errorKey}.options"])) {
-                    $container = trim($field['options'] ?? '');
+            if ($field['type'] === 'assets' && ! isset($errors["{$errorKey}.options"])) {
+                $container = trim($field['options'] ?? '');
 
-                    if ($container === '') {
-                        $errors["{$errorKey}.options"] = __('Select an asset container.');
-                    } elseif (! in_array($container, $this->availableAssetContainers->pluck('handle')->all(), true)) {
-                        $errors["{$errorKey}.options"] = __('That asset container does not exist.');
-                    }
+                if ($container === '') {
+                    $errors["{$errorKey}.options"] = __('Select an asset container.');
+                } elseif (! in_array($container, $this->availableAssetContainers->pluck('handle')->all(), true)) {
+                    $errors["{$errorKey}.options"] = __('That asset container does not exist.');
                 }
+            }
 
-                if (
-                    ! isset($errors["{$errorKey}.max_items"])
-                    && ($field['min_items'] ?? '') !== ''
-                    && ($field['max_items'] ?? '') !== ''
-                    && (int) $field['max_items'] < (int) $field['min_items']
-                ) {
-                    $errors["{$errorKey}.max_items"] = __('Maximum items must be greater than or equal to minimum items.');
-                }
+            if (
+                in_array($field['type'], ['assets', 'checkbox'], true)
+                && ! isset($errors["{$errorKey}.max_items"])
+                && ($field['min_items'] ?? '') !== ''
+                && ($field['max_items'] ?? '') !== ''
+                && (int) $field['max_items'] < (int) $field['min_items']
+            ) {
+                $errors["{$errorKey}.max_items"] = __('Maximum selections must be greater than or equal to minimum selections.');
             }
 
             if ($field['type'] === 'replicator') {
@@ -505,7 +514,7 @@ class BlueprintManager extends Component
             ] : null,
         ];
 
-        if ($field['type'] === 'select') {
+        if (in_array($field['type'], self::OPTION_BASED_TYPES, true)) {
             $normalized['options'] = collect(explode(',', $field['options'] ?? ''))
                 ->map(fn (string $option): string => trim($option))
                 ->filter()
@@ -513,8 +522,19 @@ class BlueprintManager extends Component
                 ->all();
         }
 
+        if ($field['type'] === 'checkbox') {
+            $normalized['default'] = collect(explode(',', $field['default'] ?? ''))
+                ->map(fn (string $value): string => trim($value))
+                ->filter()
+                ->values()
+                ->all();
+        }
+
         if ($field['type'] === 'assets') {
             $normalized['options'] = trim($field['options'] ?? '') ?: null;
+        }
+
+        if (in_array($field['type'], ['assets', 'checkbox'], true)) {
             $normalized['min_items'] = ($field['min_items'] ?? '') !== '' ? (int) $field['min_items'] : null;
             $normalized['max_items'] = ($field['max_items'] ?? '') !== '' ? (int) $field['max_items'] : null;
         }

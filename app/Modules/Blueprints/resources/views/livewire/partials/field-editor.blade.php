@@ -33,9 +33,29 @@
         </div>
     </div>
 
-    @if ($field['type'] === 'select')
+    @if ($field['type'] === 'select' || $field['type'] === 'radio')
         <div class="mt-3">
             <flux:input wire:model.live="{{ $prefix }}.options" :label="__('Options (comma separated)')" placeholder="draft, published, archived" size="sm" />
+        </div>
+    @elseif ($field['type'] === 'checkbox')
+        <div class="mt-3 grid grid-cols-3 gap-3">
+            <div class="col-span-1">
+                <flux:input wire:model.live="{{ $prefix }}.options" :label="__('Options (comma separated)')" placeholder="draft, published, archived" size="sm" />
+            </div>
+
+            <div>
+                <flux:input type="number" min="0" wire:model="{{ $prefix }}.min_items" :label="__('Min selections')" placeholder="{{ __('No minimum') }}" size="sm" />
+                @error("{$prefix}.min_items")
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
+            </div>
+
+            <div>
+                <flux:input type="number" min="0" wire:model="{{ $prefix }}.max_items" :label="__('Max selections')" placeholder="{{ __('No maximum') }}" size="sm" />
+                @error("{$prefix}.max_items")
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
+            </div>
         </div>
     @elseif ($field['type'] === 'assets')
         <div class="mt-3 grid grid-cols-3 gap-3">
@@ -82,12 +102,14 @@
                     <flux:radio value="true" label="{{ __('True') }}" />
                     <flux:radio value="false" label="{{ __('False') }}" />
                 </flux:radio.group>
-            @elseif ($field['type'] === 'select')
+            @elseif ($field['type'] === 'select' || $field['type'] === 'radio')
                 <flux:select wire:model="{{ $prefix }}.default" :label="__('Default value')" placeholder="{{ __('None') }}" size="sm">
                     @foreach (collect(explode(',', $field['options'] ?? ''))->map(fn (string $option): string => trim($option))->filter() as $option)
                         <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
                     @endforeach
                 </flux:select>
+            @elseif ($field['type'] === 'checkbox')
+                <flux:input wire:model="{{ $prefix }}.default" :label="__('Default value(s)')" placeholder="{{ __('Comma separated, from the options above') }}" size="sm" />
             @elseif ($field['type'] === 'date')
                 <flux:input type="date" wire:model="{{ $prefix }}.default" :label="__('Default value')" size="sm" />
             @else

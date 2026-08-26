@@ -232,6 +232,77 @@ test('assets field enforces its configured maximum item count', function () {
         ->assertHasErrors(['data.gallery']);
 });
 
+test('radio field defaults to its configured value and validates against its options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'size', 'display' => 'Size', 'type' => 'radio', 'required' => true, 'placeholder' => null, 'default' => 'medium', 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['small', 'medium', 'large']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSet('data.size', 'medium')
+        ->set('title', 'Hello World')
+        ->set('data.size', 'huge')
+        ->call('save')
+        ->assertHasErrors(['data.size']);
+});
+
+test('checkbox field stores an array of chosen options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'placeholder' => null, 'default' => [], 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['cheese', 'olives', 'mushrooms']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', ['cheese', 'olives'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['toppings'])->toBe(['cheese', 'olives']);
+});
+
+test('checkbox field rejects a value outside its options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'placeholder' => null, 'default' => [], 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['cheese', 'olives']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', ['pineapple'])
+        ->call('save')
+        ->assertHasErrors(['data.toppings.0']);
+});
+
+test('checkbox field enforces its configured minimum and maximum selection count', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'placeholder' => null, 'default' => [], 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['cheese', 'olives', 'mushrooms'], 'min_items' => 1, 'max_items' => 2],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', [])
+        ->call('save')
+        ->assertHasErrors(['data.toppings']);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', ['cheese', 'olives', 'mushrooms'])
+        ->call('save')
+        ->assertHasErrors(['data.toppings']);
+});
+
 test('entry can store rows of data for a replicator field', function () {
     $this->actingAs(User::factory()->create());
 

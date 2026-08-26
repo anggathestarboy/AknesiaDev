@@ -382,6 +382,30 @@ class EntryForm extends Component
                 continue;
             }
 
+            if ($field['type'] === 'checkbox') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+                $rules["{$key}.*"] = [Rule::in($field['options'] ?? [])];
+
+                continue;
+            }
+
             $fieldRules = [];
 
             if ($field['validate_sometimes'] ?? false) {
@@ -394,7 +418,7 @@ class EntryForm extends Component
                 'number' => 'numeric',
                 'toggle' => 'boolean',
                 'date' => 'date',
-                'select' => Rule::in($field['options'] ?? []),
+                'select', 'radio' => Rule::in($field['options'] ?? []),
                 default => 'string',
             };
 

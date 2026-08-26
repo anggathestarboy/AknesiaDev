@@ -729,3 +729,68 @@ test('assets field max items cannot be less than min items', function () {
         ->call('save')
         ->assertHasErrors(['fields.0.max_items']);
 });
+
+test('radio field can be created with options and a default value', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'size', 'display' => '', 'type' => 'radio', 'required' => false, 'options' => 'small, medium, large', 'default' => 'medium'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('radio');
+    expect($field['options'])->toBe(['small', 'medium', 'large']);
+    expect($field['default'])->toBe('medium');
+});
+
+test('checkbox field stores its options and preset default values as arrays', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'default' => 'cheese, olives'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('checkbox');
+    expect($field['options'])->toBe(['cheese', 'olives', 'mushrooms']);
+    expect($field['default'])->toBe(['cheese', 'olives']);
+});
+
+test('checkbox field can be given a min and max selection count', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'min_items' => '1', 'max_items' => '2'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['min_items'])->toBe(1);
+    expect($field['max_items'])->toBe(2);
+});
+
+test('checkbox field max selections cannot be less than min selections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives', 'min_items' => '3', 'max_items' => '1'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.max_items']);
+});
