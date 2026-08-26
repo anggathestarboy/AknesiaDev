@@ -166,7 +166,7 @@ test('items can be reordered by drag-and-drop, persisted on save', function () {
     [$firstId, $secondId] = [$tree[0]['id'], $tree[1]['id']];
 
     Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
-        ->call('sortItem', $firstId, 1, 'root')
+        ->call('sortRoot', $firstId, 1)
         ->assertSet('tree.0.id', $secondId)
         ->assertSet('tree.1.id', $firstId)
         ->call('save');
@@ -174,6 +174,115 @@ test('items can be reordered by drag-and-drop, persisted on save', function () {
     $tree = $service->load($navigation->fresh());
     expect($tree[0]['id'])->toBe($secondId);
     expect($tree[1]['id'])->toBe($firstId);
+});
+
+test('a child can be moved to become a child of a different parent via the move menu', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = makeNavigation();
+    $service = app(NavigationTreeService::class);
+
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent A', 'url' => '/a']);
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent B', 'url' => '/b']);
+    $tree = $service->load($navigation);
+    [$parentAId, $parentBId] = [$tree[0]['id'], $tree[1]['id']];
+
+    $service->addItem($navigation, $parentAId, ['type' => 'internal', 'title' => 'Child', 'url' => '/a/child']);
+    $childId = $service->load($navigation)[0]['children'][0]['id'];
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->call('askMove', $childId)
+        ->assertSet('movingId', $childId)
+        ->set('moveTargetParentId', $parentBId)
+        ->call('confirmMove')
+        ->call('save');
+
+    $tree = $service->load($navigation->fresh());
+    expect($tree[0]['children'])->toBe([]);
+    expect($tree[1]['children'])->toHaveCount(1);
+    expect($tree[1]['children'][0]['id'])->toBe($childId);
+});
+
+test('a child can be promoted to level 1 via the move menu', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = makeNavigation();
+    $service = app(NavigationTreeService::class);
+
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent', 'url' => '/parent']);
+    $parentId = $service->load($navigation)[0]['id'];
+    $service->addItem($navigation, $parentId, ['type' => 'internal', 'title' => 'Child', 'url' => '/child']);
+    $childId = $service->load($navigation)[0]['children'][0]['id'];
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->call('askMove', $childId)
+        ->call('confirmMove')
+        ->call('save');
+
+    $tree = $service->load($navigation->fresh());
+    expect($tree)->toHaveCount(2);
+    expect($tree[0]['children'])->toBe([]);
+    expect($tree[1]['id'])->toBe($childId);
+});
+
+test('moving a parent with children under another parent requires resolving its children first', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = makeNavigation();
+    $service = app(NavigationTreeService::class);
+
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent A', 'url' => '/a']);
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent B', 'url' => '/b']);
+    $tree = $service->load($navigation);
+    [$parentAId, $parentBId] = [$tree[0]['id'], $tree[1]['id']];
+    $service->addItem($navigation, $parentAId, ['type' => 'internal', 'title' => 'Child', 'url' => '/a/child']);
+
+    // Without choosing a children strategy, the move is rejected and nothing changes.
+    $component = Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->call('askMove', $parentAId)
+        ->set('moveTargetParentId', $parentBId)
+        ->call('confirmMove');
+
+    expect($component->get('tree')[0]['id'])->toBe($parentAId);
+    expect($component->get('tree')[0]['children'])->toHaveCount(1);
+
+    // Choosing "promote" moves the parent under Parent B and lifts its child to level 1.
+    $component->set('moveChildrenStrategy', 'promote')
+        ->call('confirmMove')
+        ->call('save');
+
+    $tree = $service->load($navigation->fresh());
+    expect($tree)->toHaveCount(2);
+    expect(collect($tree)->pluck('title')->all())->toContain('Child');
+    $parentB = collect($tree)->firstWhere('id', $parentBId);
+    expect($parentB['children'][0]['id'])->toBe($parentAId);
+    expect($parentB['children'][0]['children'])->toBe([]);
+});
+
+test('moving a parent with children under another parent can delete the children instead', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = makeNavigation();
+    $service = app(NavigationTreeService::class);
+
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent A', 'url' => '/a']);
+    $service->addItem($navigation, null, ['type' => 'internal', 'title' => 'Parent B', 'url' => '/b']);
+    $tree = $service->load($navigation);
+    [$parentAId, $parentBId] = [$tree[0]['id'], $tree[1]['id']];
+    $service->addItem($navigation, $parentAId, ['type' => 'internal', 'title' => 'Child', 'url' => '/a/child']);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->call('askMove', $parentAId)
+        ->set('moveTargetParentId', $parentBId)
+        ->set('moveChildrenStrategy', 'delete')
+        ->call('confirmMove')
+        ->call('save');
+
+    $tree = $service->load($navigation->fresh());
+    expect($tree)->toHaveCount(1);
+    expect($tree[0]['id'])->toBe($parentBId);
+    expect($tree[0]['children'][0]['id'])->toBe($parentAId);
+    expect($tree[0]['children'][0]['children'])->toBe([]);
 });
 
 test('opening the item menu and duplicating copies the item as the next sibling', function () {

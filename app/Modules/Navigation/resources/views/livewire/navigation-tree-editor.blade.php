@@ -17,7 +17,7 @@
     </div>
 
 <section class="mx-auto mt-17 w-full max-w-6xl space-y-4 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-zinc-900">
-        <ul wire:sort="sortItem" wire:sort:group="items" wire:sort:group-id="root" class="space-y-2">
+        <ul wire:sort="sortRoot" class="space-y-2">
             @forelse ($tree as $i => $item)
                 <li wire:key="item-{{ $item['id'] }}" wire:sort:item="{{ $item['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
                     <div class="flex flex-wrap items-center gap-2 bg-zinc-50 p-3 dark:bg-zinc-800">
@@ -46,6 +46,7 @@
                                 class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
                             >
                                 <button type="button" wire:click.stop="duplicateItem('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate item') }}</button>
+                                <button type="button" wire:click.stop="askMove('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Move to...') }}</button>
                                 <button type="button" wire:click.stop="askDelete('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete item') }}</button>
                             </div>
                         </div>
@@ -79,7 +80,7 @@
                         </div>
 
                         @if ($item['children'] !== [])
-                            <ul wire:sort="sortItem" wire:sort:group="items" wire:sort:group-id="{{ $item['id'] }}" class="space-y-2 border-t border-zinc-200 bg-white p-3 pl-4 sm:pl-9 dark:border-zinc-700 dark:bg-zinc-900">
+                            <ul wire:sort="sortChildren" wire:sort:group-id="{{ $item['id'] }}" class="space-y-2 border-t border-zinc-200 bg-white p-3 pl-4 sm:pl-9 dark:border-zinc-700 dark:bg-zinc-900">
                                 @foreach ($item['children'] as $j => $child)
                                     <li wire:key="item-{{ $child['id'] }}" wire:sort:item="{{ $child['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
                                         <div class="flex flex-wrap items-center gap-2 bg-zinc-50 p-3 dark:bg-zinc-800">
@@ -106,6 +107,7 @@
                                                     class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
                                                 >
                                                     <button type="button" wire:click.stop="duplicateItem('{{ $child['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate item') }}</button>
+                                                    <button type="button" wire:click.stop="askMove('{{ $child['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Move to...') }}</button>
                                                     <button type="button" wire:click.stop="askDelete('{{ $child['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete item') }}</button>
                                                 </div>
                                             </div>
@@ -160,6 +162,34 @@
                     <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
                 <flux:button variant="danger" wire:click="confirmDelete">{{ __('Delete') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="move-item" class="max-w-sm">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('Move item') }}</flux:heading>
+
+            <flux:select wire:model.live="moveTargetParentId" :label="__('Move under')">
+                <flux:select.option value="">{{ __('Level 1 (no parent)') }}</flux:select.option>
+                @foreach ($this->moveTargets as $target)
+                    <flux:select.option value="{{ $target['id'] }}">{{ $target['title'] !== '' ? $target['title'] : __('(untitled)') }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            @if ($moveTargetParentId !== '' && $this->movingItemHasChildren())
+                <flux:select wire:model="moveChildrenStrategy" :label="__('This item has children. What should happen to them?')">
+                    <flux:select.option value="">{{ __('Choose an option') }}</flux:select.option>
+                    <flux:select.option value="promote">{{ __('Move them to level 1') }}</flux:select.option>
+                    <flux:select.option value="delete">{{ __('Delete them') }}</flux:select.option>
+                </flux:select>
+            @endif
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button variant="primary" wire:click="confirmMove">{{ __('Move') }}</flux:button>
             </div>
         </div>
     </flux:modal>

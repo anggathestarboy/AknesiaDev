@@ -36,6 +36,23 @@ class NavigationTreeEditor extends Component
      */
     public ?string $deletingId = null;
 
+    /**
+     * Id of the item being relocated in the move modal.
+     */
+    public ?string $movingId = null;
+
+    /**
+     * Id of the chosen new parent, or '' for "level 1 (no parent)".
+     */
+    public string $moveTargetParentId = '';
+
+    /**
+     * What to do with the moved item's own children if moving it under
+     * another parent would otherwise exceed the max depth: 'promote' (make
+     * them level 1 siblings) or 'delete'.
+     */
+    public string $moveChildrenStrategy = '';
+
     public function mount(Navigation $navigation): void
     {
         $this->navigation = $navigation;
@@ -101,18 +118,102 @@ class NavigationTreeEditor extends Component
         Flux::modal('confirm-delete-item')->close();
     }
 
-    public function sortItem($id, $position, $groupId): void
+    /**
+     * Reorders within the root list only. Cross-parent moves go through
+     * askMove()/confirmMove() instead — dragging an item between separate
+     * sortable lists (root <-> a parent's children) was unreliable and
+     * could corrupt sibling data, so each list here only reorders itself.
+     */
+    public function sortRoot($id, $position): void
     {
+        $this->tree = $this->treeService()->withMovedItem($this->tree, $id, null, (int) $position);
+    }
+
+    /**
+     * Reorders within one parent's children list only. See sortRoot().
+     */
+    public function sortChildren($id, $position, $parentId): void
+    {
+        $this->tree = $this->treeService()->withMovedItem($this->tree, $id, $parentId, (int) $position);
+    }
+
+    public function askMove(string $id): void
+    {
+        $this->movingId = $id;
+        $this->moveTargetParentId = '';
+        $this->moveChildrenStrategy = '';
+        Flux::modal('move-item')->show();
+    }
+
+    /**
+     * Root items that $movingId can be moved under, i.e. every root item
+     * except itself (only root items can be parents, since depth is capped
+     * at 2 levels).
+     *
+     * @return array<int, array>
+     */
+    #[Computed]
+    public function moveTargets(): array
+    {
+        return collect($this->tree)
+            ->reject(fn (array $item): bool => $item['id'] === $this->movingId)
+            ->values()
+            ->all();
+    }
+
+    public function movingItemHasChildren(): bool
+    {
+        if ($this->movingId === null) {
+            return false;
+        }
+
+        $item = $this->treeService()->findItem($this->tree, $this->movingId);
+
+        return $item !== null && $item['children'] !== [];
+    }
+
+    public function confirmMove(): void
+    {
+        if ($this->movingId === null) {
+            return;
+        }
+
+        $service = $this->treeService();
+        $tree = $this->tree;
+        $targetParentId = $this->moveTargetParentId !== '' ? $this->moveTargetParentId : null;
+
+        $movingItem = $service->findItem($tree, $this->movingId);
+
+        if ($movingItem === null) {
+            return;
+        }
+
+        if ($movingItem['children'] !== [] && $targetParentId !== null) {
+            if ($this->moveChildrenStrategy === '') {
+                Flux::toast(variant: 'danger', text: __("Choose what happens to this item's children first."));
+
+                return;
+            }
+
+            $tree = $this->moveChildrenStrategy === 'promote'
+                ? $service->withPromotedChildren($tree, $this->movingId)
+                : $service->withClearedChildren($tree, $this->movingId);
+        }
+
+        $siblings = $targetParentId !== null
+            ? $service->findItem($tree, $targetParentId)['children']
+            : $tree;
+
         try {
-            $this->tree = $this->treeService()->withMovedItem(
-                $this->tree,
-                $id,
-                $groupId === 'root' ? null : $groupId,
-                (int) $position
-            );
+            $this->tree = $service->withMovedItem($tree, $this->movingId, $targetParentId, count($siblings));
         } catch (InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
         }
+
+        $this->movingId = null;
+        Flux::modal('move-item')->close();
     }
 
     /**

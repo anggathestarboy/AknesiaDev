@@ -121,6 +121,37 @@ class NavigationTreeService
     }
 
     /**
+     * Detaches an item's children and re-inserts them as root-level
+     * siblings, clearing the item's own children array. Used when moving a
+     * parent under another item would otherwise exceed the max depth.
+     *
+     * @param  array<int, array>  $tree
+     * @return array<int, array>
+     */
+    public function withPromotedChildren(array $tree, string $id): array
+    {
+        $item = $this->findItem($tree, $id);
+
+        if ($item === null || $item['children'] === []) {
+            return $tree;
+        }
+
+        $children = $item['children'];
+        $tree = $this->trees->updateNode($tree, $id, ['children' => []]);
+
+        return [...$tree, ...$children];
+    }
+
+    /**
+     * @param  array<int, array>  $tree
+     * @return array<int, array>
+     */
+    public function withClearedChildren(array $tree, string $id): array
+    {
+        return $this->trees->updateNode($tree, $id, ['children' => []]);
+    }
+
+    /**
      * Resolves the effective URL for a tree item. For `page` items this is
      * derived live from the referenced Entry's slug, so a slug change is
      * reflected automatically without touching the stored nav tree.
