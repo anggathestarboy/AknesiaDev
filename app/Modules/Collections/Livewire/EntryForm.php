@@ -5,11 +5,13 @@ namespace App\Modules\Collections\Livewire;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -48,6 +50,12 @@ class EntryForm extends Component
     public ?string $order = null;
 
     public string $blueprintHandle = '';
+
+    /**
+     * Which of the selected blueprint's tabs is currently shown — see
+     * blueprintTabs().
+     */
+    public string $activeTab = 'main';
 
     /**
      * The entry this one is a localization of — self-referencing, so
@@ -171,6 +179,23 @@ class EntryForm extends Component
         return $this->selectedBlueprint?->data['fields'] ?? [];
     }
 
+    /**
+     * Tabs the selected blueprint's top-level fields are grouped under —
+     * see App\Modules\Blueprints\Livewire\BlueprintManager for how these
+     * are defined. Falls back to a single "Main" tab for blueprints saved
+     * before tabs existed.
+     */
+    #[Computed]
+    public function blueprintTabs(): array
+    {
+        return $this->selectedBlueprint?->data['tabs'] ?? [['handle' => 'main', 'display' => 'Main']];
+    }
+
+    public function setActiveTab(string $handle): void
+    {
+        $this->activeTab = $handle;
+    }
+
     protected function defaultBlueprintHandle(): string
     {
         return $this->collection->effectiveBlueprint()?->handle
@@ -179,13 +204,159 @@ class EntryForm extends Component
 
     protected function fillData(?Entry $entry): void
     {
-        $this->data = [];
+        $this->data = $this->fillFieldsData($this->blueprintFields(), $entry?->data);
+    }
 
-        foreach ($this->blueprintFields() as $field) {
-            $this->data[$field['handle']] = $entry?->data[$field['handle']]
+    /**
+     * Recursively build a data array matching a field tree: a scalar value
+     * (or its default) per field, or — for a replicator — one filled row
+     * per existing entry, each row itself built the same way, to any depth.
+     */
+    protected function fillFieldsData(array $fields, ?array $existingData): array
+    {
+        $data = [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator') {
+                $existingRows = $existingData[$field['handle']] ?? [];
+                $data[$field['handle']] = array_map(
+                    fn (array $row): array => $this->fillFieldsData($field['replicator_fields'] ?? [], $row),
+                    $existingRows
+                );
+
+                continue;
+            }
+
+            if ($field['type'] === 'assets') {
+                $data[$field['handle']] = $existingData[$field['handle']] ?? [];
+
+                continue;
+            }
+
+            $data[$field['handle']] = $existingData[$field['handle']]
                 ?? $field['default']
                 ?? ($field['type'] === 'toggle' ? false : '');
         }
+
+        return $data;
+    }
+
+    /**
+     * Append a new, default-filled row to the replicator field located at
+     * $path — a list of field handles and row indexes describing where it
+     * lives in $this->data, e.g. ["sections", 2, "items"] for the "items"
+     * replicator inside row 2 of the top-level "sections" replicator.
+     */
+    public function addReplicatorRow(array $path): void
+    {
+        $field = $this->replicatorFieldAt($path);
+
+        if (! $field) {
+            return;
+        }
+
+        $rows = &$this->dataAt($path);
+        $rows[] = $this->fillFieldsData($field['replicator_fields'] ?? [], null);
+    }
+
+    public function removeReplicatorRow(array $path, int $rowIndex): void
+    {
+        $rows = &$this->dataAt($path);
+        unset($rows[$rowIndex]);
+        $rows = array_values($rows);
+    }
+
+    /**
+     * Remove a single asset id from the "assets" field located at $path —
+     * used by the "x" button on a selected asset's thumbnail.
+     */
+    public function removeAsset(array $path, int $assetId): void
+    {
+        $ids = &$this->dataAt($path);
+        $ids = collect($ids ?? [])->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => $id === $assetId)->values()->all();
+    }
+
+    /**
+     * Receives the result of the global asset picker modal (see
+     * App\Modules\Media\Livewire\AssetPicker) and writes it into the
+     * "assets" field it was opened for.
+     *
+     * @param  array<int, string|int>  $path
+     * @param  array<int, int>  $ids
+     */
+    #[On('assets-selected')]
+    public function assetsSelected(array $path, array $ids): void
+    {
+        $ref = &$this->dataAt($path);
+        $ref = array_values($ids);
+    }
+
+    /**
+     * Entries a "link" field may point to — every entry on this site,
+     * scoped to the field's allowed collections when configured.
+     *
+     * @param  array<int, string>  $allowedCollectionHandles
+     * @return \Illuminate\Support\Collection<int, Entry>
+     */
+    public function linkableEntries(array $allowedCollectionHandles)
+    {
+        return Entry::where('site', $this->site)
+            ->when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+            ->orderBy('collection')
+            ->orderBy('slug')
+            ->get();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, AssetMeta>
+     */
+    public function selectedAssets(array $ids)
+    {
+        if (empty($ids)) {
+            return collect();
+        }
+
+        $assets = AssetMeta::whereIn('id', $ids)->get()->keyBy('id');
+
+        return collect($ids)->map(fn ($id) => $assets->get((int) $id))->filter()->values();
+    }
+
+    /**
+     * The blueprint definition of the replicator field located at $path,
+     * found by walking the field tree using only the handle segments (row
+     * indexes don't affect which field definition applies).
+     */
+    protected function replicatorFieldAt(array $path): ?array
+    {
+        $fields = $this->blueprintFields();
+        $field = null;
+
+        foreach ($path as $segment) {
+            if (is_int($segment)) {
+                continue;
+            }
+
+            $field = collect($fields)->firstWhere('handle', $segment);
+
+            if (! $field) {
+                return null;
+            }
+
+            $fields = $field['replicator_fields'] ?? [];
+        }
+
+        return $field;
+    }
+
+    protected function &dataAt(array $path)
+    {
+        $ref = &$this->data;
+
+        foreach ($path as $segment) {
+            $ref = &$ref[$segment];
+        }
+
+        return $ref;
     }
 
     /**
@@ -197,19 +368,120 @@ class EntryForm extends Component
     {
         if ($name === 'blueprintHandle') {
             $this->fillData(null);
+            $this->activeTab = 'main';
         }
     }
 
     /**
      * Build Laravel validation rules per blueprint field, using the field's
-     * type, required flag, "sometimes" flag and custom rule string. Field
-     * conditions (show/hide) are not evaluated here — see docs/AI-CONTEXT.md.
+     * type, required flag, "sometimes" flag and custom rule string. A
+     * replicator recurses into its own sub-fields under a "*" wildcard per
+     * row, to any nesting depth. Field conditions (show/hide) are not
+     * evaluated here — see docs/AI-CONTEXT.md.
      */
     protected function fieldRules(): array
     {
+        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+    }
+
+    protected function fieldRulesFor(array $fields, string $prefix): array
+    {
         $rules = [];
 
-        foreach ($this->blueprintFields() as $field) {
+        foreach ($fields as $field) {
+            $key = "{$prefix}.{$field['handle']}";
+
+            if ($field['type'] === 'replicator') {
+                $rules[$key] = ['array'];
+                $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($field['type'] === 'assets') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+                $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
+
+                continue;
+            }
+
+            if ($field['type'] === 'checkbox') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+                $rules["{$key}.*"] = [Rule::in($field['options'] ?? [])];
+
+                continue;
+            }
+
+            if ($field['type'] === 'link') {
+                $linkRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $linkRules[] = 'sometimes';
+                }
+
+                $linkRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $linkRules[] = 'string';
+                $linkRules[] = 'max:2048';
+
+                $allowedCollections = $field['options'] ?? [];
+
+                $linkRules[] = function (string $attribute, mixed $value, \Closure $fail) use ($allowedCollections): void {
+                    if (! is_string($value) || ! str_starts_with($value, 'entry::')) {
+                        return;
+                    }
+
+                    $linkedEntry = Entry::find(substr($value, 7));
+
+                    if (! $linkedEntry) {
+                        $fail(__('The linked entry no longer exists.'));
+                    } elseif (! empty($allowedCollections) && ! in_array($linkedEntry->collection, $allowedCollections, true)) {
+                        $fail(__('The linked entry is not in an allowed collection.'));
+                    }
+                };
+
+                if (! empty($field['validation'])) {
+                    $linkRules[] = $field['validation'];
+                }
+
+                $rules[$key] = $linkRules;
+
+                continue;
+            }
+
             $fieldRules = [];
 
             if ($field['validate_sometimes'] ?? false) {
@@ -222,7 +494,7 @@ class EntryForm extends Component
                 'number' => 'numeric',
                 'toggle' => 'boolean',
                 'date' => 'date',
-                'select' => Rule::in($field['options'] ?? []),
+                'select', 'radio' => Rule::in($field['options'] ?? []),
                 default => 'string',
             };
 
@@ -230,7 +502,7 @@ class EntryForm extends Component
                 $fieldRules[] = $field['validation'];
             }
 
-            $rules["data.{$field['handle']}"] = $fieldRules;
+            $rules[$key] = $fieldRules;
         }
 
         return $rules;

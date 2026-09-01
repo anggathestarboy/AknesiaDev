@@ -6,6 +6,8 @@ use App\Modules\Collections\Livewire\EntryForm;
 use App\Modules\Collections\Livewire\EntryManager;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Media\Models\AssetContainer;
+use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Livewire\Livewire;
 
@@ -70,6 +72,51 @@ test('the blueprint query string parameter pre-selects the blueprint on the crea
     $response->assertDontSee('Headline');
 });
 
+test('entry form only shows fields belonging to the active tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'sidebar', 'display' => 'Sidebar'],
+        ],
+        'fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'sidebar'],
+        ],
+    ]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Headline')
+        ->assertDontSee('Seo Title')
+        ->call('setActiveTab', 'sidebar')
+        ->assertSee('Seo Title')
+        ->assertDontSee('Headline');
+});
+
+test('entry form shows a section heading and its fields, both grouped and ungrouped', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'seo', 'display' => 'SEO Settings'],
+            ]],
+        ],
+        'fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => ''],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => 'seo'],
+        ],
+    ]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Headline')
+        ->assertSee('SEO Settings')
+        ->assertSee('Seo Title');
+});
+
 test('entry can be created with dynamic fields from the collection blueprint', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
@@ -99,6 +146,426 @@ test('entry can be created with dynamic fields from the collection blueprint', f
         'status' => 'published',
         'title' => 'Hello World',
     ]);
+});
+
+test('entry create page renders the currently selected asset and an add button', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => ['mime_type' => 'image/webp']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'x', 'gallery' => [$asset->id]]]);
+
+    $this->get("/admin-panel/collections/blog/entries/{$entry->id}")
+        ->assertOk()
+        ->assertSee('sunset.webp', false);
+});
+
+test('entry receives the asset ids dispatched back by the asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => ['mime_type' => 'image/webp']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->dispatch('assets-selected', path: ['gallery'], ids: [$asset->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['gallery'])->toBe([$asset->id]);
+});
+
+test('removing a selected asset clears it from the field', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$asset->id])
+        ->call('removeAsset', ['gallery'], $asset->id)
+        ->assertSet('data.gallery', []);
+});
+
+test('assets field requires at least one asset when marked required', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
+});
+
+test('an asset id from a different container is rejected', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    AssetContainer::create(['handle' => 'documents', 'title' => 'Documents', 'disk' => 'public']);
+    $otherAsset = AssetMeta::create(['container' => 'documents', 'folder' => '', 'basename' => 'file.pdf', 'filename' => 'file', 'extension' => 'pdf', 'path' => 'file.pdf', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$otherAsset->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0']);
+});
+
+test('assets field enforces its configured minimum item count', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.webp', 'filename' => 'sunset', 'extension' => 'webp', 'path' => 'sunset.webp', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos', 'min_items' => 2, 'max_items' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$asset->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
+});
+
+test('assets field enforces its configured maximum item count', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $first = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'one.webp', 'filename' => 'one', 'extension' => 'webp', 'path' => 'one.webp', 'meta' => []]);
+    $second = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'two.webp', 'filename' => 'two', 'extension' => 'webp', 'path' => 'two.webp', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos', 'min_items' => null, 'max_items' => 1],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.gallery', [$first->id, $second->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
+});
+
+test('radio field defaults to its configured value and validates against its options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'size', 'display' => 'Size', 'type' => 'radio', 'required' => true, 'placeholder' => null, 'default' => 'medium', 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['small', 'medium', 'large']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSet('data.size', 'medium')
+        ->set('title', 'Hello World')
+        ->set('data.size', 'huge')
+        ->call('save')
+        ->assertHasErrors(['data.size']);
+});
+
+test('checkbox field stores an array of chosen options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'placeholder' => null, 'default' => [], 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['cheese', 'olives', 'mushrooms']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', ['cheese', 'olives'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['toppings'])->toBe(['cheese', 'olives']);
+});
+
+test('checkbox field rejects a value outside its options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'placeholder' => null, 'default' => [], 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['cheese', 'olives']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', ['pineapple'])
+        ->call('save')
+        ->assertHasErrors(['data.toppings.0']);
+});
+
+test('checkbox field enforces its configured minimum and maximum selection count', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'placeholder' => null, 'default' => [], 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['cheese', 'olives', 'mushrooms'], 'min_items' => 1, 'max_items' => 2],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', [])
+        ->call('save')
+        ->assertHasErrors(['data.toppings']);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.toppings', ['cheese', 'olives', 'mushrooms'])
+        ->call('save')
+        ->assertHasErrors(['data.toppings']);
+});
+
+test('link field can store a plain URL', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'CTA', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => []],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.cta', 'https://example.com')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->data['cta'])->toBe('https://example.com');
+});
+
+test('link field can store a reference to an allowed entry', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'CTA', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['blog']],
+    ]]]);
+    $collection = makeBlogCollection();
+    $target = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Target Post']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.cta', "entry::{$target->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $newEntry = Entry::where('data->title', 'Hello World')->sole();
+
+    expect($newEntry->data['cta'])->toBe("entry::{$target->id}");
+});
+
+test('link field rejects an entry outside its allowed collections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'CTA', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['pages']],
+    ]]]);
+    $collection = makeBlogCollection();
+    $target = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Target Post']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.cta', "entry::{$target->id}")
+        ->call('save')
+        ->assertHasErrors(['data.cta']);
+});
+
+test('entry can store rows of data for a replicator field', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+                ['handle' => 'featured', 'display' => 'Featured', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.0.caption', 'First image')
+        ->set('data.gallery.0.featured', true)
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.1.caption', 'Second image')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['gallery'])->toBe([
+        ['caption' => 'First image', 'featured' => true],
+        ['caption' => 'Second image', 'featured' => false],
+    ]);
+});
+
+test('replicator row requires its required sub-fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['gallery'])
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0.caption']);
+});
+
+test('replicator select sub-field must be one of its options', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'size', 'display' => 'Size', 'type' => 'select', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'options' => ['small', 'medium', 'large']],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.0.size', 'huge')
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0.size']);
+});
+
+test('replicator sub-field marked sometimes is not required when the row is absent', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => true],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('save')
+        ->assertHasNoErrors();
+});
+
+test('entry can store data for a replicator nested inside another replicator', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                [
+                    'handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false,
+                    'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+                    'validate_sometimes' => false, 'conditions' => null,
+                    'replicator_fields' => [
+                        ['handle' => 'label', 'display' => 'Label', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+                    ],
+                ],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['sections'])
+        ->call('addReplicatorRow', ['sections', 0, 'items'])
+        ->set('data.sections.0.items.0.label', 'First item')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['sections'])->toBe([
+        ['items' => [['label' => 'First item']]],
+    ]);
+});
+
+test('required label deep inside a nested replicator is still validated', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                [
+                    'handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false,
+                    'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+                    'validate_sometimes' => false, 'conditions' => null,
+                    'replicator_fields' => [
+                        ['handle' => 'label', 'display' => 'Label', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+                    ],
+                ],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('addReplicatorRow', ['sections'])
+        ->call('addReplicatorRow', ['sections', 0, 'items'])
+        ->call('save')
+        ->assertHasErrors(['data.sections.0.items.0.label']);
 });
 
 test('title is always required, regardless of the blueprint', function () {

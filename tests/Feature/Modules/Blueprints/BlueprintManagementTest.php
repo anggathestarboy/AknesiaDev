@@ -6,6 +6,7 @@ use App\Modules\Blueprints\Livewire\FieldsetManager;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
+use App\Modules\Media\Models\AssetContainer;
 use Livewire\Livewire;
 
 test('blueprints page is displayed', function () {
@@ -78,17 +79,22 @@ test('blueprint can be created with fields via the field builder', function () {
     expect($blueprint->namespace)->toBe('collections.blog');
     expect($blueprint->handle)->toBe('post');
     expect($blueprint->data)->toBe([
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'main', 'display' => 'Main'],
+            ]],
+        ],
         'fields' => [
             [
                 'handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => true,
                 'placeholder' => 'Enter a headline', 'default' => null, 'validation' => 'max:255', 'instructions' => 'Shown in listings.',
-                'validate_sometimes' => false, 'conditions' => null,
+                'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => null,
             ],
             [
                 'handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false,
                 'placeholder' => null, 'default' => 'draft', 'validation' => null, 'instructions' => null,
                 'validate_sometimes' => false, 'conditions' => null,
-                'options' => ['draft', 'published', 'archived'],
+                'options' => ['draft', 'published', 'archived'], 'tab' => 'main', 'section' => null,
             ],
         ],
     ]);
@@ -113,6 +119,7 @@ test('blueprint field can show when another field matches a value', function () 
         'placeholder' => null, 'default' => null, 'validation' => 'url', 'instructions' => null,
         'validate_sometimes' => true,
         'conditions' => ['mode' => 'show', 'field' => 'type', 'operator' => 'equals', 'value' => 'video'],
+        'tab' => 'main', 'section' => null,
     ]);
 });
 
@@ -312,6 +319,228 @@ test('blueprint field handle cannot be "title" — it is a reserved default fiel
         ->assertHasErrors(['fields.0.handle']);
 });
 
+test('replicator field can be created with sub-fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => true],
+                    ['handle' => 'featured', 'display' => '', 'type' => 'toggle', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+    $field = $blueprint->data['fields'][0];
+
+    expect($field['type'])->toBe('replicator');
+    expect($field['replicator_fields'])->toHaveCount(2);
+    expect($field['replicator_fields'][0])->toMatchArray(['handle' => 'caption', 'type' => 'text', 'required' => true]);
+});
+
+test('replicator field requires at least one sub-field', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields']);
+});
+
+test('replicator sub-field handle cannot be "title"', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.handle']);
+});
+
+test('replicator sub-field default value, placeholder and instructions round-trip through the blueprint builder', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => false,
+                        'placeholder' => 'Enter a caption', 'default' => 'Untitled', 'validation' => 'max:100', 'instructions' => 'Shown under the image',
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sub = Blueprint::sole()->data['fields'][0]['replicator_fields'][0];
+
+    expect($sub)->toMatchArray([
+        'placeholder' => 'Enter a caption',
+        'default' => 'Untitled',
+        'validation' => 'max:100',
+        'instructions' => 'Shown under the image',
+    ]);
+});
+
+test('replicator sub-field with an invalid validation rule string fails', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => false, 'validation' => 'not_a_real_rule'],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.validation']);
+});
+
+test('replicator field can contain another replicator, nested to any depth', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'sections', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'items', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                        'replicator_fields' => [
+                            ['handle' => 'label', 'display' => '', 'type' => 'text', 'required' => true],
+                        ],
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sections = Blueprint::sole()->data['fields'][0];
+
+    expect($sections['type'])->toBe('replicator');
+    expect($sections['replicator_fields'][0]['type'])->toBe('replicator');
+    expect($sections['replicator_fields'][0]['replicator_fields'][0])->toMatchArray([
+        'handle' => 'label', 'type' => 'text', 'required' => true,
+    ]);
+});
+
+test('nested replicator requires at least one sub-field, with an error at the correct depth', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'sections', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'items', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.replicator_fields']);
+});
+
+test('replicator sub-field can be a select with options and sometimes', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'size', 'display' => '', 'type' => 'select', 'required' => false,
+                        'options' => 'small, medium, large', 'sometimes' => true,
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sub = Blueprint::sole()->data['fields'][0]['replicator_fields'][0];
+
+    expect($sub['options'])->toBe(['small', 'medium', 'large']);
+    expect($sub['validate_sometimes'])->toBeTrue();
+});
+
+test('replicator sub-field can have a show-when condition scoped to its own sibling sub-fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'kind', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'image, video'],
+                    [
+                        'handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false,
+                        'condition_mode' => 'show', 'condition_field' => 'kind', 'condition_operator' => 'equals', 'condition_value' => 'video',
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $sub = Blueprint::sole()->data['fields'][0]['replicator_fields'][1];
+
+    expect($sub['conditions'])->toBe([
+        'mode' => 'show',
+        'field' => 'kind',
+        'operator' => 'equals',
+        'value' => 'video',
+    ]);
+});
+
+test('replicator sub-field condition cannot reference a field outside the replicator', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    [
+                        'handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false,
+                        'condition_mode' => 'show', 'condition_field' => 'does_not_exist', 'condition_operator' => 'equals', 'condition_value' => 'video',
+                    ],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.replicator_fields.0.condition_field']);
+});
+
 test('changing a field type resets its stale default value', function () {
     $this->actingAs(User::factory()->create());
 
@@ -320,6 +549,265 @@ test('changing a field type resets its stale default value', function () {
         ->set('fields.0.default', 'some text default')
         ->set('fields.0.type', 'toggle')
         ->assertSet('fields.0.default', '');
+});
+
+test('blueprint always has a reserved "main" tab that new fields default to', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->assertSet('tabs', [['handle' => 'main', 'display' => 'Main', 'sections' => [
+            ['handle' => 'main', 'display' => 'Main'],
+        ]]])
+        ->assertSet('fields.0.tab', 'main')
+        ->assertSet('fields.0.section', 'main');
+});
+
+test('blueprint can add a tab and assign a field to it', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'sidebar', 'display' => 'Sidebar'],
+        ])
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'sidebar'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    expect($blueprint->data['tabs'])->toBe([
+        ['handle' => 'main', 'display' => 'Main', 'sections' => []],
+        ['handle' => 'sidebar', 'display' => 'Sidebar', 'sections' => []],
+    ]);
+    expect($blueprint->data['fields'][0]['tab'])->toBe('main');
+    expect($blueprint->data['fields'][1]['tab'])->toBe('sidebar');
+});
+
+test('adding a field via a specific tab assigns it to that tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->call('addField', 'sidebar')
+        ->assertSet('fields.1.tab', 'sidebar')
+        ->assertSet('fields.0.tab', 'main');
+});
+
+test('moving a top-level field up or down only reorders within its own tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('fields.0.handle', 'main_one')
+        ->call('addField', 'sidebar')
+        ->set('fields.1.handle', 'sidebar_one')
+        ->call('addField')
+        ->set('fields.2.handle', 'main_two')
+        ->call('addField', 'sidebar')
+        ->set('fields.3.handle', 'sidebar_two')
+        // fields: [0]=main_one(main) [1]=sidebar_one(sidebar) [2]=main_two(main) [3]=sidebar_two(sidebar)
+        ->call('moveFieldDown', [1])
+        ->assertSet('fields.1.handle', 'sidebar_two')
+        ->assertSet('fields.3.handle', 'sidebar_one')
+        ->assertSet('fields.0.handle', 'main_one')
+        ->assertSet('fields.2.handle', 'main_two');
+});
+
+test('the "main" tab cannot be renamed or removed', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('tabs.0.handle', 'renamed')
+        ->call('removeTab', 0)
+        ->assertCount('tabs', 1)
+        ->set('handle', 'post')
+        ->set('fields.0.handle', 'headline')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Blueprint::sole()->data['tabs'])->toBe([
+        ['handle' => 'main', 'display' => 'Main', 'sections' => [
+            ['handle' => 'main', 'display' => 'Main'],
+        ]],
+    ]);
+});
+
+test('removing a tab reassigns its fields back to main', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('tabs.1.display', 'Sidebar')
+        ->set('fields.0.handle', 'seo_title')
+        ->set('fields.0.tab', 'sidebar')
+        ->call('removeTab', 1)
+        ->assertCount('tabs', 1)
+        ->assertSet('fields.0.tab', 'main');
+});
+
+test('a newly added tab opens in edit mode and can be closed once named', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->assertSet('editingTabIndex', null)
+        ->call('addTab')
+        ->assertSet('editingTabIndex', 1)
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('tabs.1.display', 'Sidebar')
+        ->set('editingTabIndex', null)
+        ->assertSet('editingTabIndex', null)
+        ->assertSet('tabs.1.handle', 'sidebar');
+});
+
+test('removing the tab currently being edited exits edit mode', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->assertSet('editingTabIndex', 1)
+        ->call('removeTab', 1)
+        ->assertSet('editingTabIndex', null);
+});
+
+test('a section can be added to a tab and a field assigned to it', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'seo', 'display' => 'SEO'],
+            ]],
+        ])
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => ''],
+            ['handle' => 'seo_title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'seo'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    expect($blueprint->data['tabs'][0]['sections'])->toBe([
+        ['handle' => 'seo', 'display' => 'SEO'],
+    ]);
+    expect($blueprint->data['fields'][0]['section'])->toBeNull();
+    expect($blueprint->data['fields'][1]['section'])->toBe('seo');
+});
+
+test('a freshly added, not-yet-named section does not duplicate ungrouped fields in the builder', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('fields.0.handle', 'headline')
+        ->set('fields.0.section', '')
+        ->call('addSection', 0);
+
+    $handleOccurrences = substr_count($component->html(), 'wire:model="fields.0.handle"');
+
+    expect($handleOccurrences)->toBe(1);
+});
+
+test('a newly added section opens in edit mode', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->assertSet('editingSection', null)
+        ->call('addSection', 0)
+        ->assertSet('editingSection', [0, 1])
+        ->set('tabs.0.sections.1.handle', 'seo')
+        ->set('editingSection', null)
+        ->assertSet('editingSection', null)
+        ->assertSet('tabs.0.sections.1.handle', 'seo');
+});
+
+test('removing a section ungroups its fields back to no section', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addSection', 0)
+        ->set('tabs.0.sections.1.handle', 'seo')
+        ->set('fields.0.handle', 'seo_title')
+        ->set('fields.0.section', 'seo')
+        ->call('removeSection', 0, 1)
+        ->assertCount('tabs.0.sections', 1)
+        ->assertSet('fields.0.section', '');
+});
+
+test('a field cannot be assigned to a section that does not exist in its tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'does_not_exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.section']);
+});
+
+test('a section handle must be unique within its tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main', 'sections' => [
+                ['handle' => 'seo', 'display' => 'SEO'],
+                ['handle' => 'seo', 'display' => 'Duplicate'],
+            ]],
+        ])
+        ->call('save')
+        ->assertHasErrors(['tabs.0.sections.1.handle']);
+});
+
+test('a new tab requires a unique, valid handle other than "main"', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->set('tabs', [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'main', 'display' => 'Duplicate'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['tabs.1.handle']);
+});
+
+test('a field cannot be assigned to a tab that does not exist', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'does_not_exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.tab']);
 });
 
 test('field builder can add, reorder and remove fields', function () {
@@ -332,12 +820,35 @@ test('field builder can add, reorder and remove fields', function () {
         ->assertCount('fields', 2)
         ->set('fields.0.handle', 'first')
         ->set('fields.1.handle', 'second')
-        ->call('moveFieldDown', 0)
+        ->set('fields.1.section', 'main')
+        ->call('moveFieldDown', [0])
         ->assertSet('fields.0.handle', 'second')
         ->assertSet('fields.1.handle', 'first')
-        ->call('removeField', 0)
+        ->call('removeField', [0])
         ->assertCount('fields', 1)
         ->assertSet('fields.0.handle', 'first');
+});
+
+test('field builder can add, reorder and remove fields nested inside a replicator, to any depth', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('fields.0.type', 'replicator')
+        ->call('addReplicatorField', [0])
+        ->assertCount('fields.0.replicator_fields', 1)
+        ->set('fields.0.replicator_fields.0.type', 'replicator')
+        ->call('addReplicatorField', [0, 0])
+        ->assertCount('fields.0.replicator_fields.0.replicator_fields', 1)
+        ->set('fields.0.replicator_fields.0.replicator_fields.0.handle', 'deep_field')
+        ->call('addReplicatorField', [0, 0])
+        ->set('fields.0.replicator_fields.0.replicator_fields.1.handle', 'deep_field_two')
+        ->call('moveFieldDown', [0, 0, 0])
+        ->assertSet('fields.0.replicator_fields.0.replicator_fields.0.handle', 'deep_field_two')
+        ->assertSet('fields.0.replicator_fields.0.replicator_fields.1.handle', 'deep_field')
+        ->call('removeField', [0, 0, 0])
+        ->assertCount('fields.0.replicator_fields.0.replicator_fields', 1)
+        ->assertSet('fields.0.replicator_fields.0.replicator_fields.0.handle', 'deep_field');
 });
 
 test('blueprint can be updated and fields round-trip through edit, including conditions', function () {
@@ -407,4 +918,192 @@ test('fieldset handle must be unique', function () {
         ->set('data', '{}')
         ->call('save')
         ->assertHasErrors(['handle']);
+});
+
+test('assets field can be created scoped to an asset container', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('assets');
+    expect($field['options'])->toBe('photos');
+});
+
+test('assets field requires an asset container to be selected', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
+});
+
+test('assets field container must reference an existing asset container', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'does-not-exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
+});
+
+test('assets field can be given a min and max item count', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '1', 'max_items' => '3'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['min_items'])->toBe(1);
+    expect($field['max_items'])->toBe(3);
+});
+
+test('assets field max items cannot be less than min items', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '5', 'max_items' => '2'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.max_items']);
+});
+
+test('radio field can be created with options and a default value', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'size', 'display' => '', 'type' => 'radio', 'required' => false, 'options' => 'small, medium, large', 'default' => 'medium'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('radio');
+    expect($field['options'])->toBe(['small', 'medium', 'large']);
+    expect($field['default'])->toBe('medium');
+});
+
+test('checkbox field stores its options and preset default values as arrays', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'default' => 'cheese, olives'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('checkbox');
+    expect($field['options'])->toBe(['cheese', 'olives', 'mushrooms']);
+    expect($field['default'])->toBe(['cheese', 'olives']);
+});
+
+test('checkbox field can be given a min and max selection count', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'min_items' => '1', 'max_items' => '2'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['min_items'])->toBe(1);
+    expect($field['max_items'])->toBe(2);
+});
+
+test('checkbox field max selections cannot be less than min selections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives', 'min_items' => '3', 'max_items' => '1'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.max_items']);
+});
+
+test('link field can be scoped to allowed collections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => []]);
+    Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'pages, blog'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('link');
+    expect($field['options'])->toBe(['pages', 'blog']);
+    expect($field['default'])->toBeNull();
+});
+
+test('link field can be left unrestricted (any collection allowed)', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Blueprint::sole()->data['fields'][0]['options'])->toBe([]);
+});
+
+test('link field rejects an allowed-collection handle that does not exist', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'does-not-exist'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
 });

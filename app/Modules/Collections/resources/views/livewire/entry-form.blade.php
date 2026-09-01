@@ -6,29 +6,65 @@
 
     <form wire:submit="save" class="grid grid-cols-3 gap-6">
         <div class="col-span-2 space-y-6">
-            @forelse ($this->blueprintFields() as $field)
+            @if (count($this->blueprintTabs) > 1)
+                <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
+                    @foreach ($this->blueprintTabs as $tab)
+                        <button
+                            type="button"
+                            wire:click="setActiveTab('{{ $tab['handle'] }}')"
+                            class="border-b-2 px-3 py-2 text-sm {{ $activeTab === $tab['handle'] ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' }}"
+                        >
+                            {{ $tab['display'] }}
+                        </button>
+                    @endforeach
+                </div>
+            @endif
+
+            @php
+                $activeTabDef = collect($this->blueprintTabs)->firstWhere('handle', $activeTab);
+                $tabSections = $activeTabDef['sections'] ?? [];
+                $tabFields = collect($this->blueprintFields())->filter(fn ($field) => ($field['tab'] ?? 'main') === $activeTab);
+                $ungroupedFields = $tabFields->filter(fn ($field) => ($field['section'] ?? '') === '');
+            @endphp
+
+            @forelse ($ungroupedFields as $field)
                 <div>
-                    @if ($field["type"] === "toggle")
-                        <flux:checkbox wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :description="$field['instructions']" />
-                    @elseif ($field["type"] === "select")
-                        <flux:select wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :description="$field['instructions']" :placeholder="$field['placeholder'] ?? __('Select an option')">
-                            @foreach ($field["options"] ?? [] as $option)
-                                <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                    @elseif ($field["type"] === "date")
-                        <flux:input type="date" wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :description="$field['instructions']" />
-                    @elseif ($field["type"] === "number")
-                        <flux:input type="number" wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
-                    @elseif ($field["type"] === "textarea" || $field["type"] === "markdown")
-                        <flux:textarea wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" rows="6" />
-                    @else
-                        <flux:input wire:model="data.{{ $field['handle'] }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
-                    @endif
+                    @include('collections::livewire.partials.entry-field', [
+                        'field' => $field,
+                        'path' => [$field['handle']],
+                        'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
+                        'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
+                        'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
+                    ])
                 </div>
             @empty
-                <flux:text class="text-zinc-500">{{ __("This blueprint has no fields yet.") }}</flux:text>
+                @if ($tabFields->isEmpty())
+                    <flux:text class="text-zinc-500">
+                        {{ count($this->blueprintFields()) === 0 ? __('This blueprint has no fields yet.') : __('No fields in this tab.') }}
+                    </flux:text>
+                @endif
             @endforelse
+
+            @foreach ($tabSections as $section)
+                @php $sectionFields = $tabFields->filter(fn ($field) => ($field['section'] ?? '') === $section['handle']); @endphp
+                @if ($sectionFields->isNotEmpty())
+                    <div class="space-y-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                        <flux:subheading>{{ $section['display'] }}</flux:subheading>
+
+                        @foreach ($sectionFields as $field)
+                            <div>
+                                @include('collections::livewire.partials.entry-field', [
+                                    'field' => $field,
+                                    'path' => [$field['handle']],
+                                    'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
+                                    'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
+                                    'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
+                                ])
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            @endforeach
         </div>
 
         <div class="col-span-1 space-y-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
@@ -80,4 +116,6 @@
             </div>
         </div>
     </form>
+
+    @livewire('media::asset-picker')
 </section>
