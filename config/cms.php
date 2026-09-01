@@ -19,4 +19,18 @@ return [
 
     'route' => env('CMS_ROUTE', 'admin-panel'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Protected Navigations
+    |--------------------------------------------------------------------------
+    |
+    | Navigation handles that must never be deleted, because other parts of
+    | the app depend on them existing (e.g. "sidebar-admin" drives the admin
+    | panel sidebar — see resources/views/layouts/app/sidebar.blade.php and
+    | the `admin:sidebar` console command).
+    |
+    */
+
+    'protected_navigations' => ['sidebar-admin'],
+
 ];
