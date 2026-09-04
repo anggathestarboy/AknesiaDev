@@ -59,11 +59,63 @@ class GlobalSetForm extends Component
         );
 
         $this->data = $this->fillFieldsData($this->blueprintFields(), $variable->data);
+
+        if (! $this->isOriginLocale()) {
+            $originVariable = GlobalSetVariable::firstOrCreate(
+                ['handle' => $globalSet->handle, 'locale' => $this->originLocale()],
+                ['data' => []]
+            );
+            $originData = $this->fillFieldsData($this->blueprintFields(), $originVariable->data);
+
+            $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
+        }
     }
 
     protected function activeLocale(): ?string
     {
         return $this->activeSite !== '' ? $this->activeSite : null;
+    }
+
+    /**
+     * The site whose value is authoritative for non-localizable fields —
+     * the same "default/origin" site GlobalSetManager forces into every
+     * global set's Languages list. Single-language global sets (no sites
+     * configured) have no site at all, so their one row (locale = null) is
+     * always the origin.
+     */
+    protected function originLocale(): ?string
+    {
+        $configuredSites = $this->globalSet->settings['sites'] ?? [];
+
+        if ($configuredSites === []) {
+            return null;
+        }
+
+        return Site::orderBy('order')->value('handle');
+    }
+
+    public function isOriginLocale(): bool
+    {
+        return $this->activeLocale() === $this->originLocale();
+    }
+
+    /**
+     * Overwrite non-localizable fields in $data with their value from
+     * $originData in place — a non-localizable field only ever has one
+     * value, always edited from the origin locale, so any other locale must
+     * always show/save that same value instead of its own.
+     */
+    protected function overlayNonLocalizableData(array $fields, array &$data, array $originData): void
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator') {
+                continue;
+            }
+
+            if (! ($field['localizable'] ?? false)) {
+                $data[$field['handle']] = $originData[$field['handle']] ?? $data[$field['handle']] ?? null;
+            }
+        }
     }
 
     /**
@@ -355,10 +407,20 @@ class GlobalSetForm extends Component
     public function save(): void
     {
         $validated = $this->validate($this->fieldRules());
+        $data = $validated['data'] ?? [];
+
+        if (! $this->isOriginLocale()) {
+            $originVariable = GlobalSetVariable::firstOrCreate(
+                ['handle' => $this->globalSet->handle, 'locale' => $this->originLocale()],
+                ['data' => []]
+            );
+
+            $this->overlayNonLocalizableData($this->blueprintFields(), $data, $originVariable->data);
+        }
 
         GlobalSetVariable::updateOrCreate(
             ['handle' => $this->globalSet->handle, 'locale' => $this->activeLocale()],
-            ['data' => $validated['data'] ?? []]
+            ['data' => $data]
         );
 
         Flux::toast(variant: 'success', text: __('Global set saved.'));

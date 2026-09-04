@@ -39,7 +39,7 @@
         <form wire:submit="save" class="space-y-6">
             <flux:heading size="lg">{{ $editingId ? __("Edit blueprint") : __("New blueprint") }}</flux:heading>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-4">
                 @if ($this->availableNamespaces->isEmpty())
                     <div>
                         <flux:text class="text-sm font-medium">{{ __("Namespace") }}</flux:text>
@@ -75,7 +75,7 @@
                         $ungroupedFieldIndexes = collect($fields)->keys()->filter(fn($i) => ($fields[$i]["tab"] ?? "main") === $tab["handle"] && ($fields[$i]["section"] ?? "") === "")->values();
                     @endphp
 
-                    <div class="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                    <div class="space-y-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700">
                         @if ($tabIndex !== 0 && $editingTabIndex === $tabIndex)
                             <div class="flex items-center gap-1">
                                 <flux:input wire:model="tabs.{{ $tabIndex }}.handle" placeholder="handle" size="sm" class="w-28" />

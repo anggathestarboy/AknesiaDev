@@ -29,13 +29,23 @@
 
             @forelse ($ungroupedFields as $field)
                 <div>
-                    @include('collections::livewire.partials.entry-field', [
-                        'field' => $field,
-                        'path' => [$field['handle']],
-                        'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
-                        'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
-                        'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
-                    ])
+                    @if (! ($field['localizable'] ?? false) && ! $this->isOriginLocale())
+                        <flux:field>
+                            <flux:label>{{ $field['display'] }}</flux:label>
+                            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
+                                {{ is_scalar($data[$field['handle']] ?? null) ? ($data[$field['handle']] ?: '—') : __('Set in the default language') }}
+                            </div>
+                            <flux:description>{{ __('Same for every language — edit it from the default language.') }}</flux:description>
+                        </flux:field>
+                    @else
+                        @include('collections::livewire.partials.entry-field', [
+                            'field' => $field,
+                            'path' => [$field['handle']],
+                            'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
+                            'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
+                            'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
+                        ])
+                    @endif
                 </div>
             @empty
                 @if ($tabFields->isEmpty())
@@ -60,13 +70,23 @@
 
                         @foreach ($sectionFields as $field)
                             <div>
-                                @include('collections::livewire.partials.entry-field', [
-                                    'field' => $field,
-                                    'path' => [$field['handle']],
-                                    'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
-                                    'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
-                                    'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
-                                ])
+                                @if (! ($field['localizable'] ?? false) && ! $this->isOriginLocale())
+                                    <flux:field>
+                                        <flux:label>{{ $field['display'] }}</flux:label>
+                                        <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
+                                            {{ is_scalar($data[$field['handle']] ?? null) ? ($data[$field['handle']] ?: '—') : __('Set in the default language') }}
+                                        </div>
+                                        <flux:description>{{ __('Same for every language — edit it from the default language.') }}</flux:description>
+                                    </flux:field>
+                                @else
+                                    @include('collections::livewire.partials.entry-field', [
+                                        'field' => $field,
+                                        'path' => [$field['handle']],
+                                        'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
+                                        'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
+                                        'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
+                                    ])
+                                @endif
                             </div>
                         @endforeach
                     </div>
