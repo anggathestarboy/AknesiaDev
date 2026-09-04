@@ -4,6 +4,7 @@ namespace App\Modules\Blueprints\Livewire;
 
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
+use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -126,18 +127,27 @@ class BlueprintManager extends Component
     }
 
     /**
-     * Blueprint namespaces are derived from existing collections (e.g. a
-     * "blog" collection gives the namespace "collections.blog"), mirroring
-     * how Statamic scopes blueprints to their collection.
+     * Blueprint namespaces are derived from existing collections and global
+     * sets (e.g. a "blog" collection gives the namespace "collections.blog",
+     * a "site-settings" global set gives "globals.site-settings"), mirroring
+     * how Statamic scopes blueprints to the thing they belong to.
      */
     #[Computed]
     public function availableNamespaces()
     {
-        return Collection::orderBy('title')->get()
+        $collectionNamespaces = Collection::orderBy('title')->get()
             ->map(fn (Collection $collection): array => [
                 'value' => "collections.{$collection->handle}",
                 'label' => "{$collection->title} (collections.{$collection->handle})",
             ]);
+
+        $globalSetNamespaces = GlobalSet::orderBy('title')->get()
+            ->map(fn (GlobalSet $globalSet): array => [
+                'value' => "globals.{$globalSet->handle}",
+                'label' => "{$globalSet->title} (globals.{$globalSet->handle})",
+            ]);
+
+        return $collectionNamespaces->concat($globalSetNamespaces)->values();
     }
 
     /**
@@ -823,7 +833,7 @@ class BlueprintManager extends Component
                 Rule::in($this->availableNamespaces->pluck('value')->all()),
             ],
             'handle' => [
-                'required', 'string', 'max:255',
+                'required', 'string', 'max:255', 'regex:/^[a-z][a-z0-9_]*$/',
                 Rule::unique('blueprints', 'handle')
                     ->where('namespace', $this->namespace ?: null)
                     ->ignore($this->editingId),

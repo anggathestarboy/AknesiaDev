@@ -1,0 +1,373 @@
+<?php
+
+namespace App\Modules\Globals\Livewire;
+
+use App\Modules\Collections\Models\Entry;
+use App\Modules\Globals\Models\GlobalSet;
+use App\Modules\Globals\Models\GlobalSetVariable;
+use App\Modules\Media\Models\AssetMeta;
+use App\Modules\Sites\Models\Site;
+use Flux\Flux;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
+use Livewire\Component;
+
+/**
+ * Editor for a single global set's values, rendered from its blueprint's
+ * fields — mirrors App\Modules\Collections\Livewire\EntryForm, reusing its
+ * field-rendering partial (collections::livewire.partials.entry-field) so
+ * every blueprint field type (including replicator/assets/link) works here
+ * too without duplicating that view.
+ */
+class GlobalSetForm extends Component
+{
+    public GlobalSet $globalSet;
+
+    public string $activeTab = 'main';
+
+    /**
+     * The site whose values are being edited, synced with ?site=... in the
+     * URL. Only meaningful when the global set supports more than one site
+     * (see GlobalSetManager::$sites) — otherwise values are stored under a
+     * null locale and this stays empty.
+     */
+    #[Url(as: 'site')]
+    public string $activeSite = '';
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $data = [];
+
+    public function mount(GlobalSet $globalSet): void
+    {
+        $this->globalSet = $globalSet;
+
+        $configuredSites = $globalSet->settings['sites'] ?? [];
+
+        if ($configuredSites !== [] && ! in_array($this->activeSite, $configuredSites, true)) {
+            $this->activeSite = $configuredSites[0];
+        }
+
+        $variable = GlobalSetVariable::firstOrCreate(
+            ['handle' => $globalSet->handle, 'locale' => $this->activeLocale()],
+            ['data' => []]
+        );
+
+        $this->data = $this->fillFieldsData($this->blueprintFields(), $variable->data);
+    }
+
+    protected function activeLocale(): ?string
+    {
+        return $this->activeSite !== '' ? $this->activeSite : null;
+    }
+
+    /**
+     * Site switcher links for the values page sidebar — only shown when the
+     * global set is configured for more than one site (see
+     * GlobalSetManager's "Languages" checkbox group). Same route as this
+     * page, just a different ?site=... query string.
+     *
+     * @return array<int, array{handle: string, name: string, active: bool, href: string}>
+     */
+    #[Computed]
+    public function siteLinks(): array
+    {
+        $configuredSites = $this->globalSet->settings['sites'] ?? [];
+
+        if (count($configuredSites) <= 1) {
+            return [];
+        }
+
+        return Site::whereIn('handle', $configuredSites)
+            ->orderBy('order')
+            ->get()
+            ->map(fn (Site $site): array => [
+                'handle' => $site->handle,
+                'name' => $site->name,
+                'active' => $site->handle === $this->activeLocale(),
+                'href' => route('globals.edit', ['globalSet' => $this->globalSet->handle, 'site' => $site->handle]),
+            ])
+            ->all();
+    }
+
+    #[Computed]
+    public function blueprintFields(): array
+    {
+        return $this->globalSet->effectiveBlueprint()?->data['fields'] ?? [];
+    }
+
+    #[Computed]
+    public function blueprintTabs(): array
+    {
+        return $this->globalSet->effectiveBlueprint()?->data['tabs'] ?? [['handle' => 'main', 'display' => 'Main']];
+    }
+
+    public function setActiveTab(string $handle): void
+    {
+        $this->activeTab = $handle;
+    }
+
+    /**
+     * Recursively build a data array matching a field tree — see
+     * EntryForm::fillFieldsData(), which this mirrors.
+     */
+    protected function fillFieldsData(array $fields, ?array $existingData): array
+    {
+        $data = [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator') {
+                $existingRows = $existingData[$field['handle']] ?? [];
+                $data[$field['handle']] = array_map(
+                    fn (array $row): array => $this->fillFieldsData($field['replicator_fields'] ?? [], $row),
+                    $existingRows
+                );
+
+                continue;
+            }
+
+            if ($field['type'] === 'assets') {
+                $data[$field['handle']] = $existingData[$field['handle']] ?? [];
+
+                continue;
+            }
+
+            $data[$field['handle']] = $existingData[$field['handle']]
+                ?? $field['default']
+                ?? ($field['type'] === 'toggle' ? false : '');
+        }
+
+        return $data;
+    }
+
+    public function addReplicatorRow(array $path): void
+    {
+        $field = $this->replicatorFieldAt($path);
+
+        if (! $field) {
+            return;
+        }
+
+        $rows = &$this->dataAt($path);
+        $rows[] = $this->fillFieldsData($field['replicator_fields'] ?? [], null);
+    }
+
+    public function removeReplicatorRow(array $path, int $rowIndex): void
+    {
+        $rows = &$this->dataAt($path);
+        unset($rows[$rowIndex]);
+        $rows = array_values($rows);
+    }
+
+    public function removeAsset(array $path, int $assetId): void
+    {
+        $ids = &$this->dataAt($path);
+        $ids = collect($ids ?? [])->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => $id === $assetId)->values()->all();
+    }
+
+    /**
+     * @param  array<int, string|int>  $path
+     * @param  array<int, int>  $ids
+     */
+    #[On('assets-selected')]
+    public function assetsSelected(array $path, array $ids): void
+    {
+        $ref = &$this->dataAt($path);
+        $ref = array_values($ids);
+    }
+
+    /**
+     * @return Collection<int, Entry>
+     */
+    public function linkableEntries(array $allowedCollectionHandles)
+    {
+        return Entry::when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+            ->orderBy('collection')
+            ->orderBy('slug')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, AssetMeta>
+     */
+    public function selectedAssets(array $ids)
+    {
+        if (empty($ids)) {
+            return collect();
+        }
+
+        $assets = AssetMeta::whereIn('id', $ids)->get()->keyBy('id');
+
+        return collect($ids)->map(fn ($id) => $assets->get((int) $id))->filter()->values();
+    }
+
+    protected function replicatorFieldAt(array $path): ?array
+    {
+        $fields = $this->blueprintFields();
+        $field = null;
+
+        foreach ($path as $segment) {
+            if (is_int($segment)) {
+                continue;
+            }
+
+            $field = collect($fields)->firstWhere('handle', $segment);
+
+            if (! $field) {
+                return null;
+            }
+
+            $fields = $field['replicator_fields'] ?? [];
+        }
+
+        return $field;
+    }
+
+    protected function &dataAt(array $path)
+    {
+        $ref = &$this->data;
+
+        foreach ($path as $segment) {
+            $ref = &$ref[$segment];
+        }
+
+        return $ref;
+    }
+
+    protected function fieldRules(): array
+    {
+        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+    }
+
+    protected function fieldRulesFor(array $fields, string $prefix): array
+    {
+        $rules = [];
+
+        foreach ($fields as $field) {
+            $key = "{$prefix}.{$field['handle']}";
+
+            if ($field['type'] === 'replicator') {
+                $rules[$key] = ['array'];
+                $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($field['type'] === 'assets') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+                $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
+
+                continue;
+            }
+
+            if ($field['type'] === 'checkbox') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+                $rules["{$key}.*"] = [Rule::in($field['options'] ?? [])];
+
+                continue;
+            }
+
+            if ($field['type'] === 'link') {
+                $linkRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $linkRules[] = 'sometimes';
+                }
+
+                $linkRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $linkRules[] = 'string';
+                $linkRules[] = 'max:2048';
+
+                if (! empty($field['validation'])) {
+                    $linkRules[] = $field['validation'];
+                }
+
+                $rules[$key] = $linkRules;
+
+                continue;
+            }
+
+            $fieldRules = [];
+
+            if ($field['validate_sometimes'] ?? false) {
+                $fieldRules[] = 'sometimes';
+            }
+
+            $fieldRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+
+            $fieldRules[] = match ($field['type']) {
+                'number' => 'numeric',
+                'toggle' => 'boolean',
+                'date' => 'date',
+                'select', 'radio' => Rule::in($field['options'] ?? []),
+                default => 'string',
+            };
+
+            if (! empty($field['validation'])) {
+                $fieldRules[] = $field['validation'];
+            }
+
+            $rules[$key] = $fieldRules;
+        }
+
+        return $rules;
+    }
+
+    public function save(): void
+    {
+        $validated = $this->validate($this->fieldRules());
+
+        GlobalSetVariable::updateOrCreate(
+            ['handle' => $this->globalSet->handle, 'locale' => $this->activeLocale()],
+            ['data' => $validated['data'] ?? []]
+        );
+
+        Flux::toast(variant: 'success', text: __('Global set saved.'));
+
+        $this->redirectRoute('globals.index', navigate: true);
+    }
+
+    public function render(): View
+    {
+        return view('globals::livewire.global-set-form');
+    }
+}
