@@ -1,6 +1,7 @@
 @php
     $field = array_merge(
         [
+            "_uid" => implode("-", $path),
             "handle" => "",
             "display" => "",
             "type" => "text",
@@ -27,13 +28,19 @@
     $fieldTabSections = collect($tabs ?? [])->firstWhere("handle", $field["tab"])["sections"] ?? [];
 @endphp
 
-<div wire:key="field-{{ implode('-', $path) }}" class="rounded-lg border border-gray-200 p-2 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: false }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
+<div wire:key="field-{{ $field['_uid'] }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 p-2 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: false }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
     <div class="flex items-start justify-between bg-gray-100 rounded-lg p-1 w-full">
-        <div class="col-span-1 flex items-end justify-end gap-1">
-            <flux:button size="sm" variant="ghost" icon="minus" type="button" class="cursor-pointer" x-show="!collapsed" x-on:click="collapsed = !collapsed" />
-            <flux:button size="sm" variant="ghost" icon="plus" type="button" class="cursor-pointer" x-show="collapsed" x-cloak x-on:click="collapsed = !collapsed" />
-            <flux:button size="sm" variant="ghost" icon="chevron-up" type="button" class="cursor-pointer" wire:click="moveFieldUp({{ $pathJson }})" :disabled="$isFirst ?? $index === 0" />
-            <flux:button size="sm" variant="ghost" icon="chevron-down" type="button" class="cursor-pointer" wire:click="moveFieldDown({{ $pathJson }})" :disabled="$isLast" />
+        <div class="col-span-1 flex items-center justify-end gap-1">
+            <span wire:sort:handle class="flex cursor-grab items-center px-1 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-300" title="{{ __('Drag to reorder') }}">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                    <circle cx="5" cy="3" r="1.3" />
+                    <circle cx="11" cy="3" r="1.3" />
+                    <circle cx="5" cy="8" r="1.3" />
+                    <circle cx="11" cy="8" r="1.3" />
+                    <circle cx="5" cy="13" r="1.3" />
+                    <circle cx="11" cy="13" r="1.3" />
+                </svg>
+            </span>
             <flux:button size="sm" variant="ghost" icon="trash" type="button" class="cursor-pointer" wire:click="removeField({{ $pathJson }})" />
         </div>
 
@@ -42,25 +49,32 @@
             <span class="text-zinc-400">({{ $fieldtypes[$field["type"]] ?? $field["type"] }})</span>
         </flux:text>
 
-        @if ($isTopLevelField && (count($tabs) > 1 || $fieldTabSections !== []))
-            <div class="flex gap-2">
-                @if (count($tabs) > 1)
-                    <flux:select wire:model.live="{{ $prefix }}.tab" size="sm">
-                        @foreach ($tabs as $tabOption)
-                            <flux:select.option value="{{ $tabOption['handle'] }}">{{ $tabOption["display"] ?: $tabOption["handle"] }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                @endif
+        <div class="">
+            <flux:button size="sm" variant="ghost" icon="minus" type="button" class="cursor-pointer" x-show="!collapsed" x-on:click="collapsed = !collapsed" />
+            <flux:button size="sm" variant="ghost" icon="plus" type="button" class="cursor-pointer" x-show="collapsed" x-cloak x-on:click="collapsed = !collapsed" />
+        </div>
 
-                @if ($fieldTabSections !== [])
-                    <flux:select wire:model="{{ $prefix }}.section" placeholder="{{ __('No section') }}" size="sm">
-                        @foreach ($fieldTabSections as $sectionOption)
-                            <flux:select.option value="{{ $sectionOption['handle'] }}">{{ $sectionOption["display"] ?: $sectionOption["handle"] }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                @endif
-            </div>
-        @endif
+        <div class="">
+            @if ($isTopLevelField && (count($tabs) > 1 || $fieldTabSections !== []))
+                <div class="flex gap-2">
+                    @if (count($tabs) > 1)
+                        <flux:select wire:model.live="{{ $prefix }}.tab" size="sm">
+                            @foreach ($tabs as $tabOption)
+                                <flux:select.option value="{{ $tabOption['handle'] }}">{{ $tabOption["display"] ?: $tabOption["handle"] }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    @endif
+
+                    @if ($fieldTabSections !== [])
+                        <flux:select wire:model="{{ $prefix }}.section" placeholder="{{ __('No section') }}" size="sm">
+                            @foreach ($fieldTabSections as $sectionOption)
+                                <flux:select.option value="{{ $sectionOption['handle'] }}">{{ $sectionOption["display"] ?: $sectionOption["handle"] }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    @endif
+                </div>
+            @endif
+        </div>
     </div>
 
     <div x-show="!collapsed" x-cloak>
@@ -246,21 +260,23 @@
                     <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
                 @enderror
 
-                @foreach ($field["replicator_fields"] ?? [] as $subIndex => $subField)
-                    @include ("blueprints::livewire.partials.field-editor",
-                        [
-                            "field" => $subField,
-                            "path" => [...$path, $subIndex],
-                            "prefix" => "{$prefix}.replicator_fields.{$subIndex}",
-                            "index" => $subIndex,
-                            "isLast" => $subIndex === count($field["replicator_fields"]) - 1,
-                            "siblings" => $field["replicator_fields"],
-                            "fieldtypes" => $fieldtypes,
-                            "conditionOperators" => $conditionOperators,
-                            "assetContainers" => $assetContainers,
-                            "linkableCollections" => $linkableCollections
-                        ])
-                @endforeach
+                <div wire:sort="reorderFields" wire:sort:group="blueprint-fields-replicator-{{ implode('-', $path) }}" wire:sort:group-id="{{ json_encode(['parentPath' => $path]) }}" class="space-y-2">
+                    @foreach ($field["replicator_fields"] ?? [] as $subIndex => $subField)
+                        @include ("blueprints::livewire.partials.field-editor",
+                            [
+                                "field" => $subField,
+                                "path" => [...$path, $subIndex],
+                                "prefix" => "{$prefix}.replicator_fields.{$subIndex}",
+                                "index" => $subIndex,
+                                "isLast" => $subIndex === count($field["replicator_fields"]) - 1,
+                                "siblings" => $field["replicator_fields"],
+                                "fieldtypes" => $fieldtypes,
+                                "conditionOperators" => $conditionOperators,
+                                "assetContainers" => $assetContainers,
+                                "linkableCollections" => $linkableCollections
+                            ])
+                    @endforeach
+                </div>
             </div>
         @endif
     </div>

@@ -290,6 +290,7 @@ class BlueprintManager extends Component
     protected function mapFieldFromStorage(array $field): array
     {
         return [
+            '_uid' => (string) Str::uuid(),
             'handle' => $field['handle'] ?? '',
             'display' => $field['display'] ?? '',
             'type' => $field['type'] ?? 'text',
@@ -317,7 +318,7 @@ class BlueprintManager extends Component
 
     public function addField(string $tab = 'main', string $section = ''): void
     {
-        $this->fields[] = array_merge($this->fieldDefaults(), ['tab' => $tab, 'section' => $section]);
+        $this->fields[] = array_merge($this->fieldDefaults(), ['tab' => $tab, 'section' => $section, '_uid' => (string) Str::uuid()]);
     }
 
     /**
@@ -328,7 +329,7 @@ class BlueprintManager extends Component
     public function addReplicatorField(array $path): void
     {
         $field = &$this->fieldAt($path);
-        $field['replicator_fields'][] = $this->fieldDefaults();
+        $field['replicator_fields'][] = array_merge($this->fieldDefaults(), ['_uid' => (string) Str::uuid()]);
     }
 
     public function removeField(array $path): void
@@ -337,6 +338,97 @@ class BlueprintManager extends Component
         $siblings = &$this->siblingsAt($path);
         unset($siblings[$index]);
         $siblings = array_values($siblings);
+    }
+
+    /**
+     * Drag-and-drop reorder handler for wire:sort (see field-editor.blade.php
+     * and the tab/section field lists in blueprint-manager.blade.php). $id
+     * is the dragged field's stable "_uid" (matching its wire:key, so
+     * Livewire's morph keeps the same DOM/Alpine state — e.g. a field's
+     * collapsed/expanded toggle — across the reorder instead of resetting
+     * it), and $position is its new zero-based position within that list.
+     * $groupId is JSON describing which list: {"tab":...,"section":...} for
+     * a top-level tab/section group, or {"parentPath":[...]} for a
+     * replicator's fields.
+     */
+    public function reorderFields(string $id, int $position, string $groupId): void
+    {
+        $group = json_decode($groupId, true) ?? [];
+        $parentPath = $group['parentPath'] ?? [];
+
+        if ($parentPath === []) {
+            $index = $this->findFieldIndexByUid($this->fields, $id);
+
+            if ($index === null) {
+                return;
+            }
+
+            $this->reorderTopLevelFields($index, $position, $group['tab'] ?? 'main', $group['section'] ?? '');
+
+            return;
+        }
+
+        $siblings = &$this->siblingsAt($parentPath);
+        $oldIndex = $this->findFieldIndexByUid($siblings, $id);
+
+        if ($oldIndex === null) {
+            return;
+        }
+
+        $values = array_values($siblings);
+        $moved = array_splice($values, $oldIndex, 1)[0];
+        array_splice($values, $position, 0, [$moved]);
+        $siblings = $values;
+    }
+
+    protected function findFieldIndexByUid(array $fields, string $uid): ?int
+    {
+        foreach ($fields as $index => $field) {
+            if (($field['_uid'] ?? null) === $uid) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Reorder within a tab/section group without disturbing other groups'
+     * positions in the flat $fields array — the absolute index slots a
+     * group occupies stay fixed, only the values assigned to them change,
+     * mirroring moveTopLevelField()'s swap-within-group approach.
+     */
+    protected function reorderTopLevelFields(int $index, int $position, string $tab, string $section): void
+    {
+        if (! array_key_exists($index, $this->fields)) {
+            return;
+        }
+
+        // Dropping into a different tab/section moves the field there —
+        // update it before computing the group, so a cross-group drag
+        // relocates the field instead of being silently ignored.
+        $this->fields[$index]['tab'] = $tab;
+        $this->fields[$index]['section'] = $section;
+
+        $groupIndexes = array_values(array_filter(
+            array_keys($this->fields),
+            fn (int $i): bool => ($this->fields[$i]['tab'] ?? 'main') === $tab && ($this->fields[$i]['section'] ?? '') === $section
+        ));
+
+        $oldPosition = array_search($index, $groupIndexes, true);
+
+        if ($oldPosition === false) {
+            return;
+        }
+
+        $orderedValues = array_map(fn (int $i): array => $this->fields[$i], $groupIndexes);
+        $moved = array_splice($orderedValues, $oldPosition, 1)[0];
+        $position = max(0, min($position, count($orderedValues)));
+        array_splice($orderedValues, $position, 0, [$moved]);
+
+        foreach ($groupIndexes as $slotPosition => $absoluteIndex) {
+            $this->fields[$absoluteIndex] = $orderedValues[$slotPosition];
+        }
     }
 
     public function moveFieldUp(array $path): void

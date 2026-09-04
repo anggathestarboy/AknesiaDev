@@ -664,6 +664,105 @@ test('moving a top-level field up or down only reorders within its own tab', fun
         ->assertSet('fields.2.handle', 'main_two');
 });
 
+test('dragging a top-level field only reorders within its own tab/section group', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('fields.0.handle', 'main_one')
+        ->call('addField', 'sidebar')
+        ->set('fields.1.handle', 'sidebar_one')
+        ->call('addField')
+        ->set('fields.2.handle', 'main_two')
+        ->call('addField', 'sidebar')
+        ->set('fields.3.handle', 'sidebar_two');
+
+    // fields: [0]=main_one(main) [1]=sidebar_one(sidebar) [2]=main_two(main) [3]=sidebar_two(sidebar)
+    // Drag sidebar_one (by its stable _uid) to position 1 within the "sidebar" group.
+    $component
+        ->call('reorderFields', $component->get('fields.1._uid'), 1, json_encode(['tab' => 'sidebar', 'section' => '']))
+        ->assertSet('fields.1.handle', 'sidebar_two')
+        ->assertSet('fields.3.handle', 'sidebar_one')
+        ->assertSet('fields.0.handle', 'main_one')
+        ->assertSet('fields.2.handle', 'main_two');
+});
+
+test('dragging a top-level field into another section moves it there', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addSection', 0)
+        ->set('tabs.0.sections.0.handle', 'intro')
+        ->call('addSection', 0)
+        ->set('tabs.0.sections.1.handle', 'meta')
+        ->set('fields.0.handle', 'ungrouped_one')
+        ->call('addField', 'main', 'intro')
+        ->set('fields.1.handle', 'intro_one')
+        ->call('addField', 'main', 'meta')
+        ->set('fields.2.handle', 'meta_one');
+
+    // fields: [0]=ungrouped_one(no section) [1]=intro_one(intro) [2]=meta_one(meta)
+    // Drag ungrouped_one (by its stable _uid) into the "meta" section, after meta_one.
+    $component
+        ->call('reorderFields', $component->get('fields.0._uid'), 1, json_encode(['tab' => 'main', 'section' => 'meta']))
+        ->assertSet('fields.0.handle', 'meta_one')
+        ->assertSet('fields.2.handle', 'ungrouped_one')
+        ->assertSet('fields.2.section', 'meta');
+});
+
+test('dragging a top-level field into another tab moves it there', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->call('addTab')
+        ->set('tabs.1.handle', 'seo_tools')
+        ->set('fields.0.handle', 'main_one')
+        ->call('addField', 'seo_tools')
+        ->set('fields.1.handle', 'seo_one');
+
+    // fields: [0]=main_one(main) [1]=seo_one(seo_tools)
+    // Drag main_one (by its stable _uid) into the "seo_tools" tab, after seo_one.
+    $component
+        ->call('reorderFields', $component->get('fields.0._uid'), 1, json_encode(['tab' => 'seo_tools', 'section' => '']))
+        ->assertSet('fields.0.tab', 'seo_tools')
+        ->assertSet('fields.1.handle', 'main_one');
+});
+
+test('dragging a replicator sub-field reorders within that replicator only', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('fields.0.type', 'replicator')
+        ->call('addReplicatorField', [0])
+        ->set('fields.0.replicator_fields.0.handle', 'first')
+        ->call('addReplicatorField', [0])
+        ->set('fields.0.replicator_fields.1.handle', 'second')
+        ->call('addReplicatorField', [0])
+        ->set('fields.0.replicator_fields.2.handle', 'third');
+
+    // Drag "first" (by its stable _uid) to the last position.
+    $component
+        ->call('reorderFields', $component->get('fields.0.replicator_fields.0._uid'), 2, json_encode(['parentPath' => [0]]))
+        ->assertSet('fields.0.replicator_fields.0.handle', 'second')
+        ->assertSet('fields.0.replicator_fields.1.handle', 'third')
+        ->assertSet('fields.0.replicator_fields.2.handle', 'first');
+});
+
+test('reordering ignores an unknown field id', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->call('create')
+        ->set('fields.0.handle', 'only_field')
+        ->call('reorderFields', 'not-a-real-uid', 0, json_encode(['tab' => 'main', 'section' => '']))
+        ->assertSet('fields.0.handle', 'only_field');
+});
+
 test('the "main" tab cannot be renamed or removed', function () {
     $this->actingAs(User::factory()->create());
 

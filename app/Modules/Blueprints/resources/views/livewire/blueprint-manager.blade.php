@@ -106,7 +106,7 @@
                             </div>
                         @endif
 
-                        <div class="space-y-3">
+                        <div class="space-y-3" wire:sort="reorderFields" wire:sort:group="blueprint-fields" wire:sort:group-id="{{ json_encode(['tab' => $tab['handle'], 'section' => '']) }}">
                             @forelse ($ungroupedFieldIndexes as $position => $index)
                                 @include ("blueprints::livewire.partials.field-editor",
                                     [
@@ -159,6 +159,7 @@
                                     </div>
                                 @endif
 
+                                <div wire:sort="reorderFields" wire:sort:group="blueprint-fields" wire:sort:group-id="{{ json_encode(['tab' => $tab['handle'], 'section' => $section['handle']]) }}" class="space-y-3">
                                 @forelse ($sectionFieldIndexes as $position => $index)
                                     @include ("blueprints::livewire.partials.field-editor",
                                         [
@@ -178,6 +179,7 @@
                                 @empty
                                     <flux:text class="text-sm text-zinc-500">{{ __("No fields in this section yet.") }}</flux:text>
                                 @endforelse
+                                </div>
                             </div>
                         @endforeach
                     </div>
