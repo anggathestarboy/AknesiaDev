@@ -27,7 +27,7 @@
     $fieldTabSections = collect($tabs ?? [])->firstWhere("handle", $field["tab"])["sections"] ?? [];
 @endphp
 
-<div wire:key="field-{{ implode('-', $path) }}" class="rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" x-data="{ collapsed: false }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
+<div wire:key="field-{{ implode('-', $path) }}" class="rounded-lg border border-gray-200 p-2 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: false }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
     <div class="flex items-start justify-between bg-gray-100 rounded-lg p-1 w-full">
         <div class="col-span-1 flex items-end justify-end gap-1">
             <flux:button size="sm" variant="ghost" icon="minus" type="button" class="cursor-pointer" x-show="!collapsed" x-on:click="collapsed = !collapsed" />
