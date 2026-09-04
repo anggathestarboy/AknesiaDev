@@ -53,7 +53,7 @@
                     </flux:select>
                 @endif
 
-                <flux:input wire:model="handle" :label="__('Handle')" required />
+                <flux:input wire:model="handle" :label="__('Handle')" description:trailing="{{ __('Lowercase letters, numbers and underscores only — no spaces.') }}" required />
             </div>
 
             <div class="space-y-3">

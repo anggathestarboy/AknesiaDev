@@ -6,6 +6,7 @@ use App\Modules\Blueprints\Livewire\FieldsetManager;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
+use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
 use Livewire\Livewire;
 
@@ -23,6 +24,26 @@ test('namespace options are derived from existing collections', function () {
     Livewire::test(BlueprintManager::class)
         ->assertSee('collections.blog')
         ->assertSee('collections.pages');
+});
+
+test('namespace options also include existing global sets, and a globals-namespaced blueprint can be edited', function () {
+    $this->actingAs(User::factory()->create());
+    GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site-settings', 'settings' => []]);
+
+    Livewire::test(BlueprintManager::class)->assertSee('globals.site-settings');
+
+    $blueprint = Blueprint::create(['namespace' => 'globals.site-settings', 'handle' => 'default', 'data' => ['fields' => []]]);
+
+    Livewire::test(BlueprintManager::class)
+        ->call('edit', $blueprint->id)
+        ->assertSet('namespace', 'globals.site-settings')
+        ->set('fields', [
+            ['handle' => 'site_name', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($blueprint->fresh()->data['fields'])->toHaveCount(1);
 });
 
 test('a message is shown when no collections exist yet for the namespace picker', function () {
@@ -44,6 +65,26 @@ test('blueprint namespace must match an existing collection', function () {
         ])
         ->call('save')
         ->assertHasErrors(['namespace']);
+});
+
+test('blueprint handle rejects spaces and dashes', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'blog post')
+        ->set('fields', [
+            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['handle']);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'blog-post')
+        ->set('fields', [
+            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['handle']);
 });
 
 test('blueprint can be created with no namespace', function () {
