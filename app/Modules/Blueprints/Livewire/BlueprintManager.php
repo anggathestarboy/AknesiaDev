@@ -2,6 +2,7 @@
 
 namespace App\Modules\Blueprints\Livewire;
 
+use App\Models\Taxonomy;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Globals\Models\GlobalSet;
@@ -147,7 +148,13 @@ class BlueprintManager extends Component
                 'label' => "{$globalSet->title} (globals.{$globalSet->handle})",
             ]);
 
-        return $collectionNamespaces->concat($globalSetNamespaces)->values();
+        $taxonomyNamespaces = Taxonomy::orderBy('title')->get()
+            ->map(fn (Taxonomy $taxonomy): array => [
+                'value' => "taxonomies.{$taxonomy->handle}",
+                'label' => "{$taxonomy->title} (taxonomies.{$taxonomy->handle})",
+            ]);
+
+        return $collectionNamespaces->concat($globalSetNamespaces)->concat($taxonomyNamespaces)->values();
     }
 
     /**
