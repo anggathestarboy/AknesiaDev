@@ -12,7 +12,7 @@ class TaxonomyTerm extends Model
 {
     use HasFlexibleData;
 
-    protected $fillable = ['site', 'origin_id', 'slug', 'uri', 'taxonomy', 'data'];
+    protected $fillable = ['site', 'origin_id', 'slug', 'uri', 'taxonomy', 'blueprint', 'data'];
 
     protected $casts = [
         'data' => 'array',

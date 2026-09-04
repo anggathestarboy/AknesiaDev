@@ -55,6 +55,7 @@ class SeedAdminSidebarCommand extends Command
             ['title' => 'Dashboard', 'url' => route('dashboard', absolute: false)],
             ['title' => 'Media Library', 'url' => route('media.index', absolute: false)],
             ['title' => 'Collections', 'url' => route('collections.index', absolute: false)],
+            ['title' => 'Taxonomies', 'url' => route('taxonomies.index', absolute: false)],
             ['title' => 'Globals', 'url' => route('globals.index', absolute: false)],
             ['title' => 'Blueprints', 'url' => route('blueprints.index', absolute: false)],
             ['title' => 'Sites', 'url' => route('sites.sites.index', absolute: false)],
