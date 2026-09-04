@@ -966,6 +966,46 @@ test('switching site on an existing entry links to its sibling entry when one al
     expect($englishLink['href'])->toBe(route('collections.entries.edit', ['collection' => 'blog', 'entry' => $translation->id]));
 });
 
+test('non-localizable fields share one value from the default site across all languages', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeBlogCollection();
+    makeSites();
+
+    Blueprint::create([
+        'namespace' => null,
+        'handle' => 'post',
+        'data' => ['fields' => [
+            ['handle' => 'rating', 'display' => 'Rating', 'type' => 'number', 'required' => false, 'localizable' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+            ['handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => true, 'localizable' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['draft', 'published']],
+        ]],
+    ]);
+
+    $original = Entry::create([
+        'site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post',
+        'data' => ['title' => 'Halo', 'rating' => '5', 'status' => 'draft'],
+    ]);
+
+    $translation = Entry::create([
+        'site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $original->id,
+        'data' => ['title' => 'Hello', 'rating' => '999', 'status' => 'draft'],
+    ]);
+
+    // Loading the English entry pulls "rating" back from the origin, ignoring its own stale value.
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $translation])
+        ->assertSet('data.rating', '5')
+        ->assertSet('data.status', 'draft')
+        ->set('data.rating', '42')
+        ->set('data.status', 'published')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $translation->refresh();
+
+    expect($translation->data['rating'])->toBe('5');
+    expect($translation->data['status'])->toBe('published');
+    expect($original->fresh()->data['rating'])->toBe('5');
+});
+
 test('switching site on an entry without a translation links to a create page carrying the origin', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();

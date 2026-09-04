@@ -287,6 +287,7 @@ class BlueprintManager extends Component
             'display' => $field['display'] ?? '',
             'type' => $field['type'] ?? 'text',
             'required' => (bool) ($field['required'] ?? false),
+            'localizable' => (bool) ($field['localizable'] ?? false),
             'options' => is_array($field['options'] ?? null) ? implode(', ', $field['options']) : (string) ($field['options'] ?? ''),
             'placeholder' => $field['placeholder'] ?? '',
             'default' => is_array($field['default'] ?? null) ? implode(', ', $field['default']) : (string) ($field['default'] ?? ''),
@@ -552,7 +553,7 @@ class BlueprintManager extends Component
     protected function fieldDefaults(): array
     {
         return [
-            'handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '',
+            'handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'localizable' => false, 'options' => '',
             'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false,
             'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => '',
             'min_items' => '', 'max_items' => '', 'tab' => 'main', 'section' => '',
@@ -580,6 +581,7 @@ class BlueprintManager extends Component
             'display' => ['nullable', 'string', 'max:255'],
             'type' => ['required', Rule::in(array_keys(self::FIELDTYPES))],
             'required' => ['boolean'],
+            'localizable' => ['boolean'],
             'options' => ['nullable', 'string'],
             'placeholder' => ['nullable', 'string', 'max:255'],
             'default' => ['nullable', 'string', 'max:255'],
@@ -709,6 +711,7 @@ class BlueprintManager extends Component
             'display' => $field['display'] ?: Str::headline($field['handle']),
             'type' => $field['type'],
             'required' => (bool) $field['required'],
+            'localizable' => (bool) ($field['localizable'] ?? false),
             'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator', 'assets'], true)
                 ? null
                 : (($field['placeholder'] ?? '') ?: null),

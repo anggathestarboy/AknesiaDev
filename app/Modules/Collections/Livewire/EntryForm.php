@@ -93,6 +93,60 @@ class EntryForm extends Component
         }
 
         $this->fillData($entry);
+
+        if (! $this->isOriginLocale()) {
+            $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
+            $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
+        }
+    }
+
+    /**
+     * The site treated as this collection's default/origin language — the
+     * first configured Site by order, same convention as
+     * GlobalSetManager::defaultSiteHandle().
+     */
+    protected function defaultSiteHandle(): ?string
+    {
+        return Site::orderBy('order')->value('handle');
+    }
+
+    public function isOriginLocale(): bool
+    {
+        $defaultSite = $this->defaultSiteHandle();
+
+        return $defaultSite === null || $this->site === $defaultSite;
+    }
+
+    /**
+     * The sibling entry (or this entry itself) on the default/origin site —
+     * authoritative source for non-localizable field values.
+     */
+    protected function originEntry(): ?Entry
+    {
+        if ($this->isOriginLocale()) {
+            return $this->editingId ? Entry::find($this->editingId) : null;
+        }
+
+        return $this->siblingEntryForSite($this->defaultSiteHandle());
+    }
+
+    /**
+     * Overwrite non-localizable fields in $data with their value from
+     * $originData in place — a non-localizable field only ever has one
+     * value, always edited from the origin site, so any other site must
+     * always show/save that same value instead of its own.
+     */
+    protected function overlayNonLocalizableData(array $fields, array &$data, array $originData): void
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator') {
+                continue;
+            }
+
+            if (! ($field['localizable'] ?? false)) {
+                $data[$field['handle']] = $originData[$field['handle']] ?? $data[$field['handle']] ?? null;
+            }
+        }
     }
 
     /**
@@ -525,6 +579,11 @@ class EntryForm extends Component
 
         $data = $validated['data'] ?? [];
         $data['title'] = $validated['title'];
+
+        if (! $this->isOriginLocale()) {
+            $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
+            $this->overlayNonLocalizableData($this->blueprintFields(), $data, $originData);
+        }
 
         Entry::updateOrCreate(['id' => $this->editingId], [
             'site' => $this->site,

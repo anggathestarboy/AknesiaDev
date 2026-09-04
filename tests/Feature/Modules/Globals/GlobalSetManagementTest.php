@@ -197,7 +197,7 @@ test('global set with two or more sites checked gets a language switcher keyed b
     makeSite('english', 1);
 
     Blueprint::create(['namespace' => null, 'handle' => 'footer', 'data' => ['fields' => [
-        ['handle' => 'copyright', 'display' => 'Copyright', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+        ['handle' => 'copyright', 'display' => 'Copyright', 'type' => 'text', 'required' => false, 'localizable' => true, 'placeholder' => null, 'default' => null, 'instructions' => null],
     ]]]);
 
     $globalSet = GlobalSet::create(['title' => 'Footer', 'handle' => 'footer', 'settings' => ['blueprint' => 'footer', 'sites' => ['indonesia', 'english']]]);
@@ -223,6 +223,41 @@ test('global set with two or more sites checked gets a language switcher keyed b
 
     $component = Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet]);
     expect($component->get('siteLinks'))->toHaveCount(2);
+});
+
+test('non-localizable fields share one value from the default site across all languages', function () {
+    $this->actingAs(User::factory()->create());
+    makeSite('indonesia', 0);
+    makeSite('english', 1);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'footer', 'data' => ['fields' => [
+        ['handle' => 'company_name', 'display' => 'Company name', 'type' => 'text', 'required' => false, 'localizable' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+        ['handle' => 'tagline', 'display' => 'Tagline', 'type' => 'text', 'required' => false, 'localizable' => true, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Footer', 'handle' => 'footer', 'settings' => ['blueprint' => 'footer', 'sites' => ['indonesia', 'english']]]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->assertSet('activeSite', 'indonesia')
+        ->set('data.company_name', 'Acme Inc')
+        ->set('data.tagline', 'Solusi terbaik')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // English editor shows Acme's shared value, but its own tagline.
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet, 'activeSite' => 'english'])
+        ->assertSet('data.company_name', 'Acme Inc')
+        ->assertSet('data.tagline', '')
+        ->set('data.tagline', 'Best solution')
+        ->set('data.company_name', 'Should be ignored')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $indonesian = GlobalSetVariable::where('handle', 'footer')->where('locale', 'indonesia')->sole();
+    $english = GlobalSetVariable::where('handle', 'footer')->where('locale', 'english')->sole();
+
+    expect($indonesian->data)->toBe(['company_name' => 'Acme Inc', 'tagline' => 'Solusi terbaik']);
+    expect($english->data)->toBe(['company_name' => 'Acme Inc', 'tagline' => 'Best solution']);
 });
 
 test('global set can be deleted along with its values', function () {

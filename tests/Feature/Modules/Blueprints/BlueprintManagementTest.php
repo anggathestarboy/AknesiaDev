@@ -127,12 +127,12 @@ test('blueprint can be created with fields via the field builder', function () {
         ],
         'fields' => [
             [
-                'handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => true,
+                'handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => true, 'localizable' => false,
                 'placeholder' => 'Enter a headline', 'default' => null, 'validation' => 'max:255', 'instructions' => 'Shown in listings.',
                 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main', 'section' => null,
             ],
             [
-                'handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false,
+                'handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false, 'localizable' => false,
                 'placeholder' => null, 'default' => 'draft', 'validation' => null, 'instructions' => null,
                 'validate_sometimes' => false, 'conditions' => null,
                 'options' => ['draft', 'published', 'archived'], 'tab' => 'main', 'section' => null,
@@ -156,7 +156,7 @@ test('blueprint field can show when another field matches a value', function () 
     $blueprint = Blueprint::sole();
 
     expect($blueprint->data['fields'][1])->toBe([
-        'handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false,
+        'handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false, 'localizable' => false,
         'placeholder' => null, 'default' => null, 'validation' => 'url', 'instructions' => null,
         'validate_sometimes' => true,
         'conditions' => ['mode' => 'show', 'field' => 'type', 'operator' => 'equals', 'value' => 'video'],

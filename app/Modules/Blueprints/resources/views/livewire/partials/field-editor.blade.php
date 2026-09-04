@@ -5,6 +5,7 @@
             "display" => "",
             "type" => "text",
             "required" => false,
+            "localizable" => false,
             "options" => "",
             "placeholder" => "",
             "default" => "",
@@ -103,6 +104,7 @@
             <div class="col-span-2 flex flex-wrap items-center gap-2 justify-between">
                 <flux:checkbox wire:model="{{ $prefix }}.required" :label="__('Required')" />
                 <flux:checkbox wire:model="{{ $prefix }}.sometimes" :label="__('Sometimes')" />
+                <flux:checkbox wire:model="{{ $prefix }}.localizable" :label="__('Localizable')" />
             </div>
         </div>
 
