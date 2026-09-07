@@ -5,6 +5,7 @@ namespace App\Modules\Collections\Livewire;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -49,26 +50,26 @@ class EntryManager extends Component
     }
 
     /**
-     * All blueprints an entry in this collection is allowed to use: the
-     * collection's explicitly picked blueprint (if any) plus every
+     * All blueprints an entry in this collection is allowed to use: every
      * blueprint namespaced to this collection (e.g. "collections.pages").
      */
     #[Computed]
     public function availableBlueprints()
     {
-        $explicitHandle = $this->collection->settings['blueprint'] ?? null;
-
         return Blueprint::where('namespace', "collections.{$this->collection->handle}")
-            ->when($explicitHandle, fn ($query) => $query->orWhere('handle', $explicitHandle))
             ->orderBy('handle')
-            ->get()
-            ->unique('id')
-            ->values();
+            ->get();
     }
 
     public function delete(string $id): void
     {
-        Entry::where('collection', $this->collection->handle)->findOrFail($id)->delete();
+        $entry = Entry::where('collection', $this->collection->handle)->findOrFail($id);
+
+        if ($this->collection->structured()) {
+            app(CollectionTreeService::class)->removeEntry($this->collection->handle, $entry->site, $id);
+        }
+
+        $entry->delete();
 
         Flux::toast(variant: 'success', text: __('Entry deleted.'));
 

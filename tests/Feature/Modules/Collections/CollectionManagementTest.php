@@ -5,6 +5,7 @@ use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Livewire\CollectionManager;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Sites\Models\Site;
 use Livewire\Livewire;
 
 test('collections page is displayed', function () {
@@ -13,13 +14,12 @@ test('collections page is displayed', function () {
     $this->get('/admin-panel/collections')->assertOk();
 });
 
-test('collection can be created without a blueprint', function () {
+test('collection can be created', function () {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(CollectionManager::class)
         ->set('title', 'Blog')
         ->set('handle', 'blog')
-        ->set('settings', '{"template":"blog.show"}')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -27,37 +27,30 @@ test('collection can be created without a blueprint', function () {
 
     expect($collection->title)->toBe('Blog');
     expect($collection->handle)->toBe('blog');
-    expect($collection->settings)->toBe(['template' => 'blog.show', 'blueprint' => null]);
+    expect($collection->settings)->toBe([
+        'route_mode' => 'single',
+        'route' => null,
+        'routes' => [],
+        'sites' => [],
+        'structured' => false,
+        'orderable' => false,
+        'max_depth' => null,
+        'expects_root' => false,
+    ]);
 });
 
-test('collection can be created with a blueprint', function () {
+test('collection blueprint is resolved from the blueprint\'s own namespace, not configured here', function () {
     $this->actingAs(User::factory()->create());
 
-    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => []]]);
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
 
     Livewire::test(CollectionManager::class)
         ->set('title', 'Blog')
         ->set('handle', 'blog')
-        ->set('blueprint', 'post')
-        ->set('settings', '{}')
         ->call('save')
         ->assertHasNoErrors();
 
-    $collection = Collection::sole();
-
-    expect($collection->settings['blueprint'])->toBe('post');
-});
-
-test('collection blueprint must reference an existing blueprint handle', function () {
-    $this->actingAs(User::factory()->create());
-
-    Livewire::test(CollectionManager::class)
-        ->set('title', 'Blog')
-        ->set('handle', 'blog')
-        ->set('blueprint', 'does-not-exist')
-        ->set('settings', '{}')
-        ->call('save')
-        ->assertHasErrors(['blueprint']);
+    expect(Collection::sole()->effectiveBlueprint()->handle)->toBe('post');
 });
 
 test('collection handle must be unique', function () {
@@ -68,26 +61,24 @@ test('collection handle must be unique', function () {
     Livewire::test(CollectionManager::class)
         ->set('title', 'Blog Two')
         ->set('handle', 'blog')
-        ->set('settings', '{}')
         ->call('save')
         ->assertHasErrors(['handle']);
 });
 
-test('collection can be updated and blueprint round-trips through edit separately from other settings', function () {
+test('collection route round-trips through edit', function () {
     $this->actingAs(User::factory()->create());
 
-    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => []]]);
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://id.test', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
 
     $collection = Collection::create([
         'title' => 'Blog',
         'handle' => 'blog',
-        'settings' => ['blueprint' => 'post', 'template' => 'blog.show'],
+        'settings' => ['route_mode' => 'single', 'route' => 'blog/{slug}'],
     ]);
 
     Livewire::test(CollectionManager::class)
         ->call('edit', $collection->id)
-        ->assertSet('blueprint', 'post')
-        ->assertSet('settings', json_encode(['template' => 'blog.show'], JSON_PRETTY_PRINT))
+        ->assertSet('route', 'blog/{slug}')
         ->set('title', 'Articles')
         ->call('save')
         ->assertHasNoErrors();
@@ -95,7 +86,175 @@ test('collection can be updated and blueprint round-trips through edit separatel
     $collection->refresh();
 
     expect($collection->title)->toBe('Articles');
-    expect($collection->settings)->toBe(['template' => 'blog.show', 'blueprint' => 'post']);
+    expect($collection->settings['route'])->toBe('blog/{slug}');
+});
+
+test('collection sites can be restricted, and checking every site means unrestricted', function () {
+    $this->actingAs(User::factory()->create());
+
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://id.test', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'https://en.test', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('sites', ['indonesia'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Collection::sole()->configuredSites())->toBe(['indonesia']);
+
+    $collection = Collection::first();
+
+    Livewire::test(CollectionManager::class)
+        ->call('edit', $collection->id)
+        ->assertSet('sites', ['indonesia'])
+        ->set('sites', ['indonesia', 'english'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($collection->refresh()->configuredSites())->toBe([]);
+});
+
+test('collection sites must reference an existing site handle', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('sites', ['does-not-exist'])
+        ->call('save')
+        ->assertHasErrors(['sites.0']);
+});
+
+test('the default site cannot be unchecked from a collection', function () {
+    $this->actingAs(User::factory()->create());
+
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://id.test', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'https://en.test', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Livewire::test(CollectionManager::class)
+        ->call('create')
+        ->set('sites', ['english'])
+        ->assertSet('sites', fn ($sites) => in_array('indonesia', $sites, true));
+});
+
+test('collection routes can be configured per site', function () {
+    $this->actingAs(User::factory()->create());
+
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://id.test', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'https://en.test', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('sites', ['indonesia', 'english'])
+        ->set('routeMode', 'per_site')
+        ->set('routes', ['indonesia' => 'blog/{slug}', 'english' => 'en/blog/{slug}'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->routeMode())->toBe('per_site');
+    expect($collection->routes())->toBe(['indonesia' => 'blog/{slug}', 'english' => 'en/blog/{slug}']);
+    expect($collection->routeForSite('indonesia'))->toBe('blog/{slug}');
+    expect($collection->routeForSite('english'))->toBe('en/blog/{slug}');
+});
+
+test('a route for a site that got unchecked is dropped on save', function () {
+    $this->actingAs(User::factory()->create());
+
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://id.test', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'https://en.test', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('sites', ['indonesia'])
+        ->set('routeMode', 'per_site')
+        ->set('routes', ['indonesia' => 'blog/{slug}', 'english' => 'en/blog/{slug}'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Only one site is checked, so per-site collapses back to a single route.
+    $collection = Collection::sole();
+    expect($collection->routeMode())->toBe('single');
+    expect($collection->routes())->toBe([]);
+});
+
+test('single route applies to every checked site', function () {
+    $this->actingAs(User::factory()->create());
+
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://id.test', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'https://en.test', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('sites', ['indonesia', 'english'])
+        ->set('route', 'blog/{slug}')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->routeMode())->toBe('single');
+    expect($collection->routeForSite('indonesia'))->toBe('blog/{slug}');
+    expect($collection->routeForSite('english'))->toBe('blog/{slug}');
+});
+
+test('a collection can be made structured with a max depth and expects a root page', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Pages')
+        ->set('handle', 'pages')
+        ->set('structured', true)
+        ->set('orderable', true)
+        ->set('maxDepth', '3')
+        ->set('expectsRoot', true)
+        ->set('route', '{parent_uri}/{slug}')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->structured())->toBeTrue();
+    expect($collection->orderable())->toBeTrue();
+    expect($collection->maxDepth())->toBe(3);
+    expect($collection->expectsRoot())->toBeTrue();
+});
+
+test('max depth and expects root are dropped when a collection is not structured', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('structured', false)
+        ->set('maxDepth', '3')
+        ->set('expectsRoot', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->maxDepth())->toBeNull();
+    expect($collection->expectsRoot())->toBeFalse();
+});
+
+test('turning off structured in the form clears max depth and expects root', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->call('create')
+        ->set('structured', true)
+        ->set('maxDepth', '3')
+        ->set('expectsRoot', true)
+        ->set('structured', false)
+        ->assertSet('maxDepth', '')
+        ->assertSet('expectsRoot', false);
 });
 
 test('collection can be deleted', function () {

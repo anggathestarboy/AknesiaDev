@@ -22,21 +22,97 @@ class Collection extends Model
     ];
 
     /**
-     * The blueprint this collection's entries use. Prefers the explicit
-     * pick from the Collection form (settings.blueprint), and falls back
-     * to a blueprint namespaced to this collection (e.g. a blueprint with
-     * namespace "collections.pages" for the "pages" collection) — matching
-     * how the Blueprint form's "Namespace" dropdown already scopes a
-     * blueprint to a collection.
+     * The blueprint this collection's entries use — a blueprint namespaced
+     * to this collection (e.g. a blueprint with namespace "collections.pages"
+     * for the "pages" collection), assigned from the Blueprint form's
+     * "Namespace" dropdown rather than from the Collection form.
      */
     public function effectiveBlueprint(): ?Blueprint
     {
-        $explicitHandle = $this->settings['blueprint'] ?? null;
+        return Blueprint::where('namespace', "collections.{$this->handle}")->first();
+    }
 
-        if ($explicitHandle) {
-            return Blueprint::where('handle', $explicitHandle)->first();
+    /**
+     * Which sites this collection's entries are available on. Empty means
+     * every site (unrestricted) — the behavior before this setting existed.
+     *
+     * @return array<int, string>
+     */
+    public function configuredSites(): array
+    {
+        return $this->settings['sites'] ?? [];
+    }
+
+    /**
+     * 'single' uses the same URI template on every site; 'per_site' looks
+     * the template up per site instead.
+     */
+    public function routeMode(): string
+    {
+        return $this->settings['route_mode'] ?? 'single';
+    }
+
+    /**
+     * The Statamic-style URI template per site, e.g.
+     * ['indonesia' => 'blog/{slug}', 'english' => 'en/blog/{slug}'].
+     * Only populated when routeMode() is 'per_site'.
+     *
+     * @return array<string, string>
+     */
+    public function routes(): array
+    {
+        return $this->settings['routes'] ?? [];
+    }
+
+    /**
+     * The URI template for this collection's entries on the given site —
+     * the single shared template, or that site's own when routeMode() is
+     * 'per_site'. Null means entries have no public route on that site.
+     */
+    public function routeForSite(string $site): ?string
+    {
+        if ($this->routeMode() === 'per_site') {
+            return $this->routes()[$site] ?? null;
         }
 
-        return Blueprint::where('namespace', "collections.{$this->handle}")->first();
+        return $this->settings['route'] ?? null;
+    }
+
+    /**
+     * Whether entries in this collection can be nested under a parent entry
+     * (Statamic's "Structured" collections) — enables the {parent_uri}
+     * route variable and a tree/hierarchy for entries, backed by the
+     * Structure module's trees table (type=collection, handle=this handle).
+     */
+    public function structured(): bool
+    {
+        return (bool) ($this->settings['structured'] ?? false);
+    }
+
+    /**
+     * Whether entries can be manually reordered (drag-and-drop), independent
+     * of whether the collection is structured.
+     */
+    public function orderable(): bool
+    {
+        return (bool) ($this->settings['orderable'] ?? false);
+    }
+
+    /**
+     * Maximum nesting depth for a structured collection's tree. Null means
+     * unlimited.
+     */
+    public function maxDepth(): ?int
+    {
+        return $this->settings['max_depth'] ?? null;
+    }
+
+    /**
+     * Whether a structured collection requires a single root entry (one
+     * entry with no parent) rather than allowing multiple top-level entries.
+     */
+    public function expectsRoot(): bool
+    {
+        return (bool) ($this->settings['expects_root'] ?? false);
     }
 }

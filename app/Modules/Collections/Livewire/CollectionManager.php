@@ -2,9 +2,9 @@
 
 namespace App\Modules\Collections\Livewire;
 
-use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
@@ -21,9 +21,56 @@ class CollectionManager extends Component
 
     public string $title = '';
 
-    public string $blueprint = '';
+    /**
+     * 'single' uses the same URI template on every site; 'per_site' lets
+     * each checked site have its own.
+     */
+    public string $routeMode = 'single';
 
-    public string $settings = '{}';
+    /**
+     * URI template used for every site when routeMode is 'single'.
+     */
+    public string $route = '';
+
+    /**
+     * URI template per site, e.g. ['indonesia' => 'blog/{slug}', 'english' => 'en/blog/{slug}'].
+     * Only used when routeMode is 'per_site'; only keys for currently
+     * checked sites are kept.
+     *
+     * @var array<string, string>
+     */
+    public array $routes = [];
+
+    /**
+     * Which sites this collection is available on. Empty means every site.
+     * The default (origin) site is always included and can't be unchecked.
+     *
+     * @var array<int, string>
+     */
+    public array $sites = [];
+
+    /**
+     * Whether entries can be nested under a parent entry — Statamic's
+     * "Structured" collection setting. Enables the {parent_uri} route
+     * variable.
+     */
+    public bool $structured = false;
+
+    /**
+     * Whether entries can be manually reordered (drag-and-drop).
+     */
+    public bool $orderable = false;
+
+    /**
+     * Maximum nesting depth for the tree, as a string for the number input.
+     * Blank means unlimited.
+     */
+    public string $maxDepth = '';
+
+    /**
+     * Whether a structured collection requires exactly one root entry.
+     */
+    public bool $expectsRoot = false;
 
     #[Computed]
     public function collections()
@@ -32,15 +79,22 @@ class CollectionManager extends Component
     }
 
     #[Computed]
-    public function availableBlueprints()
+    public function availableSites()
     {
-        return Blueprint::orderBy('namespace')->orderBy('handle')->get();
+        return Site::orderBy('order')->get();
+    }
+
+    #[Computed]
+    public function defaultSiteHandle(): ?string
+    {
+        return $this->availableSites->first()?->handle;
     }
 
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'blueprint', 'settings']);
-        $this->settings = '{}';
+        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'maxDepth', 'expectsRoot']);
+        $this->routeMode = 'single';
+        $this->sites = $this->availableSites->pluck('handle')->all();
         Flux::modal('collection-form')->show();
     }
 
@@ -51,30 +105,96 @@ class CollectionManager extends Component
         $this->editingId = $collection->id;
         $this->handle = $collection->handle;
         $this->title = $collection->title;
-        $this->blueprint = (string) ($collection->settings['blueprint'] ?? '');
-
-        $otherSettings = collect($collection->settings ?? [])->except('blueprint')->all();
-        $this->settings = json_encode($otherSettings, JSON_PRETTY_PRINT);
+        $this->routeMode = $collection->routeMode();
+        $this->route = (string) ($collection->settings['route'] ?? '');
+        $this->routes = $collection->routes();
+        $this->sites = $collection->configuredSites() ?: $this->availableSites->pluck('handle')->all();
+        $this->structured = $collection->structured();
+        $this->orderable = $collection->orderable();
+        $this->maxDepth = (string) ($collection->maxDepth() ?? '');
+        $this->expectsRoot = $collection->expectsRoot();
 
         Flux::modal('collection-form')->show();
     }
 
+    /**
+     * Turning off "structured" also turns off the sub-settings that only
+     * make sense for a tree.
+     */
+    public function updatedStructured(bool $value): void
+    {
+        if (! $value) {
+            $this->maxDepth = '';
+            $this->expectsRoot = false;
+        }
+    }
+
+    /**
+     * Keeps the default site checked and forces it back in if a stale
+     * client payload ever tried to drop it — it can't be unchecked in the
+     * UI. Also falls back to a single route once there's only one site left
+     * to route, since "per-site" is meaningless for one site.
+     */
+    public function updatedSites(): void
+    {
+        $this->sites = array_values(array_unique([...$this->sites, ...array_filter([$this->defaultSiteHandle])]));
+
+        if (count($this->sites) <= 1) {
+            $this->routeMode = 'single';
+        }
+    }
+
     public function save(): void
     {
+        $siteHandles = $this->availableSites->pluck('handle')->all();
+
         $validated = $this->validate([
             'handle' => ['required', 'string', 'max:255', Rule::unique('collections', 'handle')->ignore($this->editingId)],
             'title' => ['required', 'string', 'max:255'],
-            'blueprint' => ['nullable', 'string', Rule::exists('blueprints', 'handle')],
-            'settings' => ['required', 'json'],
+            'routeMode' => ['required', Rule::in(['single', 'per_site'])],
+            'route' => ['nullable', 'string', 'max:255'],
+            'routes' => ['array'],
+            'routes.*' => ['nullable', 'string', 'max:255'],
+            'sites' => ['array'],
+            'sites.*' => [Rule::in($siteHandles)],
+            'structured' => ['boolean'],
+            'orderable' => ['boolean'],
+            'maxDepth' => ['nullable', 'integer', 'min:1'],
+            'expectsRoot' => ['boolean'],
         ]);
 
-        $settings = json_decode($validated['settings'], true);
-        $settings['blueprint'] = $validated['blueprint'] ?: null;
+        // Every site selected is the same as no restriction at all.
+        $sites = count($validated['sites']) === count($siteHandles) ? [] : $validated['sites'];
+
+        // Per-site only makes sense with more than one site checked.
+        $routeMode = count($validated['sites']) > 1 ? $validated['routeMode'] : 'single';
+
+        if ($routeMode === 'per_site') {
+            // Drop route entries for sites that are no longer checked.
+            $routes = array_filter(
+                $validated['routes'],
+                fn ($route, $site) => $route && in_array($site, $validated['sites'], true),
+                ARRAY_FILTER_USE_BOTH,
+            );
+            $route = null;
+        } else {
+            $routes = [];
+            $route = $validated['route'] ?: null;
+        }
 
         Collection::updateOrCreate(['id' => $this->editingId], [
             'handle' => $validated['handle'],
             'title' => $validated['title'],
-            'settings' => $settings,
+            'settings' => [
+                'route_mode' => $routeMode,
+                'route' => $route,
+                'routes' => $routes,
+                'sites' => $sites,
+                'structured' => $validated['structured'],
+                'orderable' => $validated['orderable'],
+                'max_depth' => $validated['structured'] && $validated['maxDepth'] !== '' ? (int) $validated['maxDepth'] : null,
+                'expects_root' => $validated['structured'] && $validated['expectsRoot'],
+            ],
         ]);
 
         Flux::modal('collection-form')->close();

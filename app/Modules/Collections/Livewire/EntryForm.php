@@ -7,11 +7,13 @@ use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -66,6 +68,14 @@ class EntryForm extends Component
     public ?string $originId = null;
 
     /**
+     * The id of the entry this one is nested under, for a "Structured"
+     * collection (see Collection::structured()). Null means top-level.
+     * Tracked separately from the entry's own data, in the Structure
+     * module's tree for this collection/site.
+     */
+    public ?string $parentId = null;
+
+    /**
      * @var array<string, mixed>
      */
     public array $data = [];
@@ -94,6 +104,10 @@ class EntryForm extends Component
             $this->originId = request()->string('origin')->toString() ?: null;
         }
 
+        if ($entry && $this->collection->structured()) {
+            $this->parentId = $this->treeService()->parentIdOf($collection->handle, $this->site, $entry->id);
+        }
+
         $this->fillData($entry);
 
         if (! $this->isOriginLocale()) {
@@ -103,13 +117,29 @@ class EntryForm extends Component
     }
 
     /**
+     * The collection's configured sites — mirrors TermForm::configuredSites().
+     * Empty means every site is available.
+     *
+     * @return array<int, string>
+     */
+    protected function configuredSites(): array
+    {
+        return $this->collection->configuredSites();
+    }
+
+    /**
      * The site treated as this collection's default/origin language — the
-     * first configured Site by order, same convention as
-     * GlobalSetManager::defaultSiteHandle().
+     * first of its configured sites by order, or the first site overall
+     * when none are configured. Same convention as
+     * TermForm::defaultSiteHandle().
      */
     protected function defaultSiteHandle(): ?string
     {
-        return Site::orderBy('order')->value('handle');
+        $configuredSites = $this->configuredSites();
+
+        return Site::orderBy('order')
+            ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
+            ->value('handle');
     }
 
     public function isOriginLocale(): bool
@@ -161,7 +191,11 @@ class EntryForm extends Component
     #[Computed]
     public function siteLinks(): array
     {
-        return Site::orderBy('order')->get()
+        $configuredSites = $this->configuredSites();
+
+        return Site::orderBy('order')
+            ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
+            ->get()
             ->map(function (Site $availableSite): array {
                 $active = $availableSite->handle === $this->site;
 
@@ -206,21 +240,40 @@ class EntryForm extends Component
     }
 
     /**
-     * All blueprints an entry in this collection is allowed to use: the
-     * collection's explicitly picked blueprint (if any) plus every
+     * All blueprints an entry in this collection is allowed to use: every
      * blueprint namespaced to this collection (e.g. "collections.pages").
      */
     #[Computed]
     public function availableBlueprints()
     {
-        $explicitHandle = $this->collection->settings['blueprint'] ?? null;
-
         return Blueprint::where('namespace', "collections.{$this->collection->handle}")
-            ->when($explicitHandle, fn ($query) => $query->orWhere('handle', $explicitHandle))
             ->orderBy('handle')
-            ->get()
-            ->unique('id')
-            ->values();
+            ->get();
+    }
+
+    /**
+     * Entries this one could be nested under, for a "Structured" collection
+     * — every other entry in this collection on the current site.
+     *
+     * @return \Illuminate\Support\Collection<int, Entry>
+     */
+    #[Computed]
+    public function availableParentEntries()
+    {
+        if (! $this->collection->structured()) {
+            return collect();
+        }
+
+        return Entry::where('collection', $this->collection->handle)
+            ->where('site', $this->site)
+            ->when($this->editingId, fn ($query) => $query->where('id', '!=', $this->editingId))
+            ->orderBy('slug')
+            ->get();
+    }
+
+    protected function treeService(): CollectionTreeService
+    {
+        return app(CollectionTreeService::class);
     }
 
     #[Computed]
@@ -662,6 +715,10 @@ class EntryForm extends Component
             $this->order = null;
         }
 
+        if ($this->parentId === '') {
+            $this->parentId = null;
+        }
+
         $validated = $this->validate(array_merge([
             'title' => ['required', 'string', 'max:300'],
             'slug' => ['nullable', 'string', 'max:255'],
@@ -679,7 +736,7 @@ class EntryForm extends Component
             $this->overlayNonLocalizableData($this->blueprintFields(), $data, $originData);
         }
 
-        Entry::updateOrCreate(['id' => $this->editingId], [
+        $entry = Entry::updateOrCreate(['id' => $this->editingId], [
             'site' => $this->site,
             'origin_id' => $this->originId,
             'collection' => $this->collection->handle,
@@ -691,6 +748,16 @@ class EntryForm extends Component
             'order' => $validated['order'] !== null ? (int) $validated['order'] : null,
             'data' => $data,
         ]);
+
+        if ($this->collection->structured()) {
+            try {
+                $this->treeService()->setParent($this->collection->handle, $this->site, $entry->id, $this->parentId, $this->collection->maxDepth());
+            } catch (InvalidArgumentException $e) {
+                $this->addError('parentId', $e->getMessage());
+
+                return;
+            }
+        }
 
         Flux::toast(variant: 'success', text: __('Entry saved.'));
 

@@ -118,6 +118,18 @@
                 </div>
             @endif
 
+            @if ($collection->structured())
+                <flux:select wire:model="parentId" :label="__('Parent')" size="sm">
+                    <flux:select.option value="">{{ __('None — top level') }}</flux:select.option>
+                    @foreach ($this->availableParentEntries as $parentEntry)
+                        <flux:select.option value="{{ $parentEntry->id }}">{{ $parentEntry->data['title'] ?? $parentEntry->slug ?? $parentEntry->id }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                @error('parentId')
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
+            @endif
+
             <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
 
             <flux:input wire:model="slug" :label="__('Slug')" placeholder="my-entry-slug" size="sm" />

@@ -9,6 +9,7 @@ use App\Modules\Collections\Livewire\EntryForm;
 use App\Modules\Collections\Livewire\EntryManager;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
@@ -35,11 +36,13 @@ function makePostBlueprint(): Blueprint
 
 function makeBlogCollection(?string $blueprintHandle = 'post'): Collection
 {
-    return Collection::create([
-        'title' => 'Blog',
-        'handle' => 'blog',
-        'settings' => ['blueprint' => $blueprintHandle],
-    ]);
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog']);
+
+    if ($blueprintHandle) {
+        Blueprint::where('handle', $blueprintHandle)->update(['namespace' => 'collections.blog']);
+    }
+
+    return $collection;
 }
 
 test('entries page is displayed for a collection', function () {
@@ -879,7 +882,7 @@ test('editing an entry that belongs to a different collection is not allowed', f
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
     makeBlogCollection();
-    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['blueprint' => 'post']]);
+    Collection::create(['title' => 'Pages', 'handle' => 'pages']);
 
     $entry = Entry::create([
         'site' => 'indonesia',
@@ -912,7 +915,7 @@ test('entries from another collection are not shown', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
     $blog = makeBlogCollection();
-    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['blueprint' => 'post']]);
+    Collection::create(['title' => 'Pages', 'handle' => 'pages']);
 
     Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'blog-entry-slug', 'data' => ['title' => 'blog entry', 'status' => 'draft']]);
     Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'post', 'slug' => 'pages-entry-slug', 'data' => ['title' => 'pages entry', 'status' => 'draft']]);
@@ -1043,17 +1046,6 @@ test('when multiple blueprints are namespaced to a collection, the entry form le
     expect(Entry::sole()->blueprint)->toBe('video');
 });
 
-test('an explicitly picked blueprint takes priority over a namespace match', function () {
-    $this->actingAs(User::factory()->create());
-
-    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'namespaced', 'data' => ['fields' => []]]);
-    Blueprint::create(['namespace' => null, 'handle' => 'explicit', 'data' => ['fields' => []]]);
-
-    $collection = makeBlogCollection('explicit');
-
-    expect($collection->effectiveBlueprint()->handle)->toBe('explicit');
-});
-
 test('the site switcher lists every configured site with the current one marked active', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
@@ -1122,11 +1114,11 @@ test('switching site on an existing entry links to its sibling entry when one al
 
 test('non-localizable fields share one value from the default site across all languages', function () {
     $this->actingAs(User::factory()->create());
-    $collection = makeBlogCollection();
+    $collection = makeBlogCollection(null);
     makeSites();
 
     Blueprint::create([
-        'namespace' => null,
+        'namespace' => 'collections.blog',
         'handle' => 'post',
         'data' => ['fields' => [
             ['handle' => 'rating', 'display' => 'Rating', 'type' => 'number', 'required' => false, 'localizable' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
@@ -1192,4 +1184,130 @@ test('the create page loads correctly when arrived at via a site switcher link w
     ]);
 
     $this->get("/admin-panel/collections/blog/entries/create/english?origin={$original->id}")->assertOk();
+});
+
+test('the parent field is only shown for a structured collection', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertDontSeeHtml('wire:model="parentId"');
+
+    $collection->update(['settings' => ['structured' => true]]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
+        ->assertSeeHtml('wire:model="parentId"');
+});
+
+test('a structured collection lets an entry be nested under a parent entry', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    // Created directly, before this collection was ever structured — not
+    // yet tracked in the tree at all.
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Parent', 'status' => 'draft']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Child')
+        ->set('data.status', 'draft')
+        ->set('parentId', $parent->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $child = Entry::where('data->title', 'Child')->sole();
+
+    expect(app(CollectionTreeService::class)->parentIdOf('blog', 'indonesia', $child->id))->toBe($parent->id);
+});
+
+test('an entry\'s parent can be cleared back to "none" (top level)', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Parent', 'status' => 'draft']]);
+    $child = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Child', 'status' => 'draft']]);
+    app(CollectionTreeService::class)->setParent('blog', 'indonesia', $child->id, $parent->id, null);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $child])
+        ->assertSet('parentId', $parent->id)
+        ->set('parentId', '')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(app(CollectionTreeService::class)->parentIdOf('blog', 'indonesia', $child->id))->toBeNull();
+});
+
+test('picking a parent that predates the collection becoming structured registers it as a root', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Parent', 'status' => 'draft']]);
+    $child = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Child', 'status' => 'draft']]);
+
+    app(CollectionTreeService::class)->setParent('blog', 'indonesia', $child->id, $parent->id, null);
+
+    $tree = app(CollectionTreeService::class)->load('blog', 'indonesia');
+
+    expect($tree)->toHaveCount(1);
+    expect($tree[0]['id'])->toBe($parent->id);
+    expect($tree[0]['children'][0]['id'])->toBe($child->id);
+});
+
+test('the parent field lists other entries but not the entry being edited', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Self', 'status' => 'draft']]);
+    $other = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Other', 'status' => 'draft']]);
+
+    $available = Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->instance()
+        ->availableParentEntries;
+
+    expect($available->pluck('id')->all())->toBe([$other->id]);
+});
+
+test('nesting an entry beyond the collection max depth is rejected', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true, 'max_depth' => 1]]);
+    $collection->refresh();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Parent', 'status' => 'draft']]);
+    app(CollectionTreeService::class)->setParent('blog', 'indonesia', $parent->id, null, 1);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Child')
+        ->set('data.status', 'draft')
+        ->set('parentId', $parent->id)
+        ->call('save')
+        ->assertHasErrors(['parentId']);
+});
+
+test('deleting an entry removes it from the collection tree', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Solo', 'status' => 'draft']]);
+    app(CollectionTreeService::class)->setParent('blog', 'indonesia', $entry->id, null, null);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $entry->id);
+
+    expect(app(CollectionTreeService::class)->load('blog', 'indonesia'))->toBe([]);
 });

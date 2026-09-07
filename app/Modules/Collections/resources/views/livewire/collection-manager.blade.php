@@ -43,19 +43,59 @@
             <flux:input wire:model="title" :label="__('Title')" required autofocus />
             <flux:input wire:model="handle" :label="__('Handle')" required />
 
-            <flux:select wire:model="blueprint" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
-                @foreach ($this->availableBlueprints as $availableBlueprint)
-                    <flux:select.option value="{{ $availableBlueprint->handle }}">
-                        {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }}
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
-
-            @if ($this->availableBlueprints->isEmpty())
-                <flux:text class="text-zinc-500">{{ __('No blueprints yet — create one in the Blueprints module first.') }}</flux:text>
+            @if ($this->availableSites->isNotEmpty())
+                <flux:checkbox.group wire:model.live="sites" :label="__('Sites')" :description="__('Which sites is this collection available on? Leave all checked for no restriction. The default site is the origin language and can\'t be removed.')">
+                    @foreach ($this->availableSites as $availableSite)
+                        <flux:checkbox
+                            value="{{ $availableSite->handle }}"
+                            label="{{ $availableSite->name }}"
+                            :description="$availableSite->handle === $this->defaultSiteHandle ? __('Default — origin language') : null"
+                            :disabled="$availableSite->handle === $this->defaultSiteHandle"
+                        />
+                    @endforeach
+                </flux:checkbox.group>
             @endif
 
-            <flux:textarea wire:model="settings" :label="__('Other settings (JSON)')" rows="6" />
+            @if (count($sites) > 1)
+                <flux:radio.group wire:model.live="routeMode" variant="segmented" :label="__('Route')">
+                    <flux:radio value="single" :label="__('Single')" />
+                    <flux:radio value="per_site" :label="__('Per-site')" />
+                </flux:radio.group>
+            @endif
+
+            @php $routeVariables = __('Available variables: {slug}, {year}, {month}, {day}').($structured ? ', {parent_uri}' : ''); @endphp
+
+            @if ($routeMode === 'per_site' && count($sites) > 1)
+                <div class="space-y-4">
+                    @foreach ($this->availableSites->whereIn('handle', $sites) as $routeSite)
+                        <flux:input
+                            wire:model="routes.{{ $routeSite->handle }}"
+                            :label="__(':site route', ['site' => $routeSite->name])"
+                            placeholder="blog/{slug}"
+                            :description="$routeVariables"
+                        />
+                    @endforeach
+                </div>
+            @else
+                <flux:input
+                    wire:model="route"
+                    :label="count($sites) > 1 ? null : __('Route')"
+                    placeholder="{{ $structured ? '{parent_uri}/{slug}' : 'blog/{slug}' }}"
+                    :description="$routeVariables"
+                />
+            @endif
+
+            <div class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                <flux:checkbox wire:model.live="structured" :label="__('Structured')" :description="__('Let entries be nested under a parent entry, enabling the {parent_uri} route variable.')" />
+
+                <flux:checkbox wire:model="orderable" :label="__('Orderable')" :description="__('Let entries be manually reordered by drag-and-drop.')" />
+
+                @if ($structured)
+                    <flux:input type="number" min="1" wire:model="maxDepth" :label="__('Max depth')" placeholder="{{ __('No limit') }}" />
+
+                    <flux:checkbox wire:model="expectsRoot" :label="__('Expect a root page')" :description="__('Require exactly one top-level entry (e.g. a homepage) instead of allowing several.')" />
+                @endif
+            </div>
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
