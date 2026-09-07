@@ -10,7 +10,7 @@
 
         $path = ltrim($url, '/');
 
-        return request()->is($path === '' ? '/' : "{$path}*");
+        return request()->is($path === '' ? '/' : $path);
     };
 @endphp
 <!DOCTYPE html>
