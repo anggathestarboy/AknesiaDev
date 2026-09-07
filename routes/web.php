@@ -3,8 +3,6 @@
 use App\Modules\Collections\Http\Controllers\PageController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
-
 if (config('cms.enabled')) {
     Route::prefix(config('cms.route'))->group(function () {
         Route::get('/', fn () => redirect()->route('dashboard'))->name('cms.home');
@@ -17,6 +15,11 @@ if (config('cms.enabled')) {
 
 require __DIR__.'/settings.php';
 
-// Catch-all for published entries — must stay last so it never shadows a
-// more specific route registered above.
-Route::get('/{uri}', [PageController::class, 'show'])->where('uri', '.*')->name('page.show');
+// Public-facing entry pages, served through the collection route/template
+// system — see PageController. Named "home" so the auth layouts' logo link
+// (route('home')) still resolves.
+Route::get('/', [PageController::class, 'show'])->name('home');
+
+Route::get('/{uri}', [PageController::class, 'show'])
+    ->where('uri', '.*')
+    ->name('page.show');

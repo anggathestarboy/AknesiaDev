@@ -1,7 +1,7 @@
 <?php
 
-test('returns a successful response', function () {
+test('the homepage returns not found when no entry is published there yet', function () {
     $response = $this->get(route('home'));
 
-    $response->assertOk();
+    $response->assertNotFound();
 });

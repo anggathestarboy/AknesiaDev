@@ -5,6 +5,7 @@ use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Livewire\EntryForm;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Sites\Models\Site;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
@@ -146,6 +147,40 @@ test('a path-prefixed site (e.g. /en) resolves its own entries, not the root sit
     } finally {
         forgetTemplate('page_controller_test_id');
         forgetTemplate('page_controller_test_en');
+    }
+});
+
+test('an entry with order 1 is the homepage and its url has no slug', function () {
+    $indonesiaTemplate = makeTemplate('page_controller_test_homepage_id');
+    $englishTemplate = makeTemplate('page_controller_test_homepage_en');
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => '/', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Site::create(['handle' => 'english', 'name' => 'English', 'url' => '/en', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $indonesiaTemplate, 'fields' => []]]);
+        $collection = Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        $idHome = Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published', 'order' => 1,
+            'slug' => 'homepage-halaman', 'data' => ['title' => 'Homepage ID'],
+        ]);
+        $enHome = Entry::create([
+            'site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published', 'order' => 1,
+            'slug' => 'halo-slug', 'data' => ['title' => 'Homepage EN'],
+        ]);
+
+        expect(app(EntryUrlResolver::class)->url($collection, $idHome))->toBe('/');
+        expect(app(EntryUrlResolver::class)->url($collection, $enHome))->toBe('/en');
+
+        $this->get('/')->assertOk()->assertSee('Homepage ID');
+        $this->get('/en')->assertOk()->assertSee('Homepage EN');
+
+        // The old slug-based URLs no longer resolve for the homepage entry.
+        $this->get('/homepage-halaman')->assertNotFound();
+        $this->get('/en/halo-slug')->assertNotFound();
+    } finally {
+        forgetTemplate('page_controller_test_homepage_id');
+        forgetTemplate('page_controller_test_homepage_en');
     }
 });
 

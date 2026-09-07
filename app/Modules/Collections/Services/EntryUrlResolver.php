@@ -19,7 +19,9 @@ class EntryUrlResolver
 
     /**
      * The entry's path (no domain), or null if its collection has no route
-     * configured for its site.
+     * configured for its site. An entry with order = 1 is its site's
+     * homepage — its path is always empty (the site's own root), ignoring
+     * the route template's {slug} entirely.
      */
     public function path(Collection $collection, Entry $entry): ?string
     {
@@ -27,6 +29,10 @@ class EntryUrlResolver
 
         if (! $template) {
             return null;
+        }
+
+        if ($entry->order === 1) {
+            return '';
         }
 
         return $this->resolvePath($collection, $template, $entry);
@@ -47,7 +53,13 @@ class EntryUrlResolver
 
         $site = Site::where('handle', $entry->site)->first();
 
-        return $site ? rtrim($site->url, '/').'/'.$path : null;
+        if (! $site) {
+            return null;
+        }
+
+        $base = rtrim($site->url, '/');
+
+        return $path === '' ? ($base ?: '/') : "{$base}/{$path}";
     }
 
     /**

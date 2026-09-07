@@ -71,7 +71,18 @@
                             <span>{{ $entry->site }}</span>
                         </div>
                     </flux:table.cell>
-                    <flux:table.cell>{{ $entry->data["title"] ?? "—" }}</flux:table.cell>
+                    <flux:table.cell>
+                        <div class="flex items-center gap-2">
+                            <span>{{ $entry->data["title"] ?? "—" }}</span>
+                            @if ($entry->order === 1)
+                                <flux:badge size="sm">
+                                    <svg class="w-5 h-5 text-gray-800" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
+                                    </svg>
+                                </flux:badge>
+                            @endif
+                        </div>
+                    </flux:table.cell>
                     <flux:table.cell>{{ $entry->slug ?? "—" }}</flux:table.cell>
                     <flux:table.cell>{{ $entry->blueprint ?? "—" }}</flux:table.cell>
                     <flux:table.cell>{{ $entry->updated_at?->diffForHumans() }}</flux:table.cell>

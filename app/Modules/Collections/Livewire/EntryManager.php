@@ -28,6 +28,10 @@ class EntryManager extends Component
         $this->siteFilter = Site::orderBy('order')->value('handle') ?? '';
     }
 
+    /**
+     * The entry with order = 1 is treated as this collection's homepage —
+     * pinned first in the listing, regardless of the sort below.
+     */
     #[Computed]
     public function entries()
     {
@@ -39,6 +43,7 @@ class EntryManager extends Component
                 });
             })
             ->when($this->siteFilter !== '', fn ($query) => $query->where('site', $this->siteFilter))
+            ->orderByRaw('`order` != 1')
             ->orderByDesc('updated_at')
             ->get();
     }

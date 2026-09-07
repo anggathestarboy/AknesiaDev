@@ -946,6 +946,24 @@ test('entry order round-trips through edit', function () {
         ->assertSet('order', '5');
 });
 
+test('the entry with order 1 is pinned first in the listing and labeled as the homepage', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $recent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 3, 'data' => ['title' => 'Recent', 'status' => 'draft']]);
+    $homepage = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Homepage Entry', 'status' => 'draft']]);
+    $recent->touch();
+
+    $entries = Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->instance()->entries;
+
+    expect($entries->pluck('id')->first())->toBe($homepage->id);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->assertSeeInOrder(['Homepage Entry', 'Homepage', 'Recent']);
+});
+
 test('required blueprint fields are enforced on entries', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
