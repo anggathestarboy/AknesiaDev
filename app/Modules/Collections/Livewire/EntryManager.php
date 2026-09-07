@@ -30,22 +30,67 @@ class EntryManager extends Component
 
     /**
      * The entry with order = 1 is treated as this collection's homepage —
-     * pinned first in the listing, regardless of the sort below.
+     * pinned first in the listing, regardless of the sort below. For a
+     * structured collection, entries are instead listed as a flattened
+     * tree — each entry immediately followed by its children — with
+     * siblings at every level ordered by their own "order" (entries
+     * without one last), so it stays consistent with the homepage rule.
+     * Each entry gets transient `depth` and `parentTitle` attributes for
+     * the view to indent and label it with.
      */
     #[Computed]
     public function entries()
     {
-        return Entry::where('collection', $this->collection->handle)
+        $query = Entry::where('collection', $this->collection->handle)
             ->when($this->search !== '', function ($query) {
                 $query->where(function ($query) {
                     $query->where('slug', 'like', "%{$this->search}%")
                         ->orWhere('data->title', 'like', "%{$this->search}%");
                 });
             })
-            ->when($this->siteFilter !== '', fn ($query) => $query->where('site', $this->siteFilter))
-            ->orderByRaw('`order` != 1')
-            ->orderByDesc('updated_at')
-            ->get();
+            ->when($this->siteFilter !== '', fn ($query) => $query->where('site', $this->siteFilter));
+
+        if (! $this->collection->structured()) {
+            return $query->orderByRaw('`order` != 1')->orderByDesc('updated_at')->get();
+        }
+
+        $entries = $query->get();
+        $trees = app(CollectionTreeService::class);
+        $parentIds = $entries->mapWithKeys(fn (Entry $entry): array => [
+            $entry->id => $trees->parentIdOf($this->collection->handle, $entry->site, $entry->id),
+        ]);
+
+        return $this->flattenTree($entries, $parentIds, null, 0);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Entry>  $entries
+     * @param  \Illuminate\Support\Collection<string, ?string>  $parentIds
+     * @return \Illuminate\Support\Collection<int, Entry>
+     */
+    protected function flattenTree($entries, $parentIds, ?string $parentId, int $depth)
+    {
+        $siblings = $entries
+            ->filter(fn (Entry $entry): bool => ($parentIds[$entry->id] ?? null) === $parentId)
+            ->sort(function (Entry $a, Entry $b): int {
+                $byOrder = ($a->order ?? PHP_INT_MAX) <=> ($b->order ?? PHP_INT_MAX);
+
+                return $byOrder !== 0 ? $byOrder : $b->updated_at <=> $a->updated_at;
+            })
+            ->values();
+
+        $parentTitle = $parentId ? $entries->firstWhere('id', $parentId)?->data['title'] ?? null : null;
+
+        $result = collect();
+
+        foreach ($siblings as $entry) {
+            $entry->setAttribute('depth', $depth);
+            $entry->setAttribute('parentTitle', $parentTitle);
+            $result->push($entry);
+            $result = $result->merge($this->flattenTree($entries, $parentIds, $entry->id, $depth + 1));
+        }
+
+        return $result;
     }
 
     #[Computed]

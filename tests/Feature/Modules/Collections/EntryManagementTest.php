@@ -961,7 +961,32 @@ test('the entry with order 1 is pinned first in the listing and labeled as the h
     expect($entries->pluck('id')->first())->toBe($homepage->id);
 
     Livewire::test(EntryManager::class, ['collection' => $collection])
-        ->assertSeeInOrder(['Homepage Entry', 'Homepage', 'Recent']);
+        ->assertSeeInOrder(['Homepage Entry', 'Recent']);
+});
+
+test('a structured collection lists entries as a flattened tree, ordered by parent then order', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 2, 'data' => ['title' => 'Parent', 'status' => 'draft']]);
+    $childB = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 2, 'data' => ['title' => 'Child B', 'status' => 'draft']]);
+    $childA = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Child A', 'status' => 'draft']]);
+    $other = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Other Root', 'status' => 'draft']]);
+
+    $trees = app(CollectionTreeService::class);
+    $trees->setParent('blog', 'indonesia', $childA->id, $parent->id, null);
+    $trees->setParent('blog', 'indonesia', $childB->id, $parent->id, null);
+
+    $entries = Livewire::test(EntryManager::class, ['collection' => $collection])->instance()->entries;
+
+    expect($entries->pluck('data.title')->all())->toBe(['Other Root', 'Parent', 'Child A', 'Child B']);
+    expect($entries->firstWhere('id', $parent->id)->depth)->toBe(0);
+    expect($entries->firstWhere('id', $childA->id)->depth)->toBe(1);
+    expect($entries->firstWhere('id', $childA->id)->parentTitle)->toBe('Parent');
+    expect($entries->firstWhere('id', $other->id)->parentTitle)->toBeNull();
 });
 
 test('required blueprint fields are enforced on entries', function () {
