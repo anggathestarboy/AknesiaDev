@@ -286,6 +286,40 @@ test('taxonomy field enforces its configured minimum selection count', function 
         ->assertHasErrors(['data.categories']);
 });
 
+test('a failed multi-select taxonomy field shows its validation error message', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => 1, 'max_items' => 2],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('save')
+        ->assertHasErrors(['data.categories'])
+        ->assertSee('The data.categories field is required.');
+});
+
+test('a failed single-select taxonomy field shows its validation error message', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => null, 'max_items' => 1],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->call('save')
+        ->assertHasErrors(['data.categories'])
+        ->assertSee('The data.categories field is required.');
+});
+
 test('a term from a different taxonomy is rejected by the taxonomy field', function () {
     $this->actingAs(User::factory()->create());
 
@@ -1152,6 +1186,43 @@ test('non-localizable fields share one value from the default site across all la
     expect($original->fresh()->data['rating'])->toBe('5');
 });
 
+test('a required non-localizable field left empty on the origin does not block saving a translation', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeBlogCollection(null);
+    makeSites();
+
+    Blueprint::create([
+        'namespace' => 'collections.blog',
+        'handle' => 'post',
+        'data' => ['fields' => [
+            ['handle' => 'category', 'display' => 'Category', 'type' => 'taxonomy', 'required' => true, 'localizable' => false, 'min_items' => 1, 'max_items' => 2, 'options' => 'topics', 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+            ['handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => true, 'localizable' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['draft', 'published']],
+        ]],
+    ]);
+
+    // The origin entry itself never got "category" filled in — e.g. the
+    // field was made required after the origin was already saved.
+    $original = Entry::create([
+        'site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post',
+        'data' => ['title' => 'Halo', 'status' => 'draft'],
+    ]);
+
+    $translation = Entry::create([
+        'site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $original->id,
+        'data' => ['title' => 'Hello', 'status' => 'draft'],
+    ]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $translation])
+        ->set('title', 'Hello, updated')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'published')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($translation->fresh()->data['title'])->toBe('Hello, updated');
+    expect($translation->fresh()->data['status'])->toBe('published');
+});
+
 test('switching site on an entry without a translation links to a create page carrying the origin', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
@@ -1310,4 +1381,118 @@ test('deleting an entry removes it from the collection tree', function () {
     Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $entry->id);
 
     expect(app(CollectionTreeService::class)->load('blog', 'indonesia'))->toBe([]);
+});
+
+test('there is no visit url for an entry that has not been saved yet', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['route_mode' => 'single', 'route' => 'blog/{slug}']]);
+
+    $url = Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
+        ->instance()->resolvedUrl;
+
+    expect($url)->toBeNull();
+});
+
+test('there is no visit url when the collection has no route configured', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    makeSites();
+
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'data' => ['title' => 'Hello', 'status' => 'draft']]);
+
+    $url = Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->instance()->resolvedUrl;
+
+    expect($url)->toBeNull();
+});
+
+test('the visit url is resolved from the collection route template using the entry slug', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['route_mode' => 'single', 'route' => 'blog/{slug}']]);
+    $collection->refresh();
+    makeSites();
+
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'data' => ['title' => 'Hello', 'status' => 'draft']]);
+
+    $url = Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->instance()->resolvedUrl;
+
+    expect($url)->toBe('https://example.id/blog/hello');
+});
+
+test('the visit url nests {parent_uri} from the parent entry for a structured collection', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true, 'route_mode' => 'single', 'route' => '{parent_uri}/{slug}']]);
+    $collection->refresh();
+    makeSites();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'parent', 'data' => ['title' => 'Parent', 'status' => 'draft']]);
+    $child = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'child', 'data' => ['title' => 'Child', 'status' => 'draft']]);
+    app(CollectionTreeService::class)->setParent('blog', 'indonesia', $parent->id, null, null);
+    app(CollectionTreeService::class)->setParent('blog', 'indonesia', $child->id, $parent->id, null);
+
+    $url = Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $child])
+        ->instance()->resolvedUrl;
+
+    expect($url)->toBe('https://example.id/parent/child');
+});
+
+test('saving redirects to the listing by default', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertRedirectToRoute('collections.entries', ['collection' => 'blog']);
+});
+
+test('an "editing" save action redirects back to the same entry', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['save_action' => 'editing']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertRedirectToRoute('collections.entries.edit', ['collection' => 'blog', 'entry' => Entry::sole()->id]);
+});
+
+test('a "create another" save action redirects to a fresh create form', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['save_action' => 'create_another']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertRedirectToRoute('collections.entries.create', ['collection' => 'blog', 'site' => 'indonesia', 'blueprint' => 'post']);
+});
+
+test('a required field left blank shows a visible error banner instead of silently failing to save', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->call('save')
+        ->assertHasErrors(['data.status'])
+        ->assertSeeHtml('Please fix the following before saving')
+        ->assertSee('The data.status field is required.');
+
+    expect(Entry::count())->toBe(0);
 });

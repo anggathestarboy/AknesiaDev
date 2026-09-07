@@ -8,6 +8,7 @@ use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Collections\Services\CollectionTreeService;
+use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
@@ -274,6 +275,24 @@ class EntryForm extends Component
     protected function treeService(): CollectionTreeService
     {
         return app(CollectionTreeService::class);
+    }
+
+    /**
+     * The public URL this entry can be visited at, per the collection's
+     * route template for this site (see Collection::routeForSite()) — null
+     * when the entry hasn't been saved yet, or the collection/site has no
+     * route configured.
+     */
+    #[Computed]
+    public function resolvedUrl(): ?string
+    {
+        if (! $this->editingId) {
+            return null;
+        }
+
+        $entry = Entry::find($this->editingId);
+
+        return $entry ? app(EntryUrlResolver::class)->url($this->collection, $entry) : null;
     }
 
     #[Computed]
@@ -572,6 +591,18 @@ class EntryForm extends Component
                 continue;
             }
 
+            // A non-localizable field isn't editable outside the origin
+            // locale — the form shows it read-only, and overlayNonLocalizableData()
+            // overwrites whatever was submitted with the origin entry's value
+            // right after validation. Enforcing the field's own rules (e.g.
+            // "required") here would block saving this translation over a
+            // value the user can't even see or change from this page.
+            if (! ($field['localizable'] ?? false) && ! $this->isOriginLocale()) {
+                $rules[$key] = ['nullable'];
+
+                continue;
+            }
+
             if ($field['type'] === 'assets') {
                 $arrayRules = [];
 
@@ -759,9 +790,22 @@ class EntryForm extends Component
             }
         }
 
+        $entry->update(['uri' => app(EntryUrlResolver::class)->path($this->collection, $entry)]);
+
         Flux::toast(variant: 'success', text: __('Entry saved.'));
 
-        $this->redirectRoute('collections.entries', ['collection' => $this->collection->handle], navigate: true);
+        match ($this->collection->saveAction()) {
+            'editing' => $this->redirectRoute('collections.entries.edit', [
+                'collection' => $this->collection->handle,
+                'entry' => $entry->id,
+            ], navigate: true),
+            'create_another' => $this->redirectRoute('collections.entries.create', [
+                'collection' => $this->collection->handle,
+                'site' => $this->site,
+                'blueprint' => $this->blueprintHandle,
+            ], navigate: true),
+            default => $this->redirectRoute('collections.entries', ['collection' => $this->collection->handle], navigate: true),
+        };
     }
 
     public function render(): View

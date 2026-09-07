@@ -36,6 +36,7 @@ test('collection can be created', function () {
         'orderable' => false,
         'max_depth' => null,
         'expects_root' => false,
+        'save_action' => 'listing',
     ]);
 });
 
@@ -277,4 +278,34 @@ test('collection cannot be deleted while it still has entries', function () {
     Livewire::test(CollectionManager::class)->call('delete', $collection->id);
 
     expect(Collection::find($collection->id))->not->toBeNull();
+});
+
+test('the action after save can be configured and round-trips through edit', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('saveAction', 'create_another')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->saveAction())->toBe('create_another');
+
+    Livewire::test(CollectionManager::class)
+        ->call('edit', $collection->id)
+        ->assertSet('saveAction', 'create_another');
+});
+
+test('the action after save must be a known option', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('saveAction', 'not-a-real-option')
+        ->call('save')
+        ->assertHasErrors(['saveAction']);
 });

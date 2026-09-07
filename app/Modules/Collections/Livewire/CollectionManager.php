@@ -72,6 +72,12 @@ class CollectionManager extends Component
      */
     public bool $expectsRoot = false;
 
+    /**
+     * Where the entry form sends you after saving: 'listing', 'editing', or
+     * 'create_another'. See Collection::saveAction().
+     */
+    public string $saveAction = 'listing';
+
     #[Computed]
     public function collections()
     {
@@ -92,7 +98,7 @@ class CollectionManager extends Component
 
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'maxDepth', 'expectsRoot']);
+        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'maxDepth', 'expectsRoot', 'saveAction']);
         $this->routeMode = 'single';
         $this->sites = $this->availableSites->pluck('handle')->all();
         Flux::modal('collection-form')->show();
@@ -113,6 +119,7 @@ class CollectionManager extends Component
         $this->orderable = $collection->orderable();
         $this->maxDepth = (string) ($collection->maxDepth() ?? '');
         $this->expectsRoot = $collection->expectsRoot();
+        $this->saveAction = $collection->saveAction();
 
         Flux::modal('collection-form')->show();
     }
@@ -161,6 +168,7 @@ class CollectionManager extends Component
             'orderable' => ['boolean'],
             'maxDepth' => ['nullable', 'integer', 'min:1'],
             'expectsRoot' => ['boolean'],
+            'saveAction' => ['required', Rule::in(['listing', 'editing', 'create_another'])],
         ]);
 
         // Every site selected is the same as no restriction at all.
@@ -194,6 +202,7 @@ class CollectionManager extends Component
                 'orderable' => $validated['orderable'],
                 'max_depth' => $validated['structured'] && $validated['maxDepth'] !== '' ? (int) $validated['maxDepth'] : null,
                 'expects_root' => $validated['structured'] && $validated['expectsRoot'],
+                'save_action' => $validated['saveAction'],
             ],
         ]);
 

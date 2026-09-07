@@ -4,6 +4,16 @@
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit entry") : __("New entry") }}</flux:heading>
     </div>
 
+    @if ($errors->any())
+        <flux:callout variant="danger" icon="exclamation-triangle" :heading="__('Please fix the following before saving:')">
+            <ul class="list-disc space-y-1 pl-4 text-sm">
+                @foreach ($errors->all() as $message)
+                    <li>{{ $message }}</li>
+                @endforeach
+            </ul>
+        </flux:callout>
+    @endif
+
     <form wire:submit="save" class="grid grid-cols-3 gap-6">
         <div class="col-span-2 space-y-6">
             @if (count($this->blueprintTabs) > 1)
@@ -90,6 +100,10 @@
         </div>
 
         <div class="col-span-1 space-y-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+            @if ($this->resolvedUrl)
+                <flux:button size="sm" icon="arrow-top-right-on-square" href="{{ $this->resolvedUrl }}" target="_blank" class="w-full">{{ __('Visit') }}</flux:button>
+            @endif
+
             @if (count($this->siteLinks) > 1)
                 <div>
                     <flux:text class="text-xs font-medium text-zinc-500">{{ __('Site') }}</flux:text>

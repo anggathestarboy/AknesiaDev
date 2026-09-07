@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Collections\Http\Controllers\PageController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -15,3 +16,7 @@ if (config('cms.enabled')) {
 }
 
 require __DIR__.'/settings.php';
+
+// Catch-all for published entries — must stay last so it never shadows a
+// more specific route registered above.
+Route::get('/{uri}', [PageController::class, 'show'])->where('uri', '.*')->name('page.show');

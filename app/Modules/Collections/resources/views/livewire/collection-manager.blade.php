@@ -97,6 +97,12 @@
                 @endif
             </div>
 
+            <flux:radio.group wire:model="saveAction" :label="__('Action after save')" :description="__('Where the entry form goes after saving one of this collection\'s entries.')">
+                <flux:radio value="listing" :label="__('Go to listing')" />
+                <flux:radio value="editing" :label="__('Continue editing')" />
+                <flux:radio value="create_another" :label="__('Create another')" />
+            </flux:radio.group>
+
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="filled">{{ __('Cancel') }}</flux:button>

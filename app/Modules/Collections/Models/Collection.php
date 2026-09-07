@@ -115,4 +115,15 @@ class Collection extends Model
     {
         return (bool) ($this->settings['expects_root'] ?? false);
     }
+
+    /**
+     * Where the entry form sends you after saving one of this collection's
+     * entries: 'listing' (back to the entry list — the default), 'editing'
+     * (stay on the entry, useful for iterating), or 'create_another' (a
+     * fresh create form for the same collection/site).
+     */
+    public function saveAction(): string
+    {
+        return $this->settings['save_action'] ?? 'listing';
+    }
 }

@@ -1,0 +1,118 @@
+<?php
+
+use App\Models\User;
+use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Collections\Livewire\EntryForm;
+use App\Modules\Collections\Models\Collection;
+use App\Modules\Collections\Models\Entry;
+use App\Modules\Sites\Models\Site;
+use Illuminate\Support\Facades\File;
+use Livewire\Livewire;
+
+function makeTemplate(string $name): string
+{
+    $path = resource_path("views/pages/dynamic/{$name}.blade.php");
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<p>{{ $data[\'title\'] ?? \'\' }}</p>');
+
+    return "pages.dynamic.{$name}";
+}
+
+function forgetTemplate(string $name): void
+{
+    File::delete(resource_path("views/pages/dynamic/{$name}.blade.php"));
+}
+
+test('saving an entry persists its resolved uri', function () {
+    $this->actingAs(User::factory()->create());
+
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'https://example.id', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => ['route_mode' => 'single', 'route' => 'blog/{slug}']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->uri)->toBe('blog/hello');
+});
+
+test('a published entry renders through its resolved public url', function () {
+    $template = makeTemplate('page_controller_test_home');
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => []]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'homepage-halaman', 'uri' => 'homepage-halaman', 'data' => ['title' => 'Homepage'],
+        ]);
+
+        $this->get('/homepage-halaman')->assertOk()->assertSee('Homepage');
+    } finally {
+        forgetTemplate('page_controller_test_home');
+    }
+});
+
+test('an entry without a stored uri is still found by live-resolving and self-heals', function () {
+    $template = makeTemplate('page_controller_test_selfheal');
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => []]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        $entry = Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'about', 'uri' => null, 'data' => ['title' => 'About'],
+        ]);
+
+        $this->get('/about')->assertOk()->assertSee('About');
+
+        expect($entry->fresh()->uri)->toBe('about');
+    } finally {
+        forgetTemplate('page_controller_test_selfheal');
+    }
+});
+
+test('a draft entry is not publicly visitable', function () {
+    $template = makeTemplate('page_controller_test_draft');
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => []]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'draft',
+            'slug' => 'secret', 'uri' => 'secret', 'data' => ['title' => 'Secret'],
+        ]);
+
+        $this->get('/secret')->assertNotFound();
+    } finally {
+        forgetTemplate('page_controller_test_draft');
+    }
+});
+
+test('an entry whose blueprint has no template renders as not found', function () {
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => []]]);
+    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+    Entry::create([
+        'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+        'slug' => 'no-template', 'uri' => 'no-template', 'data' => ['title' => 'No Template'],
+    ]);
+
+    $this->get('/no-template')->assertNotFound();
+});
+
+test('an unmatched path is not found', function () {
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+
+    $this->get('/does-not-exist')->assertNotFound();
+});

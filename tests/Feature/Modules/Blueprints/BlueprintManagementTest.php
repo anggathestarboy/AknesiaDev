@@ -9,6 +9,7 @@ use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
+use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 
 test('blueprints page is displayed', function () {
@@ -121,6 +122,7 @@ test('blueprint can be created with fields via the field builder', function () {
     expect($blueprint->namespace)->toBe('collections.blog');
     expect($blueprint->handle)->toBe('post');
     expect($blueprint->data)->toBe([
+        'template' => null,
         'tabs' => [
             ['handle' => 'main', 'display' => 'Main', 'sections' => [
                 ['handle' => 'main', 'display' => 'Main'],
@@ -140,6 +142,42 @@ test('blueprint can be created with fields via the field builder', function () {
             ],
         ],
     ]);
+});
+
+test('blueprint can be assigned a template selected from resources/views/pages', function () {
+    $this->actingAs(User::factory()->create());
+
+    $path = resource_path('views/pages/dynamic/blueprint_test_home.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '');
+
+    try {
+        Livewire::test(BlueprintManager::class)
+            ->set('handle', 'home')
+            ->set('template', 'pages.dynamic.blueprint_test_home')
+            ->set('fields', [
+                ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        expect(Blueprint::sole()->data['template'])->toBe('pages.dynamic.blueprint_test_home');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('blueprint template must be an existing file under resources/views/pages', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'home')
+        ->set('template', 'pages.dynamic.does_not_exist')
+        ->set('fields', [
+            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['template']);
 });
 
 test('blueprint field can show when another field matches a value', function () {

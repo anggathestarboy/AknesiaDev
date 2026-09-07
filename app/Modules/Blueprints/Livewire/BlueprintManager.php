@@ -11,6 +11,7 @@ use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -28,6 +29,13 @@ class BlueprintManager extends Component
     public string $namespace = '';
 
     public string $handle = '';
+
+    /**
+     * Dot-notation view name of the Blade template (under
+     * resources/views/pages) used to render entries using this blueprint —
+     * see availableTemplates().
+     */
+    public string $template = '';
 
     /**
      * Groups top-level fields for display, mirroring Statamic's blueprint
@@ -133,9 +141,37 @@ class BlueprintManager extends Component
         return Taxonomy::orderBy('title')->get();
     }
 
+    /**
+     * Blade templates a blueprint can render entries with — every
+     * *.blade.php file under resources/views/pages, as the dot-notation
+     * view name Laravel's view() expects (e.g. "pages.dynamic.home").
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function availableTemplates(): array
+    {
+        $directory = resource_path('views/pages');
+
+        if (! File::isDirectory($directory)) {
+            return [];
+        }
+
+        return collect(File::allFiles($directory))
+            ->filter(fn ($file): bool => str_ends_with($file->getFilename(), '.blade.php'))
+            ->map(fn ($file): string => 'pages.'.str_replace(
+                ['/', '.blade.php'],
+                ['.', ''],
+                $file->getRelativePathname()
+            ))
+            ->sort()
+            ->values()
+            ->all();
+    }
+
     public function create(): void
     {
-        $this->reset(['editingId', 'namespace', 'handle', 'fields', 'tabs', 'editingTabIndex', 'editingSection']);
+        $this->reset(['editingId', 'namespace', 'handle', 'template', 'fields', 'tabs', 'editingTabIndex', 'editingSection']);
         $this->addField('main', 'main');
         Flux::modal('blueprint-form')->show();
     }
@@ -147,6 +183,7 @@ class BlueprintManager extends Component
         $this->editingId = $blueprint->id;
         $this->namespace = (string) $blueprint->namespace;
         $this->handle = $blueprint->handle;
+        $this->template = (string) ($blueprint->data['template'] ?? '');
 
         $this->tabs = collect($blueprint->data['tabs'] ?? [])
             ->map(fn (array $tab): array => [
@@ -310,6 +347,7 @@ class BlueprintManager extends Component
                     ->where('namespace', $this->namespace ?: null)
                     ->ignore($this->editingId),
             ],
+            'template' => ['nullable', 'string', Rule::in($this->availableTemplates)],
         ]);
 
         [$tabErrors, $tabHandles, $sectionHandlesByTab] = $this->validateTabs();
@@ -322,6 +360,7 @@ class BlueprintManager extends Component
         }
 
         $data = [
+            'template' => $validated['template'] ?: null,
             'tabs' => array_map(fn (array $tab): array => [
                 'handle' => $tab['handle'],
                 'display' => $tab['display'] ?: Str::headline($tab['handle']),
@@ -363,6 +402,7 @@ class BlueprintManager extends Component
             'linkableCollections' => $this->availableCollections,
             'fieldsets' => $this->availableFieldsets,
             'taxonomies' => $this->availableTaxonomies,
+            'templates' => $this->availableTemplates,
         ]);
     }
 }

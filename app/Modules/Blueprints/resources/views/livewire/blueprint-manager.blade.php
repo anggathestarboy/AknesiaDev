@@ -57,6 +57,19 @@
                 @endif
 
                 <flux:input wire:model="handle" :label="__('Handle')" description:trailing="{{ __('Lowercase letters, numbers and underscores only — no spaces.') }}" required />
+
+                @if (empty($templates))
+                    <div>
+                        <flux:text class="text-sm font-medium">{{ __('Template') }}</flux:text>
+                        <flux:text class="text-zinc-500">{{ __('No templates yet — add a .blade.php file under resources/views/pages first.') }}</flux:text>
+                    </div>
+                @else
+                    <flux:select wire:model="template" :label="__('Template')" placeholder="{{ __('No template') }}" :description="__('The Blade view used to render entries using this blueprint.')">
+                        @foreach ($templates as $availableTemplate)
+                            <flux:select.option value="{{ $availableTemplate }}">{{ $availableTemplate }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                @endif
             </div>
 
             <div class="space-y-3">

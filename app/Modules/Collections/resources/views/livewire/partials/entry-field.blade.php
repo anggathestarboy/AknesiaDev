@@ -152,9 +152,12 @@
                 </div>
             </div>
             <flux:description>{{ trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? '')) }}</flux:description>
+            @error($prefix)
+                <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+            @enderror
         </flux:field>
     @else
-        <flux:select wire:model="{{ $prefix }}.0" :label="$field['display']" :description="trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? ''))" placeholder="{{ __('Select a term') }}">
+        <flux:select wire:model="{{ $prefix }}.0" error:name="{{ $prefix }}" :label="$field['display']" :description="trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? ''))" placeholder="{{ __('Select a term') }}">
             @foreach ($taxonomyOptions as $term)
                 <flux:select.option value="{{ $term->id }}">{{ $term->data['title'] ?? $term->slug }}</flux:select.option>
             @endforeach
@@ -204,6 +207,10 @@
                 </button>
             @endunless
         </div>
+
+        @error($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </div>
 @else
     <flux:input wire:model="{{ $prefix }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
