@@ -1,10 +1,6 @@
-<section
-    class="w-full max-w-6xl space-y-6"
-    x-on:keydown.window.ctrl.s.prevent="$wire.save()"
-    x-on:keydown.window.meta.s.prevent="$wire.save()"
->
+<section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div class="">
-        <flux:link :href="route('collections.entries', $collection->handle)" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link>
+        <flux:link :href="route('collections.entries', $collection->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit entry") : __("New entry") }}</flux:heading>
     </div>
 
@@ -18,8 +14,8 @@
         </flux:callout>
     @endif
 
-    <form wire:submit="save" class="grid grid-cols-3 gap-6">
-        <div class="col-span-2 space-y-6">
+    <form wire:submit="save" class="flex items-start gap-10">
+        <div class="w-[70%] space-y-6">
             @if (count($this->blueprintTabs) > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
                     @foreach ($this->blueprintTabs as $tab)
@@ -94,7 +90,7 @@
             @endforeach
         </div>
 
-        <div class="col-span-1 space-y-5 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+        <div class="w-[30%] col-span-1 space-y-5 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
             <div class="">
                 <div class="flex justify-between gap-2 pb-2">
                     <flux:button variant="primary" class="w-full" type="submit">{{ __("Save") }}</flux:button>
@@ -120,7 +116,11 @@
                 </div>
             @endif
 
-            @if ($this->availableBlueprints->count() > 1)
+            <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+
+            <flux:input wire:model="slug" :label="__('Slug')" placeholder="my-entry-slug" required size="sm" />
+
+            {{-- @if ($this->availableBlueprints->count() > 1)
                 <flux:select wire:model.live="blueprintHandle" :label="__('Blueprint')" size="sm">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
                         <flux:select.option value="{{ $availableBlueprint->handle }}">{{ $availableBlueprint->handle }}</flux:select.option>
@@ -131,7 +131,7 @@
                     <flux:text class="text-xs font-medium text-zinc-500">{{ __("Blueprint") }}</flux:text>
                     <flux:text>{{ $blueprintHandle }}</flux:text>
                 </div>
-            @endif
+            @endif --}}
 
             @if ($collection->structured())
                 <flux:select wire:model="parentId" :label="__('Parent')" size="sm">
@@ -144,10 +144,6 @@
                     <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
                 @enderror
             @endif
-
-            <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
-
-            <flux:input wire:model="slug" :label="__('Slug')" placeholder="my-entry-slug" required size="sm" />
 
             <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
 

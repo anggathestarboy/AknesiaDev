@@ -1,7 +1,7 @@
 <section class="w-full space-y-6">
     <div class="flex items-start justify-between">
         <div>
-            <flux:link :href="route('collections.index')" wire:navigate class="text-sm">{{ __("← Collections") }}</flux:link>
+            <flux:link :href="route('collections.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Collections") }}</flux:link>
             <flux:heading size="lg" class="mt-5">{{ __(":collection entries", ["collection" => $collection->title]) }}</flux:heading>
             <flux:subheading>{{ __("Handle: :handle", ["handle" => $collection->handle]) }}</flux:subheading>
         </div>

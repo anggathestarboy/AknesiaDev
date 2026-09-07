@@ -117,3 +117,53 @@ test('an unmatched path is not found', function () {
 
     $this->get('/does-not-exist')->assertNotFound();
 });
+
+test('a path-prefixed site (e.g. /en) resolves its own entries, not the root site\'s', function () {
+    $indonesiaTemplate = makeTemplate('page_controller_test_id');
+    $englishTemplate = makeTemplate('page_controller_test_en');
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => '/', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Site::create(['handle' => 'english', 'name' => 'English', 'url' => '/en', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $indonesiaTemplate, 'fields' => []]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'homepage-halaman', 'uri' => 'homepage-halaman', 'data' => ['title' => 'Homepage ID'],
+        ]);
+        Entry::create([
+            'site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'halo-slug', 'uri' => 'halo-slug', 'data' => ['title' => 'Homepage EN'],
+        ]);
+
+        $this->get('/homepage-halaman')->assertOk()->assertSee('Homepage ID');
+        $this->get('/en/halo-slug')->assertOk()->assertSee('Homepage EN');
+
+        // Each site's entry only exists under its own prefix.
+        $this->get('/halo-slug')->assertNotFound();
+        $this->get('/en/homepage-halaman')->assertNotFound();
+    } finally {
+        forgetTemplate('page_controller_test_id');
+        forgetTemplate('page_controller_test_en');
+    }
+});
+
+test('the visit url for a path-prefixed site matches what the public page controller resolves', function () {
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => '/', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => '/en', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+    Blueprint::create(['namespace' => 'collections.pages', 'handle' => 'page', 'data' => ['fields' => []]]);
+    $collection = Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'english'])
+        ->set('title', 'Hello')
+        ->set('slug', 'halo-slug')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $url = Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => Entry::sole()])
+        ->instance()->resolvedUrl;
+
+    expect($url)->toBe('/en/halo-slug');
+});

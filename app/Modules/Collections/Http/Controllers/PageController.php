@@ -21,13 +21,13 @@ class PageController
 {
     public function show(Request $request, string $uri = ''): View
     {
-        $site = $this->resolveSite($request);
+        [$site, $relativeUri] = $this->resolveSite($request, trim($uri, '/'));
 
         if (! $site) {
             throw new NotFoundHttpException;
         }
 
-        $entry = $this->findEntry($site->handle, trim($uri, '/'));
+        $entry = $this->findEntry($site->handle, $relativeUri);
 
         if (! $entry) {
             throw new NotFoundHttpException;
@@ -88,16 +88,53 @@ class PageController
     }
 
     /**
-     * ponytail: substring match against each site's configured URL, falling
-     * back to the first site — good enough for one domain per site or a
-     * single-site setup; a dedicated exact-host lookup would be needed for
-     * true multi-domain routing.
+     * Matches a request to a site, supporting both domain-based sites
+     * (url has a host, e.g. https://en.example.com) and path-prefix-based
+     * sites sharing one domain (url is just a path, e.g. "/en") — Sites
+     * here store either, per the Sites module. A site with a host only
+     * matches that same request host; a site's path (if any) must prefix
+     * the request path. The longest matching path prefix wins, so "/en"
+     * beats the root site "/" for a request under /en. Returns the site
+     * and the path with that prefix stripped, ready to look up an entry's
+     * stored uri.
+     *
+     * ponytail: no wildcard/subdomain matching, no scheme check — enough
+     * for one domain (or none, in local dev) with per-language path
+     * prefixes; revisit if sites start spanning multiple real domains.
+     *
+     * @return array{0: ?Site, 1: string}
      */
-    protected function resolveSite(Request $request): ?Site
+    protected function resolveSite(Request $request, string $path): array
     {
         $host = $request->getHost();
+        $best = null;
+        $bestPrefix = null;
 
-        return Site::query()->where('url', 'like', "%{$host}%")->first()
-            ?? Site::orderBy('order')->first();
+        foreach (Site::orderBy('order')->get() as $site) {
+            $parsed = parse_url($site->url ?: '/');
+            $siteHost = $parsed['host'] ?? null;
+            $sitePath = trim($parsed['path'] ?? '', '/');
+
+            if ($siteHost && $siteHost !== $host) {
+                continue;
+            }
+
+            $matches = $sitePath === '' || $path === $sitePath || str_starts_with($path, "{$sitePath}/");
+
+            if ($matches && ($bestPrefix === null || strlen($sitePath) > strlen($bestPrefix))) {
+                $best = $site;
+                $bestPrefix = $sitePath;
+            }
+        }
+
+        $best ??= Site::orderBy('order')->first();
+
+        if (! $best) {
+            return [null, $path];
+        }
+
+        $relative = $bestPrefix ? trim(substr($path, strlen($bestPrefix)), '/') : $path;
+
+        return [$best, $relative];
     }
 }
