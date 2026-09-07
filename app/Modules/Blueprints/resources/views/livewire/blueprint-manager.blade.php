@@ -5,7 +5,10 @@
             <flux:subheading>{{ __("Define field structures used by content.") }}</flux:subheading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __("New blueprint") }}</flux:button>
+        <div class="flex gap-2">
+            <flux:button :href="route('blueprints.fieldsets')" wire:navigate>{{ __("Fieldsets") }}</flux:button>
+            <flux:button variant="primary" wire:click="create">{{ __("New blueprint") }}</flux:button>
+        </div>
     </div>
 
     <flux:table>
@@ -57,12 +60,12 @@
             </div>
 
             <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <flux:subheading>{{ __("Fields") }}</flux:subheading>
+                <div class="flex items-center justify-end">
+                    {{-- <flux:subheading>{{ __("Fields") }}</flux:subheading> --}}
                     <div class="flex gap-2">
-                        <flux:button size="sm" variant="ghost" type="button" wire:click="$dispatch('collapse-all-fields')">{{ __("Collapse all") }}</flux:button>
-                        <flux:button size="sm" variant="ghost" type="button" wire:click="$dispatch('expand-all-fields')">{{ __("Expand all") }}</flux:button>
-                        <flux:button size="sm" type="button" wire:click="addTab">{{ __("Add tab") }}</flux:button>
+                        <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('collapse-all-fields')">{{ __("Collapse all") }}</flux:button>
+                        <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('expand-all-fields')">{{ __("Expand all") }}</flux:button>
+                        <flux:button size="xs" type="button" wire:click="addTab">{{ __("Add tab") }}</flux:button>
                     </div>
                 </div>
 
@@ -78,9 +81,9 @@
                     <div class="space-y-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700">
                         @if ($tabIndex !== 0 && $editingTabIndex === $tabIndex)
                             <div class="flex items-center gap-1">
-                                <flux:input wire:model="tabs.{{ $tabIndex }}.handle" placeholder="handle" size="sm" class="w-28" />
-                                <flux:input wire:model="tabs.{{ $tabIndex }}.display" placeholder="{{ __('Label') }}" size="sm" class="w-28" />
-                                <flux:button size="sm" variant="primary" type="button" wire:click="$set('editingTabIndex', null)">{{ __("Done") }}</flux:button>
+                                <flux:input wire:model="tabs.{{ $tabIndex }}.handle" placeholder="handle" size="xs" class="w-28" />
+                                <flux:input wire:model="tabs.{{ $tabIndex }}.display" placeholder="{{ __('Label') }}" size="xs" class="w-28" />
+                                <flux:button size="xs" variant="primary" type="button" wire:click="$set('editingTabIndex', null)">{{ __("Done") }}</flux:button>
                             </div>
                             @error ("tabs.{$tabIndex}.handle")
                                 <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -100,8 +103,8 @@
                                     @endif
                                 </div>
                                 <div class="flex gap-2">
-                                    <flux:button size="sm" variant="ghost" type="button" wire:click="addSection({{ $tabIndex }})">{{ __("Add section") }}</flux:button>
-                                    <flux:button size="sm" type="button" wire:click="addField('{{ $tab['handle'] }}')">{{ __("Add field") }}</flux:button>
+                                    <flux:button size="xs" variant="ghost" type="button" wire:click="addSection({{ $tabIndex }})">{{ __("Add section") }}</flux:button>
+                                    <flux:button size="xs" type="button" wire:click="addField('{{ $tab['handle'] }}')">{{ __("Add field") }}</flux:button>
                                 </div>
                             </div>
                         @endif
@@ -121,6 +124,8 @@
                                         "conditionOperators" => $conditionOperators,
                                         "assetContainers" => $assetContainers,
                                         "linkableCollections" => $linkableCollections,
+                                        "fieldsets" => $fieldsets,
+                                        "taxonomies" => $taxonomies,
                                         "tabs" => $tabs
                                     ])
                             @empty
@@ -155,30 +160,30 @@
                                                 </flux:menu>
                                             </flux:dropdown>
                                         </div>
-                                        <flux:button size="sm" variant="ghost" type="button" wire:click="addField('{{ $tab['handle'] }}', '{{ $section['handle'] }}')">{{ __("Add field") }}</flux:button>
+                                        <flux:button size="xs" variant="primary" type="button" wire:click="addField('{{ $tab['handle'] }}', '{{ $section['handle'] }}')">{{ __("Add field") }}</flux:button>
                                     </div>
                                 @endif
 
                                 <div wire:sort="reorderFields" wire:sort:group="blueprint-fields" wire:sort:group-id="{{ json_encode(['tab' => $tab['handle'], 'section' => $section['handle']]) }}" class="space-y-3">
-                                @forelse ($sectionFieldIndexes as $position => $index)
-                                    @include ("blueprints::livewire.partials.field-editor",
-                                        [
-                                            "field" => $fields[$index],
-                                            "path" => [$index],
-                                            "prefix" => "fields.{$index}",
-                                            "index" => $index,
-                                            "isFirst" => $position === 0,
-                                            "isLast" => $position === count($sectionFieldIndexes) - 1,
-                                            "siblings" => $fields,
-                                            "fieldtypes" => $fieldtypes,
-                                            "conditionOperators" => $conditionOperators,
-                                            "assetContainers" => $assetContainers,
-                                            "linkableCollections" => $linkableCollections,
-                                            "tabs" => $tabs
-                                        ])
-                                @empty
-                                    <flux:text class="text-sm text-zinc-500">{{ __("No fields in this section yet.") }}</flux:text>
-                                @endforelse
+                                    @forelse ($sectionFieldIndexes as $position => $index)
+                                        @include ("blueprints::livewire.partials.field-editor",
+                                            [
+                                                "field" => $fields[$index],
+                                                "path" => [$index],
+                                                "prefix" => "fields.{$index}",
+                                                "index" => $index,
+                                                "isFirst" => $position === 0,
+                                                "isLast" => $position === count($sectionFieldIndexes) - 1,
+                                                "siblings" => $fields,
+                                                "fieldtypes" => $fieldtypes,
+                                                "conditionOperators" => $conditionOperators,
+                                                "assetContainers" => $assetContainers,
+                                                "linkableCollections" => $linkableCollections,
+                                                "tabs" => $tabs
+                                            ])
+                                    @empty
+                                        <flux:text class="text-sm text-zinc-500">{{ __("No fields in this section yet.") }}</flux:text>
+                                    @endforelse
                                 </div>
                             </div>
                         @endforeach

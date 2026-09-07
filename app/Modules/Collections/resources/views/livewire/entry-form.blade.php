@@ -44,6 +44,7 @@
                             'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
                             'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
                             'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
+                            'taxonomyIds' => $field['type'] === 'taxonomy' ? ($data[$field['handle']] ?? []) : null,
                         ])
                     @endif
                 </div>
@@ -78,6 +79,7 @@
                                         'rows' => $field['type'] === 'replicator' ? ($data[$field['handle']] ?? []) : null,
                                         'assetIds' => $field['type'] === 'assets' ? ($data[$field['handle']] ?? []) : null,
                                         'linkValue' => $field['type'] === 'link' ? ($data[$field['handle']] ?? '') : null,
+                                        'taxonomyIds' => $field['type'] === 'taxonomy' ? ($data[$field['handle']] ?? []) : null,
                                     ])
                                 @endif
                             </div>

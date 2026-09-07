@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | CMS Panel
@@ -15,9 +14,9 @@ return [
     |
     */
 
-    'enabled' => env('CMS_ENABLED', true),
+    "enabled" => env("CMS_ENABLED", true),
 
-    'route' => env('CMS_ROUTE', 'admin-panel'),
+    "route" => env("CMS_ROUTE", "admin-panel"),
 
     /*
     |--------------------------------------------------------------------------
@@ -31,6 +30,5 @@ return [
     |
     */
 
-    'protected_navigations' => ['sidebar-admin'],
-
+    "protected_navigations" => ["sidebar-admin"],
 ];

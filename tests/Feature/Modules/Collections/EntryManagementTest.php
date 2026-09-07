@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Taxonomy;
+use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Livewire\EntryForm;
 use App\Modules\Collections\Livewire\EntryManager;
 use App\Modules\Collections\Models\Collection;
@@ -146,6 +149,157 @@ test('entry can be created with dynamic fields from the collection blueprint', f
         'status' => 'published',
         'title' => 'Hello World',
     ]);
+});
+
+test('a fieldset field on the blueprint expands into its own fields, flattened into entry data', function () {
+    $this->actingAs(User::factory()->create());
+
+    Fieldset::create(['handle' => 'seo_tools', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'meta_description', 'display' => 'Meta Description', 'type' => 'textarea', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+
+    Blueprint::create([
+        'namespace' => null,
+        'handle' => 'homepage',
+        'data' => ['fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+            ['handle' => '', 'display' => '', 'type' => 'fieldset', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'seo_tools'],
+        ]],
+    ]);
+    $collection = makeBlogCollection('homepage');
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia']);
+
+    // The fieldset's own sub-fields render inline, using their own handles.
+    $component->assertSeeHtml('data.meta_title')->assertSeeHtml('data.meta_description');
+
+    $component
+        ->set('title', 'Home')
+        ->set('data.headline', 'Welcome')
+        ->set('data.meta_title', 'Best homepage ever')
+        ->set('data.meta_description', 'A description')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data)->toBe([
+        'headline' => 'Welcome',
+        'meta_title' => 'Best homepage ever',
+        'meta_description' => 'A description',
+        'title' => 'Home',
+    ]);
+});
+
+test('a required field imported via a fieldset is still validated', function () {
+    $this->actingAs(User::factory()->create());
+
+    Fieldset::create(['handle' => 'seo_tools', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+
+    Blueprint::create([
+        'namespace' => null,
+        'handle' => 'homepage',
+        'data' => ['fields' => [
+            ['handle' => '', 'display' => '', 'type' => 'fieldset', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'seo_tools'],
+        ]],
+    ]);
+    $collection = makeBlogCollection('homepage');
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Home')
+        ->call('save')
+        ->assertHasErrors(['data.meta_title']);
+});
+
+test('entry can store selected taxonomy terms for a taxonomy field', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    $news = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'news', 'uri' => '/categories/news', 'taxonomy' => 'categories', 'data' => ['title' => 'News']]);
+    $sports = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'sports', 'uri' => '/categories/sports', 'taxonomy' => 'categories', 'data' => ['title' => 'Sports']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => null, 'max_items' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.categories', [$news->id, $sports->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->data['categories'])->toEqual([$news->id, $sports->id]);
+});
+
+test('taxonomy field renders a multi-select dropdown once the maximum allows more than one', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'news', 'uri' => '/categories/news', 'taxonomy' => 'categories', 'data' => ['title' => 'News']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => 1, 'max_items' => 2],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSeeHtml('toggle(id)');
+});
+
+test('taxonomy field renders a plain select when at most one selection is allowed', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'news', 'uri' => '/categories/news', 'taxonomy' => 'categories', 'data' => ['title' => 'News']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => null, 'max_items' => 1],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertDontSeeHtml('toggle(id)');
+});
+
+test('taxonomy field enforces its configured minimum selection count', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    $news = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'news', 'uri' => '/categories/news', 'taxonomy' => 'categories', 'data' => ['title' => 'News']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => 2, 'max_items' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.categories', [$news->id])
+        ->call('save')
+        ->assertHasErrors(['data.categories']);
+});
+
+test('a term from a different taxonomy is rejected by the taxonomy field', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    Taxonomy::create(['handle' => 'tags', 'title' => 'Tags', 'sites' => []]);
+    $tag = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'featured', 'uri' => '/tags/featured', 'taxonomy' => 'tags', 'data' => ['title' => 'Featured']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'categories', 'min_items' => null, 'max_items' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('data.categories', [$tag->id])
+        ->call('save')
+        ->assertHasErrors(['data.categories.0']);
 });
 
 test('entry create page renders the currently selected asset and an add button', function () {

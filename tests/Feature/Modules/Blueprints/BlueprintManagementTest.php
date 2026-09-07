@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Taxonomy;
 use App\Models\User;
 use App\Modules\Blueprints\Livewire\BlueprintManager;
 use App\Modules\Blueprints\Livewire\FieldsetManager;
@@ -1033,31 +1034,79 @@ test('blueprint can be deleted', function () {
     expect(Blueprint::find($blueprint->id))->toBeNull();
 });
 
-test('fieldset can be created', function () {
+test('fieldset can be created with a field builder like blueprints', function () {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(FieldsetManager::class)
+        ->call('create')
         ->set('handle', 'seo')
-        ->set('data', '{"fields":[]}')
+        ->set('fields.0.handle', 'meta_title')
+        ->set('fields.0.display', 'Meta Title')
         ->call('save')
         ->assertHasNoErrors();
 
     $fieldset = Fieldset::sole();
 
     expect($fieldset->handle)->toBe('seo');
-    expect($fieldset->data)->toBe(['fields' => []]);
+    expect($fieldset->data['fields'])->toHaveCount(1);
+    expect($fieldset->data['fields'][0]['handle'])->toBe('meta_title');
+    expect($fieldset->data['fields'][0])->not->toHaveKey('tab');
+    expect($fieldset->data['fields'][0])->not->toHaveKey('section');
 });
 
 test('fieldset handle must be unique', function () {
     $this->actingAs(User::factory()->create());
 
-    Fieldset::create(['handle' => 'seo', 'data' => []]);
+    Fieldset::create(['handle' => 'seo', 'data' => ['fields' => []]]);
+
+    Livewire::test(FieldsetManager::class)
+        ->call('create')
+        ->set('handle', 'seo')
+        ->set('fields.0.handle', 'meta_title')
+        ->call('save')
+        ->assertHasErrors(['handle']);
+});
+
+test('a fieldset requires at least one field', function () {
+    $this->actingAs(User::factory()->create());
 
     Livewire::test(FieldsetManager::class)
         ->set('handle', 'seo')
-        ->set('data', '{}')
+        ->set('fields', [])
         ->call('save')
-        ->assertHasErrors(['handle']);
+        ->assertHasErrors(['fields']);
+});
+
+test('fieldset fields can be reordered by drag and drop', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(FieldsetManager::class)
+        ->call('create')
+        ->set('fields.0.handle', 'field_one')
+        ->call('addField')
+        ->set('fields.1.handle', 'field_two');
+
+    $component
+        ->call('reorderFields', $component->get('fields.0._uid'), 1, json_encode(['tab' => 'main', 'section' => '']))
+        ->assertSet('fields.0.handle', 'field_two')
+        ->assertSet('fields.1.handle', 'field_one');
+});
+
+test('fieldset can be edited', function () {
+    $this->actingAs(User::factory()->create());
+
+    $fieldset = Fieldset::create(['handle' => 'seo', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
+    ]]]);
+
+    Livewire::test(FieldsetManager::class)
+        ->call('edit', $fieldset->id)
+        ->assertSet('fields.0.handle', 'meta_title')
+        ->set('fields.0.required', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($fieldset->refresh()->data['fields'][0]['required'])->toBeTrue();
 });
 
 test('assets field can be created scoped to an asset container', function () {
@@ -1077,6 +1126,72 @@ test('assets field can be created scoped to an asset container', function () {
 
     expect($field['type'])->toBe('assets');
     expect($field['options'])->toBe('photos');
+});
+
+test('taxonomy field can be created scoped to a taxonomy with min/max selections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'categories', 'display' => '', 'type' => 'taxonomy', 'required' => false, 'options' => 'categories', 'min_items' => '1', 'max_items' => '3'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('taxonomy');
+    expect($field['options'])->toBe('categories');
+    expect($field['min_items'])->toBe(1);
+    expect($field['max_items'])->toBe(3);
+});
+
+test('taxonomy field requires a taxonomy to be selected', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'categories', 'display' => '', 'type' => 'taxonomy', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
+});
+
+test('a blueprint field can import an existing fieldset', function () {
+    $this->actingAs(User::factory()->create());
+
+    Fieldset::create(['handle' => 'seo', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
+    ]]]);
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'seo', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => 'seo'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('fieldset');
+    expect($field['options'])->toBe('seo');
+});
+
+test('a fieldset field requires an existing fieldset to be selected', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'seo', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options']);
 });
 
 test('assets field requires an asset container to be selected', function () {

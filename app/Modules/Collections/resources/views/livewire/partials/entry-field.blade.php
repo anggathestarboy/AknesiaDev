@@ -80,6 +80,7 @@
                                     'rows' => $sub['type'] === 'replicator' ? ($row[$sub['handle']] ?? []) : null,
                                     'assetIds' => $sub['type'] === 'assets' ? ($row[$sub['handle']] ?? []) : null,
                                     'linkValue' => $sub['type'] === 'link' ? ($row[$sub['handle']] ?? '') : null,
+                                    'taxonomyIds' => $sub['type'] === 'taxonomy' ? ($row[$sub['handle']] ?? []) : null,
                                 ])
                             </div>
                         @endforeach
@@ -95,6 +96,70 @@
             <flux:button size="sm" variant="filled" type="button" wire:click='addReplicatorRow({{ json_encode($path) }})'>{{ __('Add :label', ['label' => $field['display']]) }}</flux:button>
         </div>
     </div>
+@elseif ($field['type'] === 'taxonomy')
+    @php
+        $taxonomyOptions = $this->taxonomyTerms($field['options'] ?? null);
+        $allowsMultiple = ($field['max_items'] ?? null) === null || $field['max_items'] > 1;
+        $taxonomyHint = match (true) {
+            ($field['min_items'] ?? null) !== null && ($field['max_items'] ?? null) !== null => __(':min–:max selections', ['min' => $field['min_items'], 'max' => $field['max_items']]),
+            ($field['min_items'] ?? null) !== null => __('At least :min selections', ['min' => $field['min_items']]),
+            ($field['max_items'] ?? null) !== null => __('Up to :max selections', ['max' => $field['max_items']]),
+            default => null,
+        };
+    @endphp
+    @if ($allowsMultiple)
+        <flux:field>
+            <flux:label>{{ $field['display'] }}</flux:label>
+            <div
+                x-data="{
+                    open: false,
+                    max: {{ $field['max_items'] ?? 'null' }},
+                    labels: @js($taxonomyOptions->mapWithKeys(fn ($term) => [(string) $term->id => $term->data['title'] ?? $term->slug])),
+                    selected: @js(collect($taxonomyIds ?? [])->map(fn ($id) => (string) $id)->values()),
+                    toggle(id) {
+                        id = String(id);
+                        if (this.selected.includes(id)) {
+                            this.selected = this.selected.filter((value) => value !== id);
+                        } else {
+                            this.selected.push(id);
+                            if (this.max && this.selected.length >= this.max) {
+                                this.open = false;
+                            }
+                        }
+                    },
+                    get label() {
+                        return this.selected.length ? this.selected.map((id) => this.labels[id]).join(', ') : '{{ __('Select terms') }}';
+                    },
+                }"
+                class="relative"
+                x-on:click.outside="open = false"
+            >
+                <button type="button" x-on:click="open = !open" class="flex w-full items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm shadow-xs dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+                    <span class="truncate" x-text="label"></span>
+                    <flux:icon.chevron-down class="size-4 shrink-0 text-zinc-400" />
+                </button>
+
+                <div x-show="open" x-cloak class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-zinc-800">
+                    @forelse ($taxonomyOptions as $term)
+                        <label class="flex cursor-pointer items-center justify-between px-3 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700">
+                            <span>{{ $term->data['title'] ?? $term->slug }}</span>
+                            <input type="checkbox" wire:model="{{ $prefix }}" value="{{ $term->id }}" x-on:click="toggle('{{ $term->id }}')" class="peer sr-only">
+                            <flux:icon.check class="hidden size-4 shrink-0 text-zinc-800 peer-checked:block dark:text-zinc-100" />
+                        </label>
+                    @empty
+                        <flux:text class="block px-3 py-1.5 text-sm text-zinc-500">{{ __('No terms yet.') }}</flux:text>
+                    @endforelse
+                </div>
+            </div>
+            <flux:description>{{ trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? '')) }}</flux:description>
+        </flux:field>
+    @else
+        <flux:select wire:model="{{ $prefix }}.0" :label="$field['display']" :description="trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? ''))" placeholder="{{ __('Select a term') }}">
+            @foreach ($taxonomyOptions as $term)
+                <flux:select.option value="{{ $term->id }}">{{ $term->data['title'] ?? $term->slug }}</flux:select.option>
+            @endforeach
+        </flux:select>
+    @endif
 @elseif ($field['type'] === 'assets')
     @php
         $selectedCount = count($assetIds ?? []);
