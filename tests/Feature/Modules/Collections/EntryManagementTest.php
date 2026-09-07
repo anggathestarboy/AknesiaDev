@@ -131,6 +131,8 @@ test('entry can be created with dynamic fields from the collection blueprint', f
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
         ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('slug', 'hello-world')
         ->set('status', 'published')
         ->set('data.rating', 5)
         ->set('data.featured', true)
@@ -179,6 +181,8 @@ test('a fieldset field on the blueprint expands into its own fields, flattened i
 
     $component
         ->set('title', 'Home')
+        ->set('slug', 'home')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.headline', 'Welcome')
         ->set('data.meta_title', 'Best homepage ever')
         ->set('data.meta_description', 'A description')
@@ -231,6 +235,8 @@ test('entry can store selected taxonomy terms for a taxonomy field', function ()
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.categories', [$news->id, $sports->id])
         ->call('save')
         ->assertHasNoErrors();
@@ -281,6 +287,8 @@ test('taxonomy field enforces its configured minimum selection count', function 
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.categories', [$news->id])
         ->call('save')
         ->assertHasErrors(['data.categories']);
@@ -298,6 +306,8 @@ test('a failed multi-select taxonomy field shows its validation error message', 
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasErrors(['data.categories'])
         ->assertSee('The data.categories field is required.');
@@ -315,6 +325,8 @@ test('a failed single-select taxonomy field shows its validation error message',
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasErrors(['data.categories'])
         ->assertSee('The data.categories field is required.');
@@ -334,6 +346,8 @@ test('a term from a different taxonomy is rejected by the taxonomy field', funct
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.categories', [$tag->id])
         ->call('save')
         ->assertHasErrors(['data.categories.0']);
@@ -369,6 +383,8 @@ test('entry receives the asset ids dispatched back by the asset picker', functio
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->dispatch('assets-selected', path: ['gallery'], ids: [$asset->id])
         ->call('save')
         ->assertHasNoErrors();
@@ -391,6 +407,8 @@ test('removing a selected asset clears it from the field', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.gallery', [$asset->id])
         ->call('removeAsset', ['gallery'], $asset->id)
         ->assertSet('data.gallery', []);
@@ -408,6 +426,8 @@ test('assets field requires at least one asset when marked required', function (
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasErrors(['data.gallery']);
 });
@@ -426,6 +446,8 @@ test('an asset id from a different container is rejected', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.gallery', [$otherAsset->id])
         ->call('save')
         ->assertHasErrors(['data.gallery.0']);
@@ -444,6 +466,8 @@ test('assets field enforces its configured minimum item count', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.gallery', [$asset->id])
         ->call('save')
         ->assertHasErrors(['data.gallery']);
@@ -463,6 +487,8 @@ test('assets field enforces its configured maximum item count', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.gallery', [$first->id, $second->id])
         ->call('save')
         ->assertHasErrors(['data.gallery']);
@@ -479,6 +505,8 @@ test('radio field defaults to its configured value and validates against its opt
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->assertSet('data.size', 'medium')
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.size', 'huge')
         ->call('save')
         ->assertHasErrors(['data.size']);
@@ -494,6 +522,8 @@ test('checkbox field stores an array of chosen options', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.toppings', ['cheese', 'olives'])
         ->call('save')
         ->assertHasNoErrors();
@@ -513,6 +543,8 @@ test('checkbox field rejects a value outside its options', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.toppings', ['pineapple'])
         ->call('save')
         ->assertHasErrors(['data.toppings.0']);
@@ -528,12 +560,16 @@ test('checkbox field enforces its configured minimum and maximum selection count
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.toppings', [])
         ->call('save')
         ->assertHasErrors(['data.toppings']);
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.toppings', ['cheese', 'olives', 'mushrooms'])
         ->call('save')
         ->assertHasErrors(['data.toppings']);
@@ -549,6 +585,8 @@ test('link field can store a plain URL', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.cta', 'https://example.com')
         ->call('save')
         ->assertHasNoErrors();
@@ -567,6 +605,8 @@ test('link field can store a reference to an allowed entry', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.cta', "entry::{$target->id}")
         ->call('save')
         ->assertHasNoErrors();
@@ -587,6 +627,8 @@ test('link field rejects an entry outside its allowed collections', function () 
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.cta', "entry::{$target->id}")
         ->call('save')
         ->assertHasErrors(['data.cta']);
@@ -610,6 +652,8 @@ test('entry can store rows of data for a replicator field', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('addReplicatorRow', ['gallery'])
         ->set('data.gallery.0.caption', 'First image')
         ->set('data.gallery.0.featured', true)
@@ -643,6 +687,8 @@ test('replicator row requires its required sub-fields', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('addReplicatorRow', ['gallery'])
         ->call('save')
         ->assertHasErrors(['data.gallery.0.caption']);
@@ -665,6 +711,8 @@ test('replicator select sub-field must be one of its options', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('addReplicatorRow', ['gallery'])
         ->set('data.gallery.0.size', 'huge')
         ->call('save')
@@ -688,6 +736,8 @@ test('replicator sub-field marked sometimes is not required when the row is abse
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasNoErrors();
 });
@@ -716,6 +766,8 @@ test('entry can store data for a replicator nested inside another replicator', f
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('addReplicatorRow', ['sections'])
         ->call('addReplicatorRow', ['sections', 0, 'items'])
         ->set('data.sections.0.items.0.label', 'First item')
@@ -753,6 +805,8 @@ test('required label deep inside a nested replicator is still validated', functi
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('addReplicatorRow', ['sections'])
         ->call('addReplicatorRow', ['sections', 0, 'items'])
         ->call('save')
@@ -769,6 +823,32 @@ test('title is always required, regardless of the blueprint', function () {
         ->set('data.status', 'draft')
         ->call('save')
         ->assertHasErrors(['title']);
+});
+
+test('slug is required', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasErrors(['slug']);
+});
+
+test('date is required', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasErrors(['entryDate']);
 });
 
 test('title is capped at 300 characters', function () {
@@ -792,6 +872,8 @@ test('entry status defaults to draft and can be set to need review', function ()
         ->assertSet('status', 'draft')
         ->set('status', 'need_review')
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertHasNoErrors();
@@ -809,6 +891,7 @@ test('entry date is saved from the sidebar date picker', function () {
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('entryDate', '2026-03-15T10:30')
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertHasNoErrors();
@@ -824,6 +907,8 @@ test('entry order can be set and is nullable', function () {
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('order', '3')
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertHasNoErrors();
@@ -838,6 +923,8 @@ test('entry order left blank saves as null without a validation error', function
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertHasNoErrors();
@@ -902,6 +989,7 @@ test('entry can be updated', function () {
         ->assertSet('title', 'Old title')
         ->set('slug', 'new-slug')
         ->set('title', 'New title')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'published')
         ->call('save')
         ->assertHasNoErrors();
@@ -1049,6 +1137,8 @@ test('a blueprint namespaced to the collection is used automatically when none i
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -1074,6 +1164,8 @@ test('when multiple blueprints are namespaced to a collection, the entry form le
         ->assertSet('data', ['url' => ''])
         ->set('data.url', 'https://example.com')
         ->set('title', 'A Video')
+        ->set('slug', 'a-video')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -1174,6 +1266,8 @@ test('non-localizable fields share one value from the default site across all la
     Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $translation])
         ->assertSet('data.rating', '5')
         ->assertSet('data.status', 'draft')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.rating', '42')
         ->set('data.status', 'published')
         ->call('save')
@@ -1214,6 +1308,7 @@ test('a required non-localizable field left empty on the origin does not block s
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $translation])
         ->set('title', 'Hello, updated')
+        ->set('slug', 'hello-updated')
         ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'published')
         ->call('save')
@@ -1284,6 +1379,8 @@ test('a structured collection lets an entry be nested under a parent entry', fun
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Child')
+        ->set('slug', 'child')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->set('parentId', $parent->id)
         ->call('save')
@@ -1307,6 +1404,8 @@ test('an entry\'s parent can be cleared back to "none" (top level)', function ()
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $child])
         ->assertSet('parentId', $parent->id)
+        ->set('slug', 'child')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('parentId', '')
         ->call('save')
         ->assertHasNoErrors();
@@ -1362,6 +1461,8 @@ test('nesting an entry beyond the collection max depth is rejected', function ()
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Child')
+        ->set('slug', 'child')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->set('parentId', $parent->id)
         ->call('save')
@@ -1451,6 +1552,8 @@ test('saving redirects to the listing by default', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertRedirectToRoute('collections.entries', ['collection' => 'blog']);
@@ -1464,6 +1567,8 @@ test('an "editing" save action redirects back to the same entry', function () {
 
     Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertRedirectToRoute('collections.entries.edit', ['collection' => 'blog', 'entry' => Entry::sole()->id]);
@@ -1477,6 +1582,8 @@ test('a "create another" save action redirects to a fresh create form', function
 
     Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
         ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->set('data.status', 'draft')
         ->call('save')
         ->assertRedirectToRoute('collections.entries.create', ['collection' => 'blog', 'site' => 'indonesia', 'blueprint' => 'post']);

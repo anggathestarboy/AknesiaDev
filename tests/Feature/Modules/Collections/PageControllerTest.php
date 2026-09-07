@@ -33,6 +33,7 @@ test('saving an entry persists its resolved uri', function () {
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->set('title', 'Hello')
         ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasNoErrors();
 

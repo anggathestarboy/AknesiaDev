@@ -752,9 +752,9 @@ class EntryForm extends Component
 
         $validated = $this->validate(array_merge([
             'title' => ['required', 'string', 'max:300'],
-            'slug' => ['nullable', 'string', 'max:255'],
+            'slug' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(array_keys(self::STATUSES))],
-            'entryDate' => ['nullable', 'date'],
+            'entryDate' => ['required', 'date'],
             'order' => ['nullable', 'integer'],
             'blueprintHandle' => ['required', Rule::in($this->availableBlueprints->pluck('handle')->all())],
         ], $this->fieldRules()));
@@ -772,10 +772,10 @@ class EntryForm extends Component
             'origin_id' => $this->originId,
             'collection' => $this->collection->handle,
             'blueprint' => $validated['blueprintHandle'],
-            'slug' => $validated['slug'] ?: null,
+            'slug' => $validated['slug'],
             'status' => $validated['status'],
             'published' => $validated['status'] === 'published',
-            'date' => $validated['entryDate'] ? str_replace('T', ' ', $validated['entryDate']) : null,
+            'date' => str_replace('T', ' ', $validated['entryDate']),
             'order' => $validated['order'] !== null ? (int) $validated['order'] : null,
             'data' => $data,
         ]);
