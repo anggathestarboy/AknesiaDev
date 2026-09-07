@@ -11,32 +11,50 @@
         </div>
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Namespace") }}</flux:table.column>
-            <flux:table.column>{{ __("Handle") }}</flux:table.column>
-            <flux:table.column>{{ __("Fields") }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
+    @if ($this->blueprints->isEmpty())
+        <flux:text class="text-zinc-500">{{ __("No blueprints yet.") }}</flux:text>
+    @else
+        @php
+            $categories = [
+                "collections" => __("Collections"),
+                "globals" => __("Globals"),
+                "taxonomies" => __("Taxonomies"),
+                "other" => __("Other"),
+            ];
+        @endphp
 
-        <flux:table.rows>
-            @forelse ($this->blueprints as $blueprint)
-                <flux:table.row wire:key="blueprint-{{ $blueprint->id }}">
-                    <flux:table.cell>{{ $blueprint->namespace ?? "—" }}</flux:table.cell>
-                    <flux:table.cell>{{ $blueprint->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ count($blueprint->data["fields"] ?? []) }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-2">
-                        <flux:button size="sm" wire:click="edit({{ $blueprint->id }})">{{ __("Edit") }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $blueprint->id }})" wire:confirm="{{ __('Delete this blueprint?') }}">{{ __("Delete") }}</flux:button>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="4">{{ __("No blueprints yet.") }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+        @foreach ($categories as $categoryKey => $categoryLabel)
+            @php $group = $this->blueprintGroups->get($categoryKey, collect()); @endphp
+            @if ($group->isNotEmpty())
+                <div class="space-y-3">
+                    <flux:heading size="md">{{ $categoryLabel }}</flux:heading>
+
+                    <flux:table>
+                        <flux:table.columns>
+                            <flux:table.column class="">{{ __("Namespace") }}</flux:table.column>
+                            <flux:table.column class="w-[400px]">{{ __("Handle") }}</flux:table.column>
+                            <flux:table.column class="w-[100px]">{{ __("Fields") }}</flux:table.column>
+                            <flux:table.column class="w-[150px]"></flux:table.column>
+                        </flux:table.columns>
+
+                        <flux:table.rows>
+                            @foreach ($group as $blueprint)
+                                <flux:table.row wire:key="blueprint-{{ $blueprint->id }}">
+                                    <flux:table.cell>{{ $blueprint->namespace ?? "—" }}</flux:table.cell>
+                                    <flux:table.cell>{{ $blueprint->handle }}</flux:table.cell>
+                                    <flux:table.cell>{{ count($blueprint->data["fields"] ?? []) }}</flux:table.cell>
+                                    <flux:table.cell class="flex justify-end gap-2">
+                                        <flux:button size="sm" wire:click="edit({{ $blueprint->id }})">{{ __("Edit") }}</flux:button>
+                                        <flux:button size="sm" variant="danger" wire:click="delete({{ $blueprint->id }})" wire:confirm="{{ __('Delete this blueprint?') }}">{{ __("Delete") }}</flux:button>
+                                    </flux:table.cell>
+                                </flux:table.row>
+                            @endforeach
+                        </flux:table.rows>
+                    </flux:table>
+                </div>
+            @endif
+        @endforeach
+    @endif
 
     <flux:modal name="blueprint-form" class="min-w-[85%]" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">
@@ -60,8 +78,8 @@
 
                 @if (empty($templates))
                     <div>
-                        <flux:text class="text-sm font-medium">{{ __('Template') }}</flux:text>
-                        <flux:text class="text-zinc-500">{{ __('No templates yet — add a .blade.php file under resources/views/pages first.') }}</flux:text>
+                        <flux:text class="text-sm font-medium">{{ __("Template") }}</flux:text>
+                        <flux:text class="text-zinc-500">{{ __("No templates yet — add a .blade.php file under resources/views/pages first.") }}</flux:text>
                     </div>
                 @else
                     <flux:select wire:model="template" :label="__('Template')" placeholder="{{ __('No template') }}" :description="__('The Blade view used to render entries using this blueprint.')">

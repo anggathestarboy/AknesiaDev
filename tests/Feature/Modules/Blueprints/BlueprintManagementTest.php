@@ -18,6 +18,25 @@ test('blueprints page is displayed', function () {
     $this->get('/admin-panel/blueprints')->assertOk();
 });
 
+test('blueprints are grouped by category with a heading per group', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
+    Blueprint::create(['namespace' => 'globals.site_settings', 'handle' => 'site_settings', 'data' => ['fields' => []]]);
+    Blueprint::create(['namespace' => 'taxonomies.categories', 'handle' => 'categories', 'data' => ['fields' => []]]);
+    Blueprint::create(['namespace' => null, 'handle' => 'loose', 'data' => ['fields' => []]]);
+
+    $groups = Livewire::test(BlueprintManager::class)->instance()->blueprintGroups;
+
+    expect($groups->get('collections')->pluck('handle')->all())->toBe(['post']);
+    expect($groups->get('globals')->pluck('handle')->all())->toBe(['site_settings']);
+    expect($groups->get('taxonomies')->pluck('handle')->all())->toBe(['categories']);
+    expect($groups->get('other')->pluck('handle')->all())->toBe(['loose']);
+
+    Livewire::test(BlueprintManager::class)
+        ->assertSeeInOrder([__('Collections'), 'post', __('Globals'), 'site_settings', __('Taxonomies'), 'categories', __('Other'), 'loose']);
+});
+
 test('namespace options are derived from existing collections', function () {
     $this->actingAs(User::factory()->create());
     Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);

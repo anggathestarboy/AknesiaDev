@@ -74,6 +74,24 @@ class BlueprintManager extends Component
     }
 
     /**
+     * Blueprints grouped by the thing their namespace scopes them to
+     * (collections.*, globals.*, taxonomies.*), plus an "other" group for
+     * blueprints with no namespace yet — so the listing can show a heading
+     * per category instead of one flat table.
+     *
+     * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, Blueprint>>
+     */
+    #[Computed]
+    public function blueprintGroups()
+    {
+        return $this->blueprints->groupBy(function (Blueprint $blueprint): string {
+            $prefix = explode('.', (string) $blueprint->namespace, 2)[0];
+
+            return in_array($prefix, ['collections', 'globals', 'taxonomies'], true) ? $prefix : 'other';
+        });
+    }
+
+    /**
      * Blueprint namespaces are derived from existing collections and global
      * sets (e.g. a "blog" collection gives the namespace "collections.blog",
      * a "site-settings" global set gives "globals.site-settings"), mirroring
