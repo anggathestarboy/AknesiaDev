@@ -1,21 +1,36 @@
 @php
     $prefix = 'data.'.implode('.', $path);
+    $fieldLabel = new \Illuminate\Support\HtmlString(
+        e($field['display']).(($field['required'] ?? false) ? ' <span class="text-red-500">*</span>' : '')
+    );
 @endphp
 
 @if ($field['type'] === 'toggle')
-    <flux:checkbox wire:model="{{ $prefix }}" :label="$field['display']" :description="$field['instructions']" />
+    <flux:checkbox wire:model="{{ $prefix }}" :description="$field['instructions']">{!! $fieldLabel !!}</flux:checkbox>
 @elseif ($field['type'] === 'select')
-    <flux:select wire:model="{{ $prefix }}" :label="$field['display']" :description="$field['instructions']" :placeholder="$field['placeholder'] ?? __('Select an option')">
-        @foreach ($field['options'] ?? [] as $option)
-            <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
-        @endforeach
-    </flux:select>
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:select wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?? __('Select an option')">
+            @foreach ($field['options'] ?? [] as $option)
+                <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
+            @endforeach
+        </flux:select>
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+    </flux:field>
 @elseif ($field['type'] === 'radio')
-    <flux:radio.group wire:model="{{ $prefix }}" :label="$field['display']" :description="$field['instructions']">
-        @foreach ($field['options'] ?? [] as $option)
-            <flux:radio value="{{ $option }}" label="{{ $option }}" />
-        @endforeach
-    </flux:radio.group>
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:radio.group wire:model="{{ $prefix }}">
+            @foreach ($field['options'] ?? [] as $option)
+                <flux:radio value="{{ $option }}" label="{{ $option }}" />
+            @endforeach
+        </flux:radio.group>
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+    </flux:field>
 @elseif ($field['type'] === 'checkbox')
     @php
         $checkboxHint = match (true) {
@@ -25,21 +40,46 @@
             default => null,
         };
     @endphp
-    <flux:checkbox.group wire:model="{{ $prefix }}" :label="$field['display']" :description="trim(($field['instructions'] ?? '').' '.($checkboxHint ?? ''))">
-        @foreach ($field['options'] ?? [] as $option)
-            <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
-        @endforeach
-    </flux:checkbox.group>
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:checkbox.group wire:model="{{ $prefix }}">
+            @foreach ($field['options'] ?? [] as $option)
+                <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
+            @endforeach
+        </flux:checkbox.group>
+        @php $checkboxDescription = trim(($field['instructions'] ?? '').' '.($checkboxHint ?? '')); @endphp
+        @if ($checkboxDescription !== '')
+            <flux:description>{{ $checkboxDescription }}</flux:description>
+        @endif
+    </flux:field>
 @elseif ($field['type'] === 'date')
-    <flux:input type="date" wire:model="{{ $prefix }}" :label="$field['display']" :description="$field['instructions']" />
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:input type="date" wire:model="{{ $prefix }}" />
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+    </flux:field>
 @elseif ($field['type'] === 'number')
-    <flux:input type="number" wire:model="{{ $prefix }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:input type="number" wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+    </flux:field>
 @elseif ($field['type'] === 'textarea' || $field['type'] === 'markdown')
-    <flux:textarea wire:model="{{ $prefix }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" rows="4" />
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:textarea wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+    </flux:field>
 @elseif ($field['type'] === 'link')
     @php $isEntryLink = str_starts_with((string) ($linkValue ?? ''), 'entry::'); @endphp
     <div x-data="{ mode: '{{ $isEntryLink ? 'entry' : 'url' }}' }">
-        <flux:text class="text-sm font-medium">{{ $field['display'] }}</flux:text>
+        <flux:text class="text-sm font-medium">{!! $fieldLabel !!}</flux:text>
         @if ($field['instructions'])
             <flux:text class="block text-xs text-zinc-500">{{ $field['instructions'] }}</flux:text>
         @endif
@@ -63,7 +103,7 @@
     </div>
 @elseif ($field['type'] === 'replicator')
     <div>
-        <flux:text class="text-sm font-medium">{{ $field['display'] }}</flux:text>
+        <flux:text class="text-sm font-medium">{!! $fieldLabel !!}</flux:text>
         @if ($field['instructions'])
             <flux:text class="block text-xs text-zinc-500">{{ $field['instructions'] }}</flux:text>
         @endif
@@ -109,7 +149,7 @@
     @endphp
     @if ($allowsMultiple)
         <flux:field>
-            <flux:label>{{ $field['display'] }}</flux:label>
+            <flux:label>{!! $fieldLabel !!}</flux:label>
             <div
                 x-data="{
                     open: false,
@@ -157,11 +197,15 @@
             @enderror
         </flux:field>
     @else
-        <flux:select wire:model="{{ $prefix }}.0" error:name="{{ $prefix }}" :label="$field['display']" :description="trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? ''))" placeholder="{{ __('Select a term') }}">
-            @foreach ($taxonomyOptions as $term)
-                <flux:select.option value="{{ $term->id }}">{{ $term->data['title'] ?? $term->slug }}</flux:select.option>
-            @endforeach
-        </flux:select>
+        <flux:field>
+            <flux:label>{!! $fieldLabel !!}</flux:label>
+            <flux:select wire:model="{{ $prefix }}.0" error:name="{{ $prefix }}" placeholder="{{ __('Select a term') }}">
+                @foreach ($taxonomyOptions as $term)
+                    <flux:select.option value="{{ $term->id }}">{{ $term->data['title'] ?? $term->slug }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:description>{{ trim(($field['instructions'] ?? '').' '.($taxonomyHint ?? '')) }}</flux:description>
+        </flux:field>
     @endif
 @elseif ($field['type'] === 'assets')
     @php
@@ -169,7 +213,7 @@
         $maxReached = ($field['max_items'] ?? null) !== null && $selectedCount >= $field['max_items'];
     @endphp
     <div>
-        <flux:text class="text-sm font-medium">{{ $field['display'] }}</flux:text>
+        <flux:text class="text-sm font-medium">{!! $fieldLabel !!}</flux:text>
         @if ($field['instructions'])
             <flux:text class="block text-xs text-zinc-500">{{ $field['instructions'] }}</flux:text>
         @endif
@@ -213,5 +257,11 @@
         @enderror
     </div>
 @else
-    <flux:input wire:model="{{ $prefix }}" :label="$field['display']" :placeholder="$field['placeholder']" :description="$field['instructions']" />
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+    </flux:field>
 @endif

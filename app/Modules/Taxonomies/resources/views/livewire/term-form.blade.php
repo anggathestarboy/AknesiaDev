@@ -25,7 +25,7 @@
                 <div>
                     @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
                         <flux:field>
-                            <flux:label>{{ $field["display"] }}</flux:label>
+                            <flux:label>{{ $field["display"] }}@if ($field["required"] ?? false)<span class="text-red-500">*</span>@endif</flux:label>
                             <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
                             <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
                         </flux:field>
@@ -56,7 +56,7 @@
                             <div>
                                 @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
                                     <flux:field>
-                                        <flux:label>{{ $field["display"] }}</flux:label>
+                                        <flux:label>{{ $field["display"] }}@if ($field["required"] ?? false)<span class="text-red-500">*</span>@endif</flux:label>
                                         <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
                                         <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
                                     </flux:field>
@@ -106,7 +106,10 @@
                 </div>
             @endif
 
-            <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('Term title') }}" maxlength="300" required size="sm" />
+            <flux:field>
+                <flux:label>{{ __('Title') }} <span class="text-red-500">*</span></flux:label>
+                <flux:input wire:model="title" placeholder="{{ __('Term title') }}" maxlength="300" required size="sm" />
+            </flux:field>
 
             <flux:input wire:model="slug" :label="__('Slug')" placeholder="my-term-slug" size="sm" />
 

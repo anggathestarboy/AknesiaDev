@@ -101,6 +101,26 @@ test('entry form only shows fields belonging to the active tab', function () {
         ->assertDontSee('Headline');
 });
 
+test('a required field shows a red asterisk after its label, an optional one does not', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'subtitle', 'display' => 'Subtitle', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $html = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])->html();
+
+    expect($html)->toContain('Headline <span class="text-red-500">*</span>');
+    expect($html)->not->toContain('Subtitle <span class="text-red-500">*</span>');
+    // The static Title/Slug/Date/Status fields are always required.
+    expect($html)->toContain('Title <span class="text-red-500">*</span>');
+    expect($html)->toContain('Slug <span class="text-red-500">*</span>');
+    expect($html)->toContain('Date <span class="text-red-500">*</span>');
+    expect($html)->toContain('Status <span class="text-red-500">*</span>');
+});
+
 test('entry form shows a section heading and its fields, both grouped and ungrouped', function () {
     $this->actingAs(User::factory()->create());
 
