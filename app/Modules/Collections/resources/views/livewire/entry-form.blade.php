@@ -14,8 +14,8 @@
         </flux:callout>
     @endif
 
-    <form wire:submit="save" class="flex items-start gap-10">
-        <div class="w-[70%] space-y-6">
+    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7 lg:gap-10">
+        <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6">
             @if (count($this->blueprintTabs) > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
                     @foreach ($this->blueprintTabs as $tab)
@@ -92,7 +92,7 @@
                                             "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
                                             "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
                                             "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
+                                            "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
                                         ])
                                 @endif
                             </div>
@@ -102,7 +102,7 @@
             @endforeach
         </div>
 
-        <div class="w-[30%] col-span-1 space-y-5 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+        <div class="w-full lg:w-[40%] xl:w-[30%] col-span-1 space-y-5 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
             <div class="">
                 <div class="flex justify-between gap-2 pb-2">
                     <flux:button variant="primary" class="w-full" type="submit">{{ __("Save") }}</flux:button>
