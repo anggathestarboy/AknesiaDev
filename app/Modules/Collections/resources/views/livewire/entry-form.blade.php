@@ -118,7 +118,10 @@
 
             <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
 
-            <flux:input wire:model="slug" :label="__('Slug')" placeholder="my-entry-slug" required size="sm" />
+            <div class="grid grid-cols-[1fr_auto] items-end gap-2">
+                <flux:input wire:model="slug" :label="__('Slug')" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateSlug" :tooltip="__('Regenerate from title')" />
+            </div>
 
             {{-- @if ($this->availableBlueprints->count() > 1)
                 <flux:select wire:model.live="blueprintHandle" :label="__('Blueprint')" size="sm">

@@ -13,6 +13,7 @@ use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Livewire\Attributes\Computed;
@@ -368,6 +369,11 @@ class EntryForm extends Component
     public function setActiveTab(string $handle): void
     {
         $this->activeTab = $handle;
+    }
+
+    public function regenerateSlug(): void
+    {
+        $this->slug = Str::slug($this->title);
     }
 
     protected function defaultBlueprintHandle(): string

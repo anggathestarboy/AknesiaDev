@@ -838,6 +838,18 @@ test('slug is required', function () {
         ->assertHasErrors(['slug']);
 });
 
+test('the slug can be regenerated from the title', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World, Again!')
+        ->set('slug', 'something-else')
+        ->call('regenerateSlug')
+        ->assertSet('slug', 'hello-world-again');
+});
+
 test('date is required', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
