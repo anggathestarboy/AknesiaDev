@@ -1122,6 +1122,69 @@ test('a structured collection lists entries as a flattened tree, ordered by pare
     expect($entries->firstWhere('id', $other->id)->parentTitle)->toBeNull();
 });
 
+test('dragging an entry to the top of an orderable collection makes it the homepage', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['orderable' => true]]);
+    $collection->refresh();
+
+    $first = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'First', 'status' => 'draft']]);
+    $second = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 2, 'data' => ['title' => 'Second', 'status' => 'draft']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->call('reorderRoot', $second->id, 0);
+
+    expect($second->fresh()->order)->toBe(1);
+    expect($first->fresh()->order)->toBe(2);
+});
+
+test('reordering does nothing when the collection is not orderable', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $first = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'First', 'status' => 'draft']]);
+    $second = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 2, 'data' => ['title' => 'Second', 'status' => 'draft']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->call('reorderRoot', $second->id, 0);
+
+    expect($second->fresh()->order)->toBe(2);
+    expect($first->fresh()->order)->toBe(1);
+});
+
+test('dragging a child entry only reorders it among its own parent\'s siblings, and it never becomes the homepage', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true, 'orderable' => true]]);
+    $collection->refresh();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 2, 'data' => ['title' => 'About', 'status' => 'draft']]);
+    $visi = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 2, 'data' => ['title' => 'Visi', 'status' => 'draft']]);
+    $misi = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 3, 'data' => ['title' => 'Misi', 'status' => 'draft']]);
+    $otherRoot = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Contact', 'status' => 'draft']]);
+
+    $trees = app(CollectionTreeService::class);
+    $trees->setParent('blog', 'indonesia', $visi->id, $parent->id, null);
+    $trees->setParent('blog', 'indonesia', $misi->id, $parent->id, null);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->call('reorderChildren', $misi->id, 0, $parent->id);
+
+    // Misi moved to the front of About's children — order renumbers from 2, never 1.
+    expect($misi->fresh()->order)->toBe(2);
+    expect($visi->fresh()->order)->toBe(3);
+    // Root-level siblings (Contact) are untouched by a child-group reorder.
+    expect($otherRoot->fresh()->order)->toBe(1);
+    // Misi is still About's child — it wasn't promoted to root.
+    expect($trees->parentIdOf('blog', 'indonesia', $misi->id))->toBe($parent->id);
+});
+
 test('required blueprint fields are enforced on entries', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
