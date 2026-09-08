@@ -421,6 +421,7 @@ class BlueprintManager extends Component
             'fieldsets' => $this->availableFieldsets,
             'taxonomies' => $this->availableTaxonomies,
             'templates' => $this->availableTemplates,
+            'bardToolbarButtons' => static::$bardToolbarButtons,
         ]);
     }
 }

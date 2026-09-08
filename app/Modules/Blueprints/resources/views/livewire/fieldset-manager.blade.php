@@ -67,6 +67,7 @@
                                 'linkableCollections' => $linkableCollections,
                                 'fieldsets' => $fieldsets,
                                 'taxonomies' => $taxonomies,
+                                'bardToolbarButtons' => $bardToolbarButtons,
                                 'tabs' => $tabs
                             ])
                     @empty

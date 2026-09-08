@@ -36,7 +36,8 @@
                                 "path" => [$field["handle"]],
                                 "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
                                 "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null
+                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
                             ])
                     @endif
                 </div>
@@ -67,7 +68,8 @@
                                             "path" => [$field["handle"]],
                                             "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
                                             "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                            "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null
+                                            "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
                                         ])
                                 @endif
                             </div>

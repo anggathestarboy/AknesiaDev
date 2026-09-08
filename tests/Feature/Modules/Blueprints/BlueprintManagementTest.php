@@ -163,6 +163,32 @@ test('blueprint can be created with fields via the field builder', function () {
     ]);
 });
 
+test('a bard field can have its toolbar buttons restricted', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'options' => '', 'toolbar' => ['bold', 'italic']],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Blueprint::sole()->data['fields'][0]['toolbar'])->toBe(['bold', 'italic']);
+});
+
+test('a bard field toolbar button must be a known key', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintManager::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'options' => '', 'toolbar' => ['not-a-real-button']],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.toolbar.0']);
+});
+
 test('blueprint can be assigned a template selected from resources/views/pages', function () {
     $this->actingAs(User::factory()->create());
 

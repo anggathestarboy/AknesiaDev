@@ -76,6 +76,91 @@
             <flux:description>{{ $field['instructions'] }}</flux:description>
         @endif
     </flux:field>
+@elseif ($field['type'] === 'bard')
+    @php
+        $bardToolbar = $field['toolbar'] ?? [];
+        $bardShowAll = empty($bardToolbar);
+        $bardShows = fn (string $key): bool => $bardShowAll || in_array($key, $bardToolbar, true);
+        $bardBtn = 'rounded p-1.5 text-zinc-500 hover:bg-zinc-100 data-[active]:bg-zinc-200 data-[active]:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:data-[active]:bg-white/20 dark:data-[active]:text-white';
+        $bardBtnWide = 'rounded px-2 py-1 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 data-[active]:bg-zinc-200 data-[active]:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:data-[active]:bg-white/20 dark:data-[active]:text-white';
+    @endphp
+    <flux:field>
+        <flux:label>{!! $fieldLabel !!}</flux:label>
+        <div
+            wire:ignore
+            wire:key="bard-{{ implode('-', $path) }}"
+            x-data="bardEditor(@js($bardValue ?? ''), '{{ $prefix }}')"
+            class="rounded-lg border border-zinc-200 shadow-xs dark:border-white/10"
+        >
+            <div class="flex flex-wrap items-center gap-1 border-b border-zinc-200 p-1.5 dark:border-white/10">
+                @if ($bardShows('bold'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleBold')" :data-active="isActive('bold') || null" class="{{ $bardBtn }}"><flux:icon.bold class="size-4" /></button>
+                @endif
+                @if ($bardShows('italic'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleItalic')" :data-active="isActive('italic') || null" class="{{ $bardBtn }}"><flux:icon.italic class="size-4" /></button>
+                @endif
+                @if ($bardShows('underline'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleUnderline')" :data-active="isActive('underline') || null" class="{{ $bardBtn }}"><flux:icon.underline class="size-4" /></button>
+                @endif
+                @if ($bardShows('strike'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleStrike')" :data-active="isActive('strike') || null" class="{{ $bardBtn }}"><flux:icon.strikethrough class="size-4" /></button>
+                @endif
+
+                @if ($bardShows('h1') || $bardShows('h2') || $bardShows('h3') || $bardShows('h4') || $bardShows('h5') || $bardShows('h6'))
+                    <div class="mx-1 h-5 w-px bg-zinc-200 dark:bg-white/10"></div>
+                @endif
+
+                @foreach ([1, 2, 3, 4, 5, 6] as $level)
+                    @if ($bardShows("h{$level}"))
+                        <button type="button" x-on:mousedown.prevent x-on:click="run('toggleHeading', { level: {{ $level }} })" :data-active="isActive('heading', { level: {{ $level }} }) || null" class="{{ $bardBtnWide }}">H{{ $level }}</button>
+                    @endif
+                @endforeach
+
+                @if ($bardShows('bulletlist') || $bardShows('orderedlist') || $bardShows('blockquote') || $bardShows('link'))
+                    <div class="mx-1 h-5 w-px bg-zinc-200 dark:bg-white/10"></div>
+                @endif
+
+                @if ($bardShows('bulletlist'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleBulletList')" :data-active="isActive('bulletList') || null" class="{{ $bardBtn }}"><flux:icon.list-bullet class="size-4" /></button>
+                @endif
+                @if ($bardShows('orderedlist'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleOrderedList')" :data-active="isActive('orderedList') || null" class="{{ $bardBtn }}"><flux:icon.numbered-list class="size-4" /></button>
+                @endif
+                @if ($bardShows('blockquote'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="run('toggleBlockquote')" :data-active="isActive('blockquote') || null" class="rounded px-2 py-1 text-sm text-zinc-500 hover:bg-zinc-100 data-[active]:bg-zinc-200 data-[active]:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:data-[active]:bg-white/20 dark:data-[active]:text-white">"</button>
+                @endif
+                @if ($bardShows('link'))
+                    <button type="button" x-on:mousedown.prevent x-on:click="setLink()" :data-active="isActive('link') || null" class="{{ $bardBtn }}"><flux:icon.link class="size-4" /></button>
+                @endif
+
+                <div class="mx-1 h-5 w-px bg-zinc-200 dark:bg-white/10"></div>
+
+                <button type="button" x-on:mousedown.prevent x-on:click="run('undo')" class="rounded p-1.5 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/10"><flux:icon.arrow-uturn-left class="size-4" /></button>
+                <button type="button" x-on:mousedown.prevent x-on:click="run('redo')" class="rounded p-1.5 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/10"><flux:icon.arrow-uturn-right class="size-4" /></button>
+            </div>
+
+            <div
+                x-ref="editor"
+                class="max-w-none px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200
+                    [&_.ProseMirror]:min-h-32 [&_.ProseMirror]:outline-none
+                    [&_h1]:mb-1 [&_h1]:mt-3 [&_h1]:text-xl [&_h1]:font-bold
+                    [&_h2]:mb-1 [&_h2]:mt-3 [&_h2]:text-lg [&_h2]:font-semibold
+                    [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold
+                    [&_h4]:mb-1 [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold
+                    [&_h5]:mb-1 [&_h5]:mt-2 [&_h5]:text-sm [&_h5]:font-semibold
+                    [&_h6]:mb-1 [&_h6]:mt-2 [&_h6]:text-sm [&_h6]:font-semibold
+                    [&_p]:my-1 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-5
+                    [&_blockquote]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-zinc-300 [&_blockquote]:pl-3 [&_blockquote]:italic dark:[&_blockquote]:border-zinc-600
+                    [&_a]:text-blue-600 [&_a]:underline dark:[&_a]:text-blue-400"
+            ></div>
+        </div>
+        @if ($field['instructions'])
+            <flux:description>{{ $field['instructions'] }}</flux:description>
+        @endif
+        @error($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
+    </flux:field>
 @elseif ($field['type'] === 'link')
     @php $isEntryLink = str_starts_with((string) ($linkValue ?? ''), 'entry::'); @endphp
     <div x-data="{ mode: '{{ $isEntryLink ? 'entry' : 'url' }}' }">
@@ -121,6 +206,7 @@
                                     'assetIds' => $sub['type'] === 'assets' ? ($row[$sub['handle']] ?? []) : null,
                                     'linkValue' => $sub['type'] === 'link' ? ($row[$sub['handle']] ?? '') : null,
                                     'taxonomyIds' => $sub['type'] === 'taxonomy' ? ($row[$sub['handle']] ?? []) : null,
+                                    'bardValue' => $sub['type'] === 'bard' ? ($row[$sub['handle']] ?? '') : null,
                                 ])
                             </div>
                         @endforeach

@@ -25,6 +25,7 @@ trait HasFieldBuilder
         'text' => 'Text',
         'textarea' => 'Textarea',
         'markdown' => 'Markdown',
+        'bard' => 'Bard (rich text)',
         'number' => 'Number',
         'toggle' => 'Toggle',
         'date' => 'Date',
@@ -57,6 +58,30 @@ trait HasFieldBuilder
     protected static array $conditionModes = ['always', 'show', 'hide'];
 
     /**
+     * Every toolbar button a "bard" field can offer — a field's own
+     * "toolbar" setting is a subset of these keys (empty means "show all").
+     * Mirrors Statamic's Bard fieldtype's configurable toolbar.
+     *
+     * @var array<string, string>
+     */
+    protected static array $bardToolbarButtons = [
+        'bold' => 'Bold',
+        'italic' => 'Italic',
+        'underline' => 'Underline',
+        'strike' => 'Strikethrough',
+        'h1' => 'Heading 1',
+        'h2' => 'Heading 2',
+        'h3' => 'Heading 3',
+        'h4' => 'Heading 4',
+        'h5' => 'Heading 5',
+        'h6' => 'Heading 6',
+        'bulletlist' => 'Bulleted list',
+        'orderedlist' => 'Numbered list',
+        'blockquote' => 'Blockquote',
+        'link' => 'Link',
+    ];
+
+    /**
      * A field tree: each field may itself contain a "replicator_fields"
      * array of the same shape, recursively, to any depth.
      *
@@ -85,6 +110,7 @@ trait HasFieldBuilder
             'condition_value' => $field['conditions']['value'] ?? '',
             'min_items' => isset($field['min_items']) ? (string) $field['min_items'] : '',
             'max_items' => isset($field['max_items']) ? (string) $field['max_items'] : '',
+            'toolbar' => array_values($field['toolbar'] ?? []),
             'tab' => $field['tab'] ?? 'main',
             'section' => $field['section'] ?? '',
             'replicator_fields' => collect($field['replicator_fields'] ?? [])
@@ -432,7 +458,7 @@ trait HasFieldBuilder
             'handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'localizable' => false, 'options' => '',
             'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false,
             'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => '',
-            'min_items' => '', 'max_items' => '', 'tab' => 'main', 'section' => '',
+            'min_items' => '', 'max_items' => '', 'toolbar' => [], 'tab' => 'main', 'section' => '',
             'replicator_fields' => [],
         ];
     }
@@ -472,6 +498,8 @@ trait HasFieldBuilder
             'condition_value' => ['nullable', 'string', 'max:255'],
             'min_items' => ['nullable', 'integer', 'min:0'],
             'max_items' => ['nullable', 'integer', 'min:0'],
+            'toolbar' => ['array'],
+            'toolbar.*' => [Rule::in(array_keys(static::$bardToolbarButtons))],
             'tab' => ['nullable', 'string'],
             'section' => ['nullable', 'string'],
         ];
@@ -656,6 +684,10 @@ trait HasFieldBuilder
         if (in_array($field['type'], ['assets', 'checkbox', 'taxonomy'], true)) {
             $normalized['min_items'] = ($field['min_items'] ?? '') !== '' ? (int) $field['min_items'] : null;
             $normalized['max_items'] = ($field['max_items'] ?? '') !== '' ? (int) $field['max_items'] : null;
+        }
+
+        if ($field['type'] === 'bard') {
+            $normalized['toolbar'] = array_values($field['toolbar'] ?? []);
         }
 
         if ($field['type'] === 'replicator') {

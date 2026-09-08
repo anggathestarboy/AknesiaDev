@@ -137,6 +137,7 @@ class FieldsetManager extends Component
             'fieldsets' => $this->availableFieldsets,
             'taxonomies' => $this->availableTaxonomies,
             'tabs' => self::TABS,
+            'bardToolbarButtons' => static::$bardToolbarButtons,
         ]);
     }
 }

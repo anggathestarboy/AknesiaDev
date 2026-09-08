@@ -231,11 +231,19 @@
                     @enderror
                 </div>
             </div>
+        @elseif ($field["type"] === "bard")
+            <div class="mt-3">
+                <flux:checkbox.group wire:model="{{ $prefix }}.toolbar" :label="__('Toolbar buttons')" :description="__('Leave all unchecked to show every button.')">
+                    @foreach ($bardToolbarButtons as $buttonKey => $buttonLabel)
+                        <flux:checkbox value="{{ $buttonKey }}" label="{{ $buttonLabel }}" />
+                    @endforeach
+                </flux:checkbox.group>
+            </div>
         @endif
 
         @unless ($field["type"] === "fieldset")
             <div class="mt-3 grid grid-cols-4 gap-3">
-                @if ($field["type"] === "replicator" || $field["type"] === "assets" || $field["type"] === "link" || $field["type"] === "taxonomy")
+                @if ($field["type"] === "replicator" || $field["type"] === "assets" || $field["type"] === "link" || $field["type"] === "taxonomy" || $field["type"] === "bard")
                     <flux:input :label="__('Placeholder')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
                     <flux:input :label="__('Default value')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
                 @else
@@ -321,7 +329,8 @@
                                 "assetContainers" => $assetContainers,
                                 "linkableCollections" => $linkableCollections,
                                 "fieldsets" => $fieldsets,
-                                "taxonomies" => $taxonomies
+                                "taxonomies" => $taxonomies,
+                                "bardToolbarButtons" => $bardToolbarButtons
                             ])
                     @endforeach
                 </div>

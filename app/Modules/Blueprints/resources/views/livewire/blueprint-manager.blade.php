@@ -157,6 +157,7 @@
                                         "linkableCollections" => $linkableCollections,
                                         "fieldsets" => $fieldsets,
                                         "taxonomies" => $taxonomies,
+                                        "bardToolbarButtons" => $bardToolbarButtons,
                                         "tabs" => $tabs
                                     ])
                             @empty
@@ -210,6 +211,7 @@
                                                 "conditionOperators" => $conditionOperators,
                                                 "assetContainers" => $assetContainers,
                                                 "linkableCollections" => $linkableCollections,
+                                                "bardToolbarButtons" => $bardToolbarButtons,
                                                 "tabs" => $tabs
                                             ])
                                     @empty

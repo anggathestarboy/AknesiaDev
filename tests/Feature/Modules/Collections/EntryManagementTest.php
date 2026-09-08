@@ -595,6 +595,56 @@ test('checkbox field enforces its configured minimum and maximum selection count
         ->assertHasErrors(['data.toppings']);
 });
 
+test('bard field renders the rich text editor and can store HTML content', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSeeHtml('bardEditor(')
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.body', '<p>Hello <strong>world</strong></p>')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->data['body'])->toBe('<p>Hello <strong>world</strong></p>');
+});
+
+test('a bard field only shows its configured toolbar buttons', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'toolbar' => ['bold', 'italic']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSeeHtml("run('toggleBold')")
+        ->assertSeeHtml("run('toggleItalic')")
+        ->assertDontSeeHtml("run('toggleStrike')")
+        ->assertDontSeeHtml("run('toggleBulletList')");
+});
+
+test('a bard field with no toolbar restriction shows all six heading levels', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia']);
+
+    foreach (range(1, 6) as $level) {
+        $component->assertSeeHtml("run('toggleHeading', { level: {$level} })");
+    }
+});
+
 test('link field can store a plain URL', function () {
     $this->actingAs(User::factory()->create());
 
