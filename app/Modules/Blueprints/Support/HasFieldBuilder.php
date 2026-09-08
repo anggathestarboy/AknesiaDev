@@ -79,6 +79,7 @@ trait HasFieldBuilder
         'orderedlist' => 'Numbered list',
         'blockquote' => 'Blockquote',
         'link' => 'Link',
+        'image' => 'Image',
     ];
 
     /**

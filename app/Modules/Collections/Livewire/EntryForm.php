@@ -467,6 +467,16 @@ class EntryForm extends Component
     #[On('assets-selected')]
     public function assetsSelected(array $path, array $ids): void
     {
+        // A "bard" field's image button opens the same shared picker with a
+        // sentinel path (see entry-field.blade.php's bardEditor) since it
+        // has no "assets" data property to write into — resolve URLs and
+        // hand them back to the editor instead of touching $this->data.
+        if (($path[0] ?? null) === '__bard__') {
+            $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', urls: AssetMeta::whereIn('id', $ids)->get()->pluck('url')->all());
+
+            return;
+        }
+
         $ref = &$this->dataAt($path);
         $ref = array_values($ids);
     }

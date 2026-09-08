@@ -645,6 +645,57 @@ test('a bard field with no toolbar restriction shows all six heading levels', fu
     }
 });
 
+test('a bard field shows an insert-image button when an asset container exists', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'assets', 'title' => 'Assets', 'disk' => 'public', 'settings' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSeeHtml('insertImage()')
+        ->assertSeeHtml("bardEditor('', 'data.body', 'assets')");
+});
+
+test('selecting an image for a bard field resolves its url via the shared asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    $container = AssetContainer::create(['handle' => 'assets', 'title' => 'Assets', 'disk' => 'public', 'settings' => []]);
+    $asset = AssetMeta::create(['container' => $container->handle, 'folder' => '', 'basename' => 'photo.jpg', 'filename' => 'photo', 'extension' => 'jpg', 'path' => 'photo.jpg', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('assetsSelected', ['__bard__', 'data.body'], [$asset->id]);
+
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', urls: [$asset->url]);
+    expect($component->get('data.body'))->toBe('');
+});
+
+test('replacing an image for a bard field forwards the replace mode via the shared asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    $container = AssetContainer::create(['handle' => 'assets', 'title' => 'Assets', 'disk' => 'public', 'settings' => []]);
+    $asset = AssetMeta::create(['container' => $container->handle, 'folder' => '', 'basename' => 'photo.jpg', 'filename' => 'photo', 'extension' => 'jpg', 'path' => 'photo.jpg', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('assetsSelected', ['__bard__', 'data.body', 'replace'], [$asset->id]);
+
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'replace', urls: [$asset->url]);
+    expect($component->get('data.body'))->toBe('');
+});
+
 test('link field can store a plain URL', function () {
     $this->actingAs(User::factory()->create());
 
