@@ -59,8 +59,12 @@
             <flux:heading size="lg">{{ $editingId ? __('Edit navigation') : __('Add navigation') }}</flux:heading>
 
             <div class="space-y-4">
-                <flux:input wire:model.live="title" :label="__('Title')" placeholder="Main menu" required autofocus />
-                <flux:input wire:model.live="handle" :label="__('Handle')" placeholder="main" required />
+                <flux:input wire:model="title" :label="__('Title')" placeholder="Main menu" required autofocus />
+
+                <div class="flex items-start gap-2">
+                    <flux:input wire:model="handle" :label="__('Handle')" placeholder="main" class="flex-1" required />
+                    <flux:button size="sm" type="button" icon="arrow-path" class="mt-7" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
+                </div>
             </div>
 
             @unless ($editingId)

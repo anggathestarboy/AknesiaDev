@@ -31,13 +31,6 @@ class NavigationManager extends Component
      */
     public bool $createBlueprint = true;
 
-    /**
-     * Once the user types into the handle field directly, it stops
-     * auto-following the title (matches Statamic's slug-follows-title
-     * behavior).
-     */
-    public bool $handleManuallyEdited = false;
-
     #[Computed]
     public function navigations()
     {
@@ -52,7 +45,7 @@ class NavigationManager extends Component
 
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'blueprint', 'handleManuallyEdited']);
+        $this->reset(['editingId', 'handle', 'title', 'blueprint']);
         $this->createBlueprint = true;
         Flux::modal('navigation-form')->show();
     }
@@ -72,20 +65,13 @@ class NavigationManager extends Component
         $this->title = $navigation->title;
         $this->blueprint = (string) ($navigation->effectiveBlueprint()?->handle ?? '');
         $this->createBlueprint = false;
-        $this->handleManuallyEdited = true;
 
         Flux::modal('navigation-form')->show();
     }
 
-    public function updated(string $name): void
+    public function regenerateHandle(): void
     {
-        if ($name === 'title' && ! $this->handleManuallyEdited) {
-            $this->handle = Str::slug($this->title);
-        }
-
-        if ($name === 'handle') {
-            $this->handleManuallyEdited = true;
-        }
+        $this->handle = Str::slug($this->title);
     }
 
     public function save(): void

@@ -71,10 +71,6 @@
                 </div>
             @endif
         @endforeach
-
-        <div class="flex justify-end gap-2 border-t border-zinc-200 pt-6 dark:border-zinc-700">
-            <flux:button :href="route('navigation.index')" wire:navigate variant="filled">{{ __('Cancel') }}</flux:button>
-        </div>
     </form>
 
     @livewire('media::asset-picker')
