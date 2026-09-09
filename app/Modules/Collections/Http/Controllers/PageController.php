@@ -42,7 +42,7 @@ class PageController
 
         return view($template, [
             'entry' => $entry,
-            'data' => $entry->data,
+            'data' => $entry->fluentData(),
             'site' => $site,
         ]);
     }

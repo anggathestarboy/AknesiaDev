@@ -48,7 +48,7 @@ class PreviewController
 
         return view($template, [
             'entry' => $entry,
-            'data' => $payload['attributes']['data'] ?? [],
+            'data' => $entry->fluentData(),
             'site' => Site::where('handle', $payload['site'])->first(),
         ]);
     }

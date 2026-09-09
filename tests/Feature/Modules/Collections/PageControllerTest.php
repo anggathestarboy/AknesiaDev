@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Taxonomy;
+use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Livewire\EntryForm;
@@ -201,4 +203,84 @@ test('the visit url for a path-prefixed site matches what the public page contro
         ->instance()->resolvedUrl;
 
     expect($url)->toBe('/en/halo-slug');
+});
+
+test('a template can read entry data with arrow access, including nested replicator rows', function () {
+    $path = resource_path('views/pages/dynamic/page_controller_test_fluent.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<p>{{ $data->title }}</p><ul>@foreach ($data->rows as $row)<li>{{ $row->label }}</li>@endforeach</ul>');
+    $template = 'pages.dynamic.page_controller_test_fluent';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => []]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'fluent-test', 'uri' => 'fluent-test',
+            'data' => ['title' => 'Fluent Title', 'rows' => [['label' => 'First row'], ['label' => 'Second row']]],
+        ]);
+
+        $this->get('/fluent-test')->assertOk()->assertSee('Fluent Title')->assertSee('First row')->assertSee('Second row');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('a single-select taxonomy field resolves to the term itself, not just its id', function () {
+    $path = resource_path('views/pages/dynamic/page_controller_test_taxonomy_single.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<p>{{ $data->category->title }}</p>');
+    $template = 'pages.dynamic.page_controller_test_taxonomy_single';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => [], 'settings' => []]);
+        $term = TaxonomyTerm::create(['taxonomy' => 'categories', 'site' => 'indonesia', 'slug' => 'news', 'data' => ['title' => 'News']]);
+
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => [
+            ['handle' => 'category', 'display' => 'Category', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'max_items' => 1, 'options' => 'categories'],
+        ]]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'taxonomy-single-test', 'uri' => 'taxonomy-single-test',
+            'data' => ['title' => 'Post', 'category' => [$term->id]],
+        ]);
+
+        $this->get('/taxonomy-single-test')->assertOk()->assertSee('News');
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('a multi-select taxonomy field resolves to a list of terms, in the stored order', function () {
+    $path = resource_path('views/pages/dynamic/page_controller_test_taxonomy_multi.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<ul>@foreach ($data->categories as $category)<li>{{ $category->title }}</li>@endforeach</ul>');
+    $template = 'pages.dynamic.page_controller_test_taxonomy_multi';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => [], 'settings' => []]);
+        $second = TaxonomyTerm::create(['taxonomy' => 'categories', 'site' => 'indonesia', 'slug' => 'second', 'data' => ['title' => 'Second']]);
+        $first = TaxonomyTerm::create(['taxonomy' => 'categories', 'site' => 'indonesia', 'slug' => 'first', 'data' => ['title' => 'First']]);
+
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => [
+            ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'max_items' => null, 'options' => 'categories'],
+        ]]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'taxonomy-multi-test', 'uri' => 'taxonomy-multi-test',
+            'data' => ['title' => 'Post', 'categories' => [$first->id, $second->id]],
+        ]);
+
+        $this->get('/taxonomy-multi-test')->assertOk()->assertSeeInOrder(['First', 'Second']);
+    } finally {
+        File::delete($path);
+    }
 });

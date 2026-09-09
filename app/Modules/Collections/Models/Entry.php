@@ -2,8 +2,11 @@
 
 namespace App\Modules\Collections\Models;
 
+use App\Models\TaxonomyTerm;
+use App\Modules\Blueprints\Models\Blueprint;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Fluent;
 
 /**
  * @property string $id
@@ -33,4 +36,69 @@ class Entry extends Model
         'published' => 'boolean',
         'data' => 'array',
     ];
+
+    /**
+     * This entry's field data for public templates — every associative
+     * array (including nested replicator rows) becomes a Fluent instance,
+     * so a template can read a field as $data->title as well as
+     * $data['title'], at any nesting depth, without wrapping it itself. A
+     * "taxonomy" field's stored term ids are also resolved to the actual
+     * terms (each with its own data as $data->fieldHandle->title, etc.) —
+     * a single term directly for a single-select field, a list of terms
+     * for a multi-select one — instead of leaving raw ids for the template
+     * to look up itself.
+     */
+    public function fluentData(): Fluent
+    {
+        return static::wrapFluent($this->resolveTaxonomyFields($this->data));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function resolveTaxonomyFields(array $data): array
+    {
+        $taxonomyFields = collect(Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? [])
+            ->where('type', 'taxonomy');
+
+        foreach ($taxonomyFields as $field) {
+            $handle = $field['handle'];
+
+            if (! array_key_exists($handle, $data) || ! is_array($data[$handle])) {
+                continue;
+            }
+
+            $ids = $data[$handle];
+            $terms = TaxonomyTerm::whereIn('id', $ids)->get()->sortBy(fn (TaxonomyTerm $term): int => array_search($term->id, $ids, true));
+            $allowsMultiple = ($field['max_items'] ?? null) === null || $field['max_items'] > 1;
+
+            $data[$handle] = $allowsMultiple
+                ? $terms->map(fn (TaxonomyTerm $term): array => static::termAttributes($term))->values()->all()
+                : (($term = $terms->first()) ? static::termAttributes($term) : null);
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function termAttributes(TaxonomyTerm $term): array
+    {
+        return array_merge($term->data, ['id' => $term->id, 'slug' => $term->slug]);
+    }
+
+    protected static function wrapFluent(array $data): Fluent
+    {
+        return new Fluent(collect($data)->map(function ($value) {
+            if (! is_array($value)) {
+                return $value;
+            }
+
+            return array_is_list($value)
+                ? collect($value)->map(fn ($item) => is_array($item) ? static::wrapFluent($item) : $item)->all()
+                : static::wrapFluent($value);
+        })->all());
+    }
 }
