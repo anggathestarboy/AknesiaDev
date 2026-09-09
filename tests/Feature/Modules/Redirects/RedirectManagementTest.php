@@ -125,6 +125,62 @@ test('clearing start/end date fields saves as null instead of an empty string, a
     expect($redirect->match_type)->toBe('prefix');
 });
 
+test('status code accepts 410 and 451 alongside the redirect codes', function () {
+    $this->actingAs(User::factory()->create());
+
+    $redirect = makeRedirect();
+
+    Livewire::test(RedirectManager::class)
+        ->call('view', $redirect->id)
+        ->set('status_code', 410)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($redirect->refresh()->status_code)->toBe(410);
+
+    Livewire::test(RedirectManager::class)
+        ->call('view', $redirect->id)
+        ->set('status_code', 451)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($redirect->refresh()->status_code)->toBe(451);
+});
+
+test('switching match type to exact forces keep_path off and hides its toggle, prefix/regex show it', function () {
+    $this->actingAs(User::factory()->create());
+
+    $redirect = makeRedirect(['match_type' => 'prefix', 'keep_path' => true]);
+
+    Livewire::test(RedirectManager::class)
+        ->call('view', $redirect->id)
+        ->assertSee('Keep path')
+        ->set('match_type', 'exact')
+        ->assertSet('keep_path', false)
+        ->assertDontSee('Keep path')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($redirect->refresh())
+        ->match_type->toBe('exact')
+        ->keep_path->toBeFalse();
+});
+
+test('keep_path stays forced off when saving an exact-match redirect even without touching match_type', function () {
+    $this->actingAs(User::factory()->create());
+
+    // Legacy/edge-case data: exact match that somehow still has keep_path true.
+    $redirect = makeRedirect(['match_type' => 'exact', 'keep_path' => true]);
+
+    Livewire::test(RedirectManager::class)
+        ->call('view', $redirect->id)
+        ->set('target', '/still-exact')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($redirect->refresh()->keep_path)->toBeFalse();
+});
+
 test('redirects can be searched by source or target', function () {
     $this->actingAs(User::factory()->create());
 

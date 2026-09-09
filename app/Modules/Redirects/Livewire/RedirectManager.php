@@ -67,6 +67,19 @@ class RedirectManager extends Component
         Flux::modal('redirect-form')->show();
     }
 
+    /**
+     * "Keep path" only means something for a prefix/regex match — an exact
+     * match has no leftover suffix to append, so force it off (and the
+     * toggle hides itself in the view) the moment match type becomes exact,
+     * rather than silently saving a stale true from before the switch.
+     */
+    public function updatedMatchType(): void
+    {
+        if ($this->match_type === 'exact') {
+            $this->keep_path = false;
+        }
+    }
+
     public function delete(int $id): void
     {
         Redirect::findOrFail($id)->delete();
@@ -86,10 +99,16 @@ class RedirectManager extends Component
         $this->start_at = $this->start_at ?: null;
         $this->end_at = $this->end_at ?: null;
 
+        // Belt-and-braces alongside updatedMatchType(): an exact match has
+        // no leftover path to keep, regardless of how match_type got here.
+        if ($this->match_type === 'exact') {
+            $this->keep_path = false;
+        }
+
         $validated = $this->validate([
             'source' => ['required', 'string', 'max:255', Rule::unique('redirects', 'source')->ignore($this->editingId)],
             'target' => ['required', 'string', 'max:2048'],
-            'status_code' => ['required', 'integer', 'in:301,302,307,308'],
+            'status_code' => ['required', 'integer', 'in:301,302,307,308,410,451'],
             'match_type' => ['required', 'string', 'in:exact,prefix,regex'],
             'is_active' => ['boolean'],
             'start_at' => ['nullable', 'date'],

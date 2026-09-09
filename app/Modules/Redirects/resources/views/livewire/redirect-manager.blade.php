@@ -61,9 +61,11 @@
                         <flux:select.option value="302">302 — {{ __('Temporary') }}</flux:select.option>
                         <flux:select.option value="307">307 — {{ __('Temporary (keep method)') }}</flux:select.option>
                         <flux:select.option value="308">308 — {{ __('Permanent (keep method)') }}</flux:select.option>
+                        <flux:select.option value="410">410 — {{ __('Gone') }}</flux:select.option>
+                        <flux:select.option value="451">451 — {{ __('Unavailable for legal reasons') }}</flux:select.option>
                     </flux:select>
 
-                    <flux:select wire:model="match_type" :label="__('Match type')">
+                    <flux:select wire:model.live="match_type" :label="__('Match type')">
                         <flux:select.option value="exact">{{ __('Exact') }}</flux:select.option>
                         <flux:select.option value="prefix">{{ __('Prefix') }}</flux:select.option>
                         <flux:select.option value="regex">{{ __('Regex') }}</flux:select.option>
@@ -77,7 +79,10 @@
 
                 <flux:switch wire:model="is_active" :label="__('Active')" />
                 <flux:switch wire:model="is_external" :label="__('External target')" />
-                <flux:switch wire:model="keep_path" :label="__('Keep path')" />
+
+                @unless ($match_type === 'exact')
+                    <flux:switch wire:model="keep_path" :label="__('Keep path')" />
+                @endunless
 
                 <flux:text class="text-sm text-zinc-500">{{ __(':count hits so far.', ['count' => $hits]) }}</flux:text>
             </div>

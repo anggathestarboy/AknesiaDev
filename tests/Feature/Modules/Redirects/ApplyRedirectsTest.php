@@ -63,6 +63,19 @@ test('a prefix redirect with keep_path appends the remaining path to the target'
         ->assertStatus(302);
 });
 
+test('a regex redirect with keep_path appends whatever the pattern did not consume', function () {
+    Redirect::create([
+        'source' => '#^/product-(\d+)#',
+        'target' => '/items',
+        'status_code' => 301,
+        'match_type' => 'regex',
+        'is_active' => true,
+        'keep_path' => true,
+    ]);
+
+    $this->get('/product-42/reviews')->assertRedirect('/items/reviews');
+});
+
 test('an external redirect target is not resolved against the app URL', function () {
     Redirect::create([
         'source' => '/away',
@@ -87,6 +100,40 @@ test('an external redirect target without a scheme is sent with https:// instead
     ]);
 
     $this->get('/aksata')->assertRedirect('https://www.anggara.xyz');
+});
+
+test('a 410 status still sends visitors to the target via a client-side redirect, since no Location is possible on that code', function () {
+    Redirect::create([
+        'source' => '/discontinued',
+        'target' => '/moved-here',
+        'status_code' => 410,
+        'match_type' => 'exact',
+        'is_active' => true,
+    ]);
+
+    $response = $this->get('/discontinued');
+
+    $response->assertStatus(410);
+    $response->assertHeaderMissing('Location');
+    $response->assertSee('/moved-here', false);
+    $response->assertSee('window.location.replace', false);
+    expect(Redirect::sole()->hits)->toBe(1);
+});
+
+test('a 451 status still sends visitors to the target via a client-side redirect, since no Location is possible on that code', function () {
+    Redirect::create([
+        'source' => '/blocked',
+        'target' => '/moved-here',
+        'status_code' => 451,
+        'match_type' => 'exact',
+        'is_active' => true,
+    ]);
+
+    $response = $this->get('/blocked');
+
+    $response->assertStatus(451);
+    $response->assertHeaderMissing('Location');
+    $response->assertSee('/moved-here', false);
 });
 
 test('a redirect outside its start/end window is ignored', function () {

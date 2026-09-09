@@ -40,10 +40,18 @@ class ApplyRedirects
         }
 
         $redirect->increment('hits');
+        $target = $this->targetFor($redirect, $path);
 
-        $response = $redirect->is_external
-            ? redirect()->away($this->targetFor($redirect, $path), $redirect->status_code)
-            : redirect()->to($this->targetFor($redirect, $path), $redirect->status_code);
+        // 410/451 are terminal statuses, not redirects — Symfony's
+        // RedirectResponse rejects any non-3xx code outright, and browsers
+        // never follow a Location header on a non-3xx response by spec. To
+        // still send visitors to the target while reporting that status
+        // (e.g. for crawlers/legal compliance), do it client-side instead.
+        $response = in_array($redirect->status_code, [410, 451], true)
+            ? response($this->clientRedirectHtml($target), $redirect->status_code)
+            : ($redirect->is_external
+                ? redirect()->away($target, $redirect->status_code)
+                : redirect()->to($target, $redirect->status_code));
 
         // Browsers cache a 301 aggressively and will keep reusing it locally
         // — without a hint against that, the record's hit count stops
@@ -64,11 +72,26 @@ class ApplyRedirects
         };
     }
 
+    protected function clientRedirectHtml(string $target): string
+    {
+        return '<!doctype html><html><head><meta http-equiv="refresh" content="0;url='.e($target).'"></head>'
+            .'<body><script>window.location.replace('.json_encode($target).');</script></body></html>';
+    }
+
     protected function targetFor(Redirect $redirect, string $path): string
     {
-        $target = $redirect->match_type === 'prefix' && $redirect->keep_path
-            ? rtrim($redirect->target, '/').substr($path, strlen($redirect->source))
-            : $redirect->target;
+        $target = $redirect->target;
+
+        // "Keep path" only makes sense when the match consumed a leading
+        // part of the request path — append whatever's left after that
+        // match onto the target, whether the match came from a literal
+        // prefix or a regex pattern.
+        if ($redirect->keep_path && $redirect->match_type === 'prefix') {
+            $target = rtrim($target, '/').substr($path, strlen($redirect->source));
+        } elseif ($redirect->keep_path && $redirect->match_type === 'regex' && @preg_match($redirect->source, $path, $matches, PREG_OFFSET_CAPTURE) === 1) {
+            $matchedLength = $matches[0][1] + strlen($matches[0][0]);
+            $target = rtrim($target, '/').substr($path, $matchedLength);
+        }
 
         // A Location header with no scheme (e.g. "example.com") is a
         // relative reference per the URL spec, so browsers resolve it
