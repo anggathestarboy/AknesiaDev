@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Navigation\Livewire\NavigationManager;
 use App\Modules\Navigation\Models\Navigation;
 use Livewire\Livewire;
@@ -96,4 +97,84 @@ test('protected navigations cannot be deleted', function () {
     Livewire::test(NavigationManager::class)->call('delete', $navigation->id);
 
     expect(Navigation::find($navigation->id))->not->toBeNull();
+});
+
+test('protected navigations cannot be edited', function () {
+    $this->actingAs(User::factory()->create());
+
+    config(['cms.protected_navigations' => ['sidebar-admin']]);
+    $navigation = Navigation::create(['title' => 'Sidebar Admin', 'handle' => 'sidebar-admin']);
+
+    Livewire::test(NavigationManager::class)
+        ->call('edit', $navigation->id)
+        ->assertSet('editingId', null);
+});
+
+test('creating a navigation with the blueprint checkbox on also creates its blueprint', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(NavigationManager::class)
+        ->set('title', 'Main menu')
+        ->set('handle', 'main')
+        ->set('createBlueprint', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $navigation = Navigation::sole();
+
+    expect($navigation->effectiveBlueprint())->not->toBeNull();
+    expect($navigation->effectiveBlueprint()->namespace)->toBe('navigations.main');
+});
+
+test('creating a navigation without the blueprint checkbox uses the picked blueprint', function () {
+    $this->actingAs(User::factory()->create());
+
+    $blueprint = Blueprint::create([
+        'namespace' => null,
+        'handle' => 'custom_nav',
+        'data' => ['tabs' => [], 'fields' => [['handle' => 'icon', 'display' => 'Icon', 'type' => 'text']]],
+    ]);
+
+    Livewire::test(NavigationManager::class)
+        ->set('title', 'Main menu')
+        ->set('handle', 'main')
+        ->set('createBlueprint', false)
+        ->set('blueprint', $blueprint->handle)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $navigation = Navigation::sole();
+
+    expect($navigation->effectiveBlueprint()->handle)->toBe('custom_nav');
+});
+
+test('editing a navigation preselects its currently picked blueprint', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = Navigation::create(['title' => 'Main menu', 'handle' => 'main', 'settings' => ['blueprint' => 'custom_nav']]);
+    Blueprint::create(['namespace' => null, 'handle' => 'custom_nav', 'data' => ['fields' => []]]);
+
+    Livewire::test(NavigationManager::class)
+        ->call('edit', $navigation->id)
+        ->assertSet('blueprint', 'custom_nav')
+        ->assertSet('createBlueprint', false);
+});
+
+test('edit tree is disabled while the navigation\'s blueprint has no fields', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = Navigation::create(['title' => 'Main menu', 'handle' => 'main']);
+    Blueprint::create(['namespace' => 'navigations.main', 'handle' => 'main', 'data' => ['fields' => []]]);
+
+    $this->get('/admin-panel/navigations')->assertSee('Add fields to this navigation');
+});
+
+test('edit tree stays enabled for a protected navigation even with no blueprint', function () {
+    $this->actingAs(User::factory()->create());
+
+    config(['cms.protected_navigations' => ['sidebar-admin']]);
+    $navigation = Navigation::create(['title' => 'Sidebar Admin', 'handle' => 'sidebar-admin']);
+
+    Livewire::test(NavigationManager::class)
+        ->assertSeeHtml(route('navigation.edit', $navigation->handle));
 });

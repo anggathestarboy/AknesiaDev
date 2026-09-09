@@ -9,6 +9,7 @@ use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
+use App\Modules\Navigation\Models\Navigation;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 
@@ -24,6 +25,7 @@ test('blueprints are grouped by category with a heading per group', function () 
     Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
     Blueprint::create(['namespace' => 'globals.site_settings', 'handle' => 'site_settings', 'data' => ['fields' => []]]);
     Blueprint::create(['namespace' => 'taxonomies.categories', 'handle' => 'categories', 'data' => ['fields' => []]]);
+    Blueprint::create(['namespace' => 'navigations.header', 'handle' => 'header', 'data' => ['fields' => []]]);
     Blueprint::create(['namespace' => null, 'handle' => 'loose', 'data' => ['fields' => []]]);
 
     $groups = Livewire::test(BlueprintManager::class)->instance()->blueprintGroups;
@@ -31,10 +33,11 @@ test('blueprints are grouped by category with a heading per group', function () 
     expect($groups->get('collections')->pluck('handle')->all())->toBe(['post']);
     expect($groups->get('globals')->pluck('handle')->all())->toBe(['site_settings']);
     expect($groups->get('taxonomies')->pluck('handle')->all())->toBe(['categories']);
+    expect($groups->get('navigations')->pluck('handle')->all())->toBe(['header']);
     expect($groups->get('other')->pluck('handle')->all())->toBe(['loose']);
 
     Livewire::test(BlueprintManager::class)
-        ->assertSeeInOrder([__('Collections'), 'post', __('Globals'), 'site_settings', __('Taxonomies'), 'categories', __('Other'), 'loose']);
+        ->assertSeeInOrder([__('Collections'), 'post', __('Globals'), 'site_settings', __('Taxonomies'), 'categories', __('Navigation'), 'header', __('Other'), 'loose']);
 });
 
 test('namespace options are derived from existing collections', function () {
@@ -64,6 +67,28 @@ test('namespace options also include existing global sets, and a globals-namespa
         ->call('save')
         ->assertHasNoErrors();
 
+    expect($blueprint->fresh()->data['fields'])->toHaveCount(1);
+});
+
+test('namespace options also include existing navigations, and a navigations-namespaced blueprint can be edited without its namespace being swapped', function () {
+    $this->actingAs(User::factory()->create());
+    Taxonomy::create(['title' => 'News Category', 'handle' => 'news_category']);
+    Navigation::create(['title' => 'Header', 'handle' => 'header']);
+
+    Livewire::test(BlueprintManager::class)->assertSee('navigations.header');
+
+    $blueprint = Blueprint::create(['namespace' => 'navigations.header', 'handle' => 'header', 'data' => ['fields' => []]]);
+
+    Livewire::test(BlueprintManager::class)
+        ->call('edit', $blueprint->id)
+        ->assertSet('namespace', 'navigations.header')
+        ->set('fields', [
+            ['handle' => 'icon', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($blueprint->fresh()->namespace)->toBe('navigations.header');
     expect($blueprint->fresh()->data['fields'])->toHaveCount(1);
 });
 

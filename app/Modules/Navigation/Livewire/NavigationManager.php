@@ -2,6 +2,7 @@
 
 namespace App\Modules\Navigation\Livewire;
 
+use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Navigation\Models\Navigation;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -20,6 +21,16 @@ class NavigationManager extends Component
 
     public string $title = '';
 
+    public string $blueprint = '';
+
+    /**
+     * Whether saving this (new) navigation should also create a blueprint
+     * for it, namespaced "navigations.{handle}", instead of requiring one to
+     * be picked from $blueprint. Only relevant on create. Mirrors
+     * TaxonomyManager::$createBlueprint.
+     */
+    public bool $createBlueprint = true;
+
     /**
      * Once the user types into the handle field directly, it stops
      * auto-following the title (matches Statamic's slug-follows-title
@@ -33,9 +44,16 @@ class NavigationManager extends Component
         return Navigation::orderBy('title')->get();
     }
 
+    #[Computed]
+    public function availableBlueprints()
+    {
+        return Blueprint::orderBy('namespace')->orderBy('handle')->get();
+    }
+
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'handleManuallyEdited']);
+        $this->reset(['editingId', 'handle', 'title', 'blueprint', 'handleManuallyEdited']);
+        $this->createBlueprint = true;
         Flux::modal('navigation-form')->show();
     }
 
@@ -43,9 +61,17 @@ class NavigationManager extends Component
     {
         $navigation = Navigation::findOrFail($id);
 
+        if ($this->isProtected($navigation)) {
+            Flux::toast(variant: 'danger', text: __('This navigation is protected and cannot be edited.'));
+
+            return;
+        }
+
         $this->editingId = $navigation->id;
         $this->handle = $navigation->handle;
         $this->title = $navigation->title;
+        $this->blueprint = (string) ($navigation->effectiveBlueprint()?->handle ?? '');
+        $this->createBlueprint = false;
         $this->handleManuallyEdited = true;
 
         Flux::modal('navigation-form')->show();
@@ -67,14 +93,36 @@ class NavigationManager extends Component
         $validated = $this->validate([
             'handle' => ['required', 'string', 'max:255', Rule::unique('navigations', 'handle')->ignore($this->editingId)],
             'title' => ['required', 'string', 'max:255'],
+            'blueprint' => [$this->createBlueprint ? 'exclude' : 'nullable', 'string', Rule::exists('blueprints', 'handle')],
         ]);
 
-        Navigation::updateOrCreate(['id' => $this->editingId], $validated);
+        $navigation = Navigation::updateOrCreate(['id' => $this->editingId], [
+            'handle' => $validated['handle'],
+            'title' => $validated['title'],
+            'settings' => ['blueprint' => $validated['blueprint'] ?? null],
+        ]);
+
+        $blueprintCreated = false;
+
+        if ($this->createBlueprint) {
+            $blueprint = Blueprint::firstOrCreate(
+                ['namespace' => "navigations.{$navigation->handle}", 'handle' => $navigation->handle],
+                ['data' => ['tabs' => [['handle' => 'main', 'display' => 'Main', 'sections' => []]], 'fields' => []]]
+            );
+            $blueprintCreated = $blueprint->wasRecentlyCreated;
+        }
 
         Flux::modal('navigation-form')->close();
-        Flux::toast(variant: 'success', text: __('Navigation saved.'));
-
         unset($this->navigations);
+
+        if ($blueprintCreated) {
+            Flux::toast(variant: 'success', text: __('Navigation saved — add fields to its blueprint so they show up on Edit tree.'));
+            $this->redirectRoute('blueprints.index', navigate: true);
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Navigation saved.'));
     }
 
     public function delete(int $id): void

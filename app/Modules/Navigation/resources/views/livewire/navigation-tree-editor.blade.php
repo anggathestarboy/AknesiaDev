@@ -19,7 +19,7 @@
 <section class="mx-auto mt-17 w-full max-w-6xl space-y-4 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-zinc-900">
         <ul wire:sort="sortRoot" class="space-y-2">
             @forelse ($tree as $i => $item)
-                <li wire:key="item-{{ $item['id'] }}" wire:sort:item="{{ $item['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                <li wire:key="item-{{ $item['id'] }}-{{ $i }}" wire:sort:item="{{ $item['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
                     <div class="flex flex-wrap items-center gap-2 bg-zinc-50 p-3 dark:bg-zinc-800">
                         <flux:icon.bars-3 wire:sort:handle class="size-4 shrink-0 cursor-grab text-zinc-400" />
 
@@ -82,7 +82,7 @@
                         @if ($item['children'] !== [])
                             <ul wire:sort="sortChildren" wire:sort:group-id="{{ $item['id'] }}" class="space-y-2 border-t border-zinc-200 bg-white p-3 pl-4 sm:pl-9 dark:border-zinc-700 dark:bg-zinc-900">
                                 @foreach ($item['children'] as $j => $child)
-                                    <li wire:key="item-{{ $child['id'] }}" wire:sort:item="{{ $child['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+                                    <li wire:key="item-{{ $child['id'] }}-{{ $i }}-{{ $j }}" wire:sort:item="{{ $child['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
                                         <div class="flex flex-wrap items-center gap-2 bg-zinc-50 p-3 dark:bg-zinc-800">
                                             <flux:icon.bars-3 wire:sort:handle class="size-4 shrink-0 cursor-grab text-zinc-400" />
 

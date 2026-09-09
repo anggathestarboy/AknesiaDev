@@ -19,6 +19,7 @@
                 "collections" => __("Collections"),
                 "globals" => __("Globals"),
                 "taxonomies" => __("Taxonomies"),
+                "navigations" => __("Navigation"),
                 "other" => __("Other"),
             ];
         @endphp

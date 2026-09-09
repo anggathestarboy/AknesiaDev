@@ -170,11 +170,20 @@ class NavigationTreeService
     }
 
     /**
+     * Items normally carry only blueprint-driven `data` (see
+     * NavigationTreeEditor). The legacy type/title/url/target shape is kept
+     * for navigations with no blueprint fields — only reachable for
+     * protected navigations like sidebar-admin.
+     *
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>
      */
     protected function normalize(array $attributes): array
     {
+        if (! array_key_exists('type', $attributes)) {
+            return ['data' => $attributes['data'] ?? []];
+        }
+
         if (! in_array($attributes['type'], self::TYPES, true)) {
             throw new InvalidArgumentException('Invalid navigation item type.');
         }
@@ -185,6 +194,7 @@ class NavigationTreeService
             'target' => $attributes['target'] ?? '_self',
             'url' => $attributes['type'] !== 'page' ? ($attributes['url'] ?? null) : null,
             'page_id' => $attributes['type'] === 'page' ? ($attributes['page_id'] ?? null) : null,
+            'data' => $attributes['data'] ?? [],
         ];
     }
 
