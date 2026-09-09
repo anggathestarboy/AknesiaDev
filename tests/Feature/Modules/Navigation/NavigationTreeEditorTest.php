@@ -7,11 +7,25 @@ use App\Modules\Collections\Models\Entry;
 use App\Modules\Navigation\Livewire\NavigationTreeEditor;
 use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Navigation\Services\NavigationTreeService;
+use App\Modules\Sites\Models\Site;
 use Livewire\Livewire;
 
 function makeNavigation(): Navigation
 {
     return Navigation::create(['title' => 'Main menu', 'handle' => 'main']);
+}
+
+function makeNavigationSite(string $handle, int $order = 0): Site
+{
+    return Site::create([
+        'handle' => $handle,
+        'name' => ucfirst($handle),
+        'url' => "https://{$handle}.example.com",
+        'locale' => $handle,
+        'lang' => $handle,
+        'attributes' => [],
+        'order' => $order,
+    ]);
 }
 
 test('tree editor page is displayed', function () {
@@ -382,6 +396,74 @@ test('saving fails validation when a required blueprint field is left blank', fu
     Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
         ->call('save')
         ->assertHasErrors(['data.header_text' => 'required']);
+});
+
+test('the default language is whichever site has the topmost order', function () {
+    $this->actingAs(User::factory()->create());
+
+    makeNavigationSite('english', 1);
+    makeNavigationSite('indonesian', 0);
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null],
+        ]],
+    ]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->assertSet('activeSite', 'indonesian');
+});
+
+test('a non-default language inherits the default language live until edited directly, then stays independent', function () {
+    $this->actingAs(User::factory()->create());
+
+    makeNavigationSite('indonesian', 0);
+    makeNavigationSite('english', 1);
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null],
+        ]],
+    ]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->assertSet('activeSite', 'indonesian')
+        ->set('data.header_text', 'Selamat datang')
+        ->call('save')
+        ->assertHasNoErrors()
+        // English hasn't been touched yet, so switching to it shows the default language's value directly.
+        ->set('activeSite', 'english')
+        ->assertSet('data.header_text', 'Selamat datang')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $service = app(NavigationTreeService::class);
+    // Saving english untouched stores no override, so it keeps live-following the default language.
+    expect($service->load($navigation->fresh(), 'english'))->toBe([]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->set('data.header_text', 'Selamat datang lagi')
+        ->call('save');
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'english'])
+        ->assertSet('data.header_text', 'Selamat datang lagi')
+        // Editing english directly now makes it independent of the default language.
+        ->set('data.header_text', 'Welcome')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->set('data.header_text', 'Selamat datang lagi diubah')
+        ->call('save');
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'english'])
+        ->assertSet('data.header_text', 'Welcome');
 });
 
 test('menu links are a replicator field the admin can add rows to directly, without a custom tree', function () {

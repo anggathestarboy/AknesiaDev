@@ -4,7 +4,16 @@
             <flux:heading size="lg">{{ $navigation->title }}</flux:heading>
             <flux:subheading>{{ __('Fields come from this navigation\'s blueprint — add a replicator field there for repeatable links.') }}</flux:subheading>
         </div>
-        <flux:button variant="primary" wire:click="save">{{ __('Save') }}</flux:button>
+        <div class="flex items-center gap-2">
+            @if ($this->availableSites->count() > 1)
+                <flux:select wire:model.live="activeSite" size="sm">
+                    @foreach ($this->availableSites as $site)
+                        <flux:select.option value="{{ $site->handle }}">{{ $site->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
+            <flux:button variant="primary" wire:click="save">{{ __('Save') }}</flux:button>
+        </div>
     </div>
 
     <form wire:submit="save" class="space-y-6 rounded-lg border-2 border-zinc-300 p-6 dark:border-zinc-500">
