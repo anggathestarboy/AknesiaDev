@@ -13,6 +13,7 @@ use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
@@ -82,6 +83,26 @@ class EntryForm extends Component
      */
     public array $data = [];
 
+    /**
+     * Whether the live preview pane is currently shown — see
+     * Collection::livePreview() and refreshPreviewCache().
+     */
+    public bool $previewOpen = false;
+
+    /**
+     * Identifies this editing session's cached preview payload
+     * (see refreshPreviewCache()) — stable for the lifetime of this page
+     * load, regenerated on the next full page load.
+     */
+    public string $previewToken = '';
+
+    /**
+     * Bumped every time the preview cache is refreshed, so binding it into
+     * the preview iframe's src as a query string forces a reload whenever
+     * the in-progress form data changes.
+     */
+    public int $previewRefreshCount = 0;
+
     public function mount(Collection $collection, ?Entry $entry = null, ?string $site = null): void
     {
         $this->collection = $collection;
@@ -116,6 +137,47 @@ class EntryForm extends Component
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
         }
+
+        if ($this->collection->livePreview()) {
+            $this->previewToken = (string) Str::uuid();
+            $this->refreshPreviewCache();
+        }
+    }
+
+    #[Computed]
+    public function previewUrl(): ?string
+    {
+        return $this->previewToken !== '' ? route('collections.preview', ['token' => $this->previewToken]) : null;
+    }
+
+    /**
+     * Caches this editing session's in-progress (not-yet-saved) form state
+     * under previewToken, for PreviewController to render — see that
+     * controller and Collection::livePreview(). Called on every field
+     * change (see updated()) so the live preview pane stays current without
+     * requiring a save.
+     */
+    protected function refreshPreviewCache(): void
+    {
+        Cache::put("entry-preview:{$this->previewToken}", [
+            'collection' => $this->collection->handle,
+            'blueprint' => $this->blueprintHandle,
+            'site' => $this->site,
+            'attributes' => [
+                'id' => $this->editingId,
+                'site' => $this->site,
+                'origin_id' => $this->originId,
+                'status' => $this->status,
+                'slug' => $this->slug,
+                'date' => $this->entryDate ? str_replace('T', ' ', $this->entryDate) : null,
+                'order' => $this->order !== '' && $this->order !== null ? (int) $this->order : null,
+                'collection' => $this->collection->handle,
+                'blueprint' => $this->blueprintHandle,
+                'data' => array_merge($this->data, ['title' => $this->title]),
+            ],
+        ], now()->addHour());
+
+        $this->previewRefreshCount++;
     }
 
     /**
@@ -578,6 +640,10 @@ class EntryForm extends Component
         if ($name === 'blueprintHandle') {
             $this->fillData(null);
             $this->activeTab = 'main';
+        }
+
+        if ($this->collection->livePreview() && $name !== 'previewOpen') {
+            $this->refreshPreviewCache();
         }
     }
 

@@ -1,18 +1,36 @@
 @php
     $prefix = "data." . implode(".", $path);
     $fieldLabel = new \Illuminate\Support\HtmlString(e($field["display"]) . ($field["required"] ?? false ? ' <span class="text-red-500">*</span>' : ""));
+    // When the collection has Live Preview enabled, typed/selected fields
+    // sync to the server as you go (instead of only on the next unrelated
+    // request) so the preview pane can stay up to date. Complex fields
+    // (bard, assets, replicator, taxonomy checkboxes) already sync on every
+    // interaction via explicit $wire calls/clicks, so they're left alone.
+    $preview = $preview ?? false;
 @endphp
 
 @if ($field["type"] === "toggle")
-    <flux:checkbox wire:model="{{ $prefix }}" :description="$field['instructions']" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:checkbox>
+    @if ($preview)
+        <flux:checkbox wire:model.live="{{ $prefix }}" :description="$field['instructions']" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:checkbox>
+    @else
+        <flux:checkbox wire:model="{{ $prefix }}" :description="$field['instructions']" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:checkbox>
+    @endif
 @elseif ($field["type"] === "select")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:select wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?? __('Select an option')">
-            @foreach ($field["options"] ?? [] as $option)
-                <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
-            @endforeach
-        </flux:select>
+        @if ($preview)
+            <flux:select wire:model.live="{{ $prefix }}" :placeholder="$field['placeholder'] ?? __('Select an option')">
+                @foreach ($field["options"] ?? [] as $option)
+                    <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        @else
+            <flux:select wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?? __('Select an option')">
+                @foreach ($field["options"] ?? [] as $option)
+                    <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        @endif
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
@@ -20,11 +38,19 @@
 @elseif ($field["type"] === "radio")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:radio.group wire:model="{{ $prefix }}">
-            @foreach ($field["options"] ?? [] as $option)
-                <flux:radio value="{{ $option }}" label="{{ $option }}" />
-            @endforeach
-        </flux:radio.group>
+        @if ($preview)
+            <flux:radio.group wire:model.live="{{ $prefix }}">
+                @foreach ($field["options"] ?? [] as $option)
+                    <flux:radio value="{{ $option }}" label="{{ $option }}" />
+                @endforeach
+            </flux:radio.group>
+        @else
+            <flux:radio.group wire:model="{{ $prefix }}">
+                @foreach ($field["options"] ?? [] as $option)
+                    <flux:radio value="{{ $option }}" label="{{ $option }}" />
+                @endforeach
+            </flux:radio.group>
+        @endif
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
@@ -40,11 +66,19 @@
     @endphp
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:checkbox.group wire:model="{{ $prefix }}">
-            @foreach ($field["options"] ?? [] as $option)
-                <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
-            @endforeach
-        </flux:checkbox.group>
+        @if ($preview)
+            <flux:checkbox.group wire:model.live="{{ $prefix }}">
+                @foreach ($field["options"] ?? [] as $option)
+                    <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
+                @endforeach
+            </flux:checkbox.group>
+        @else
+            <flux:checkbox.group wire:model="{{ $prefix }}">
+                @foreach ($field["options"] ?? [] as $option)
+                    <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
+                @endforeach
+            </flux:checkbox.group>
+        @endif
         @php $checkboxDescription = trim(($field["instructions"] ?? "") . " " . ($checkboxHint ?? "")); @endphp
         @if ($checkboxDescription !== "")
             <flux:description>{{ $checkboxDescription }}</flux:description>
@@ -53,7 +87,11 @@
 @elseif ($field["type"] === "date")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:input type="date" wire:model="{{ $prefix }}" />
+        @if ($preview)
+            <flux:input type="date" wire:model.live.debounce.600ms="{{ $prefix }}" />
+        @else
+            <flux:input type="date" wire:model="{{ $prefix }}" />
+        @endif
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
@@ -61,7 +99,11 @@
 @elseif ($field["type"] === "number")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:input type="number" wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @if ($preview)
+            <flux:input type="number" wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @else
+            <flux:input type="number" wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @endif
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
@@ -69,7 +111,11 @@
 @elseif ($field["type"] === "textarea" || $field["type"] === "markdown")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:textarea wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
+        @if ($preview)
+            <flux:textarea wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
+        @else
+            <flux:textarea wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
+        @endif
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
@@ -170,7 +216,11 @@
         </div>
 
         <div x-show="mode === 'url'">
-            <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?: __('https://...')" size="sm" />
+            @if ($preview)
+                <flux:input wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder'] ?: __('https://...')" size="sm" />
+            @else
+                <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?: __('https://...')" size="sm" />
+            @endif
         </div>
 
         <div x-show="mode === 'entry'" x-cloak>
@@ -202,7 +252,8 @@
                                         "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
                                         "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
                                         "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
-                                        "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null
+                                        "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null,
+                                        "preview" => $preview
                                     ])
                             </div>
                         @endforeach
@@ -337,7 +388,11 @@
 @else
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @if ($preview)
+            <flux:input wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @else
+            <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
+        @endif
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif

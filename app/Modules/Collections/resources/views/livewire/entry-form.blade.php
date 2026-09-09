@@ -1,4 +1,8 @@
 <section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
+    @php
+        $preview = $this->collection->livePreview();
+    @endphp
+
     <div class="">
         <flux:link :href="route('collections.entries', $collection->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit entry") : __("New entry") }}</flux:heading>
@@ -54,7 +58,8 @@
                                 "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
                                 "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
                                 "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
+                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                "preview" => $this->collection->livePreview()
                             ])
                     @endif
                 </div>
@@ -115,6 +120,10 @@
                         <flux:button size="sm" icon="arrow-top-right-on-square" disabled class="w-full">{{ __("Visit") }}</flux:button>
                     @endif
                 @endif
+
+                @if ($this->collection->livePreview() && $this->previewUrl)
+                    <flux:button size="sm" icon="eye" wire:click="$toggle('previewOpen')" class="mt-2 w-full">{{ __("Live Preview") }}</flux:button>
+                @endif
             </div>
 
             @if (count($this->siteLinks) > 1)
@@ -134,13 +143,21 @@
 
             <flux:field>
                 <flux:label>{{ __("Title") }} <span class="text-red-500">*</span></flux:label>
-                <flux:input wire:model="title" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+                @if ($preview)
+                    <flux:input wire:model.live.debounce.600ms="title" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+                @else
+                    <flux:input wire:model="title" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+                @endif
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __("Slug") }} <span class="text-red-500">*</span></flux:label>
                 <div class="grid grid-cols-[1fr_auto] items-end gap-2">
-                    <flux:input wire:model="slug" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                    @if ($preview)
+                        <flux:input wire:model.live.debounce.600ms="slug" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                    @else
+                        <flux:input wire:model="slug" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                    @endif
                     <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateSlug" :tooltip="__('Regenerate from title')" />
                 </div>
             </flux:field>
@@ -170,23 +187,48 @@
                 @enderror
             @endif
 
-            <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
+            @if ($preview)
+                <flux:input type="number" wire:model.live.debounce.600ms="order" :label="__('Order')" placeholder="1" size="sm" />
+            @else
+                <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
+            @endif
 
             <flux:field>
                 <flux:label>{{ __("Date") }} <span class="text-red-500">*</span></flux:label>
-                <flux:input type="datetime-local" wire:model="entryDate" required size="sm" />
+                @if ($preview)
+                    <flux:input type="datetime-local" wire:model.live.debounce.600ms="entryDate" required size="sm" />
+                @else
+                    <flux:input type="datetime-local" wire:model="entryDate" required size="sm" />
+                @endif
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __("Status") }} <span class="text-red-500">*</span></flux:label>
-                <flux:radio.group wire:model="status" class="">
-                    @foreach ($statuses as $value => $label)
-                        <flux:radio value="{{ $value }}" label="{{ $label }}" />
-                    @endforeach
-                </flux:radio.group>
+                @if ($preview)
+                    <flux:radio.group wire:model.live="status" class="">
+                        @foreach ($statuses as $value => $label)
+                            <flux:radio value="{{ $value }}" label="{{ $label }}" />
+                        @endforeach
+                    </flux:radio.group>
+                @else
+                    <flux:radio.group wire:model="status" class="">
+                        @foreach ($statuses as $value => $label)
+                            <flux:radio value="{{ $value }}" label="{{ $label }}" />
+                        @endforeach
+                    </flux:radio.group>
+                @endif
             </flux:field>
         </div>
     </form>
 
     @livewire ("media::asset-picker")
+
+    @if ($this->collection->livePreview() && $this->previewUrl)
+        <flux:modal name="live-preview" wire:model="previewOpen" class="w-full max-w-6xl">
+            <div class="space-y-3">
+                <flux:heading size="lg">{{ __("Live Preview") }}</flux:heading>
+                <iframe src="{{ $this->previewUrl }}?v={{ $previewRefreshCount }}" class="h-[75vh] w-full rounded-lg border border-zinc-200 dark:border-white/10"></iframe>
+            </div>
+        </flux:modal>
+    @endif
 </section>
