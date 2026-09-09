@@ -109,7 +109,11 @@
                     <flux:button :href="route('collections.entries', $collection->handle)" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
                 </div>
                 @if ($this->resolvedUrl)
-                    <flux:button size="sm" icon="arrow-top-right-on-square" href="{{ $this->resolvedUrl }}" target="_blank" class="w-full">{{ __("Visit") }}</flux:button>
+                    @if ($status === "published")
+                        <flux:button size="sm" icon="arrow-top-right-on-square" href="{{ $this->resolvedUrl }}" target="_blank" class="w-full">{{ __("Visit") }}</flux:button>
+                    @else
+                        <flux:button size="sm" icon="arrow-top-right-on-square" disabled class="w-full">{{ __("Visit") }}</flux:button>
+                    @endif
                 @endif
             </div>
 
