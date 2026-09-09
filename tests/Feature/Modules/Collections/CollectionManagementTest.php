@@ -34,6 +34,7 @@ test('collection can be created', function () {
         'sites' => [],
         'structured' => false,
         'orderable' => false,
+        'live_preview' => false,
         'max_depth' => null,
         'expects_root' => false,
         'save_action' => 'listing',

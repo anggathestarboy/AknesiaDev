@@ -62,6 +62,12 @@ class CollectionManager extends Component
     public bool $orderable = false;
 
     /**
+     * Whether the entry form's live preview pane is available for this
+     * collection.
+     */
+    public bool $livePreview = false;
+
+    /**
      * Maximum nesting depth for the tree, as a string for the number input.
      * Blank means unlimited.
      */
@@ -98,7 +104,7 @@ class CollectionManager extends Component
 
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'maxDepth', 'expectsRoot', 'saveAction']);
+        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'livePreview', 'maxDepth', 'expectsRoot', 'saveAction']);
         $this->routeMode = 'single';
         $this->sites = $this->availableSites->pluck('handle')->all();
         Flux::modal('collection-form')->show();
@@ -117,6 +123,7 @@ class CollectionManager extends Component
         $this->sites = $collection->configuredSites() ?: $this->availableSites->pluck('handle')->all();
         $this->structured = $collection->structured();
         $this->orderable = $collection->orderable();
+        $this->livePreview = $collection->livePreview();
         $this->maxDepth = (string) ($collection->maxDepth() ?? '');
         $this->expectsRoot = $collection->expectsRoot();
         $this->saveAction = $collection->saveAction();
@@ -166,6 +173,7 @@ class CollectionManager extends Component
             'sites.*' => [Rule::in($siteHandles)],
             'structured' => ['boolean'],
             'orderable' => ['boolean'],
+            'livePreview' => ['boolean'],
             'maxDepth' => ['nullable', 'integer', 'min:1'],
             'expectsRoot' => ['boolean'],
             'saveAction' => ['required', Rule::in(['listing', 'editing', 'create_another'])],
@@ -200,6 +208,7 @@ class CollectionManager extends Component
                 'sites' => $sites,
                 'structured' => $validated['structured'],
                 'orderable' => $validated['orderable'],
+                'live_preview' => $validated['livePreview'],
                 'max_depth' => $validated['structured'] && $validated['maxDepth'] !== '' ? (int) $validated['maxDepth'] : null,
                 'expects_root' => $validated['structured'] && $validated['expectsRoot'],
                 'save_action' => $validated['saveAction'],

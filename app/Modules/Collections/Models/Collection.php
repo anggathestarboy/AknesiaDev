@@ -99,6 +99,17 @@ class Collection extends Model
     }
 
     /**
+     * Whether entries can be viewed via the authenticated live preview pane
+     * on the entry form regardless of their publish status, and whether
+     * their fields sync to the server as they're typed so the preview stays
+     * up to date (see resources/views/livewire/partials/entry-field.blade.php).
+     */
+    public function livePreview(): bool
+    {
+        return (bool) ($this->settings['live_preview'] ?? false);
+    }
+
+    /**
      * Maximum nesting depth for a structured collection's tree. Null means
      * unlimited.
      */

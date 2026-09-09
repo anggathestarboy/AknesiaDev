@@ -90,6 +90,8 @@
 
                 <flux:checkbox wire:model="orderable" :label="__('Orderable')" :description="__('Let entries be manually reordered by drag-and-drop.')" />
 
+                <flux:checkbox wire:model="livePreview" :label="__('Live Preview')" :description="__('Let editors preview an entry on the live site as they edit it, even before it\'s published.')" />
+
                 @if ($structured)
                     <flux:input type="number" min="1" wire:model="maxDepth" :label="__('Max depth')" placeholder="{{ __('No limit') }}" />
 

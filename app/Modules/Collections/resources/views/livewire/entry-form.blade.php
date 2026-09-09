@@ -1,4 +1,8 @@
 <section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
+    @php
+        $preview = $this->collection->livePreview();
+    @endphp
+
     <div class="">
         <flux:link :href="route('collections.entries', $collection->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit entry") : __("New entry") }}</flux:heading>
@@ -54,7 +58,8 @@
                                 "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
                                 "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
                                 "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
+                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                "preview" => $this->collection->livePreview()
                             ])
                     @endif
                 </div>
@@ -108,9 +113,20 @@
                     <flux:button variant="primary" class="w-full" type="submit">{{ __("Save") }}</flux:button>
                     <flux:button :href="route('collections.entries', $collection->handle)" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
                 </div>
-                @if ($this->resolvedUrl)
-                    <flux:button size="sm" icon="arrow-top-right-on-square" href="{{ $this->resolvedUrl }}" target="_blank" class="w-full">{{ __("Visit") }}</flux:button>
-                @endif
+
+                <div class="flex gap-2">
+                    @if ($this->collection->livePreview() && $this->previewUrl)
+                        <flux:button size="sm" icon="eye" wire:click="$toggle('previewOpen')" class="w-full">{{ __("Live Preview") }}</flux:button>
+                    @endif
+
+                    @if ($this->resolvedUrl)
+                        @if ($status === "published")
+                            <flux:button size="sm" icon="arrow-top-right-on-square" href="{{ $this->resolvedUrl }}" target="_blank" class="w-full">{{ __("Visit") }}</flux:button>
+                        @else
+                            <flux:button size="sm" icon="arrow-top-right-on-square" disabled class="w-full">{{ __("Visit") }}</flux:button>
+                        @endif
+                    @endif
+                </div>
             </div>
 
             @if (count($this->siteLinks) > 1)
@@ -130,13 +146,21 @@
 
             <flux:field>
                 <flux:label>{{ __("Title") }} <span class="text-red-500">*</span></flux:label>
-                <flux:input wire:model="title" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+                @if ($preview)
+                    <flux:input wire:model.live.debounce.600ms="title" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+                @else
+                    <flux:input wire:model="title" placeholder="{{ __('Entry title') }}" maxlength="300" required size="sm" />
+                @endif
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __("Slug") }} <span class="text-red-500">*</span></flux:label>
                 <div class="grid grid-cols-[1fr_auto] items-end gap-2">
-                    <flux:input wire:model="slug" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                    @if ($preview)
+                        <flux:input wire:model.live.debounce.600ms="slug" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                    @else
+                        <flux:input wire:model="slug" placeholder="enter-slug" class="min-w-0 w-full" maxlength="255" required size="sm" />
+                    @endif
                     <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateSlug" :tooltip="__('Regenerate from title')" />
                 </div>
             </flux:field>
@@ -166,23 +190,66 @@
                 @enderror
             @endif
 
-            <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
+            @if ($preview)
+                <flux:input type="number" wire:model.live.debounce.600ms="order" :label="__('Order')" placeholder="1" size="sm" />
+            @else
+                <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
+            @endif
 
             <flux:field>
                 <flux:label>{{ __("Date") }} <span class="text-red-500">*</span></flux:label>
-                <flux:input type="datetime-local" wire:model="entryDate" required size="sm" />
+                @if ($preview)
+                    <flux:input type="datetime-local" wire:model.live.debounce.600ms="entryDate" required size="sm" />
+                @else
+                    <flux:input type="datetime-local" wire:model="entryDate" required size="sm" />
+                @endif
             </flux:field>
 
             <flux:field>
                 <flux:label>{{ __("Status") }} <span class="text-red-500">*</span></flux:label>
-                <flux:radio.group wire:model="status" class="">
-                    @foreach ($statuses as $value => $label)
-                        <flux:radio value="{{ $value }}" label="{{ $label }}" />
-                    @endforeach
-                </flux:radio.group>
+                @if ($preview)
+                    <flux:radio.group wire:model.live="status" class="">
+                        @foreach ($statuses as $value => $label)
+                            <flux:radio value="{{ $value }}" label="{{ $label }}" />
+                        @endforeach
+                    </flux:radio.group>
+                @else
+                    <flux:radio.group wire:model="status" class="">
+                        @foreach ($statuses as $value => $label)
+                            <flux:radio value="{{ $value }}" label="{{ $label }}" />
+                        @endforeach
+                    </flux:radio.group>
+                @endif
             </flux:field>
         </div>
     </form>
 
     @livewire ("media::asset-picker")
+
+    @if ($this->collection->livePreview() && $this->previewUrl)
+        <flux:modal name="live-preview" wire:model="previewOpen" class="w-full max-w-[90%]">
+            <div class="space-y-3" x-data="{ device: 'desktop', sizes: { desktop: [1280, 800], tablet: [768, 1024], mobile: [375, 667] } }">
+                <div class="flex flex-col flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="flex gap-1 rounded-lg border border-zinc-200 p-1 dark:border-white/10">
+                            <button type="button" title="{{ __('Desktop') }}" x-on:click="device = 'desktop'" x-bind:class="device === 'desktop' ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'" class="rounded p-1.5 cursor-pointer">
+                                <flux:icon.computer-desktop class="size-4" />
+                            </button>
+                            <button type="button" title="{{ __('Tablet') }}" x-on:click="device = 'tablet'" x-bind:class="device === 'tablet' ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'" class="rounded p-1.5 cursor-pointer">
+                                <flux:icon.device-tablet class="size-4" />
+                            </button>
+                            <button type="button" title="{{ __('Mobile') }}" x-on:click="device = 'mobile'" x-bind:class="device === 'mobile' ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'" class="rounded p-1.5 cursor-pointer">
+                                <flux:icon.device-phone-mobile class="size-4" />
+                            </button>
+                        </div>
+                        <span class="text-xs text-zinc-500 dark:text-zinc-400" x-text="`${sizes[device][0]} × ${sizes[device][1]}px`"></span>
+                    </div>
+                </div>
+
+                <div class="max-h-[75vh] overflow-auto rounded-lg bg-zinc-100 p-4 dark:bg-zinc-900">
+                    <iframe src="{{ $this->previewUrl }}?v={{ $previewRefreshCount }}" x-bind:style="`width: ${sizes[device][0]}px; height: ${sizes[device][1]}px;`" class="mx-auto max-w-full rounded-lg border border-zinc-200 bg-white dark:border-white/10"></iframe>
+                </div>
+            </div>
+        </flux:modal>
+    @endif
 </section>

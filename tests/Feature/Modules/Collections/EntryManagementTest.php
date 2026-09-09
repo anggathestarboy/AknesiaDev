@@ -1784,6 +1784,25 @@ test('the visit url nests {parent_uri} from the parent entry for a structured co
     expect($url)->toBe('https://example.id/parent/child');
 });
 
+test('the visit button is only enabled for published entries', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['route_mode' => 'single', 'route' => 'blog/{slug}']]);
+    $collection->refresh();
+    makeSites();
+
+    $draft = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'status' => 'draft', 'slug' => 'draft-entry', 'data' => ['title' => 'Draft', 'status' => 'draft']]);
+    $published = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'status' => 'published', 'slug' => 'published-entry', 'data' => ['title' => 'Published', 'status' => 'published']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $draft])
+        ->assertSeeHtml('disabled')
+        ->assertDontSeeHtml('href="https://example.id/blog/draft-entry"');
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $published])
+        ->assertSeeHtml('href="https://example.id/blog/published-entry"');
+});
+
 test('saving redirects to the listing by default', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();
