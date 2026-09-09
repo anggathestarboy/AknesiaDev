@@ -6,6 +6,7 @@ use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Navigation\Services\NavigationTreeService;
+use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
@@ -15,6 +16,7 @@ use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
@@ -58,6 +60,15 @@ class NavigationTreeEditor extends Component
     public string $activeTab = 'main';
 
     /**
+     * The site whose values are being edited, synced with ?site=... in the
+     * URL — mirrors GlobalSetForm::$activeSite. Only meaningful in blueprint
+     * mode when more than one site is configured; otherwise the tree is
+     * stored under a null locale and this stays empty.
+     */
+    #[Url(as: 'site')]
+    public string $activeSite = '';
+
+    /**
      * @var array<string, mixed>
      */
     public array $data = [];
@@ -67,12 +78,85 @@ class NavigationTreeEditor extends Component
         $this->navigation = $navigation;
 
         if ($this->usesBlueprint()) {
-            $this->data = $this->fillFieldsData($this->blueprintFields(), $this->treeService()->load($navigation));
+            if ($this->availableSites->count() > 1 && ! $this->availableSites->pluck('handle')->contains($this->activeSite)) {
+                $this->activeSite = (string) $this->originLocale();
+            }
+
+            $this->loadBlueprintData();
 
             return;
         }
 
         $this->tree = $this->treeService()->load($navigation);
+    }
+
+    public function updatedActiveSite(): void
+    {
+        if ($this->usesBlueprint()) {
+            $this->loadBlueprintData();
+        }
+    }
+
+    /**
+     * A non-origin locale's stored row only ever holds the fields it has
+     * been explicitly given their own value for (see save()) — anything
+     * else is missing on purpose, so it keeps inheriting whatever the
+     * default language currently has. Merging origin's full data underneath
+     * the locale's own (partial) row gives every field a value while
+     * letting untouched fields keep following the default language.
+     */
+    protected function loadBlueprintData(): void
+    {
+        $ownData = $this->treeService()->load($this->navigation, $this->activeLocale());
+
+        if ($this->isOriginLocale()) {
+            $this->data = $this->fillFieldsData($this->blueprintFields(), $ownData);
+
+            return;
+        }
+
+        $originData = $this->treeService()->load($this->navigation, $this->originLocale());
+        $this->data = $this->fillFieldsData($this->blueprintFields(), array_merge($originData, $ownData));
+    }
+
+    #[Computed]
+    public function availableSites(): Collection
+    {
+        return Site::orderBy('order')->get();
+    }
+
+    protected function activeLocale(): ?string
+    {
+        return $this->activeSite !== '' ? $this->activeSite : null;
+    }
+
+    /**
+     * The default language — the topmost site by order. Single-language
+     * installs (no sites) have no site at all, so their one tree
+     * (locale = null) is always the origin.
+     */
+    protected function originLocale(): ?string
+    {
+        return $this->availableSites->first()?->handle;
+    }
+
+    public function isOriginLocale(): bool
+    {
+        return $this->activeLocale() === $this->originLocale();
+    }
+
+    /**
+     * Keeps only the top-level fields whose value differs from $originData
+     * — i.e. the ones this locale has actually been given its own value
+     * for. Fields left untouched are dropped so they keep inheriting the
+     * default language's value if it's edited later, instead of freezing a
+     * copy of it the moment this locale is saved for the first time.
+     */
+    protected function overridesFrom(array $data, array $originData): array
+    {
+        return collect($data)
+            ->reject(fn ($value, string $handle): bool => array_key_exists($handle, $originData) && $originData[$handle] == $value)
+            ->all();
     }
 
     public function usesBlueprint(): bool
@@ -590,7 +674,14 @@ class NavigationTreeEditor extends Component
     {
         if ($this->usesBlueprint()) {
             $validated = $this->validate($this->fieldRules());
-            $this->treeService()->save($this->navigation, $this->stripRowUids($validated['data'] ?? []));
+            $data = $this->stripRowUids($validated['data'] ?? []);
+
+            if (! $this->isOriginLocale()) {
+                $originData = $this->treeService()->load($this->navigation, $this->originLocale());
+                $data = $this->overridesFrom($data, $originData);
+            }
+
+            $this->treeService()->save($this->navigation, $data, $this->activeLocale());
 
             Flux::toast(variant: 'success', text: __('Navigation saved.'));
 

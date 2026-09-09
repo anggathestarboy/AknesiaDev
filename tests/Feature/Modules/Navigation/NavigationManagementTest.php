@@ -27,18 +27,19 @@ test('navigation can be created', function () {
     expect($navigation->handle)->toBe('main');
 });
 
-test('handle auto-follows the title until edited manually', function () {
+test('handle can be generated from the title via the regenerate button', function () {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(NavigationManager::class)
         ->call('create')
         ->set('title', 'Main Menu!')
+        ->assertSet('handle', '')
+        ->call('regenerateHandle')
         ->assertSet('handle', 'main-menu')
-        ->set('title', 'Main Menu Updated')
-        ->assertSet('handle', 'main-menu-updated')
-        ->set('handle', 'custom-handle')
         ->set('title', 'Yet Another Title')
-        ->assertSet('handle', 'custom-handle');
+        ->assertSet('handle', 'main-menu')
+        ->call('regenerateHandle')
+        ->assertSet('handle', 'yet-another-title');
 });
 
 test('editing an existing navigation does not overwrite its handle when the title changes', function () {

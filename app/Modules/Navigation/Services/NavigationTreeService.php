@@ -24,9 +24,9 @@ class NavigationTreeService
     /**
      * @return array<int, array>
      */
-    public function load(Navigation $navigation): array
+    public function load(Navigation $navigation, ?string $locale = null): array
     {
-        return $this->trees->load('navigation', $navigation->handle);
+        return $this->trees->load('navigation', $navigation->handle, $locale);
     }
 
     /**
@@ -205,8 +205,8 @@ class NavigationTreeService
      *
      * @param  array<int, array>  $tree
      */
-    public function save(Navigation $navigation, array $tree): void
+    public function save(Navigation $navigation, array $tree, ?string $locale = null): void
     {
-        $this->trees->save('navigation', $navigation->handle, $tree);
+        $this->trees->save('navigation', $navigation->handle, $tree, $locale);
     }
 }
