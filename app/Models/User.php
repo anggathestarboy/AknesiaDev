@@ -3,11 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Modules\Users\Models\Role;
+use App\Modules\Users\Models\UserGroup;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -59,5 +62,39 @@ class User extends Authenticatable implements PasskeyUser
         return Str::length($initials) > 1
             ? Str::substr($initials, 0, 1).Str::substr($initials, -1)
             : $initials;
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'role_user');
+    }
+
+    public function userGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(UserGroup::class, 'user_group_user');
+    }
+
+    /**
+     * All permissions this user has, whether granted directly through a
+     * role or inherited through a user group's roles.
+     *
+     * @return array<int, string>
+     */
+    public function permissions(): array
+    {
+        $direct = $this->roles->flatMap(fn (Role $role): array => $role->permissions);
+        $viaGroups = $this->userGroups->flatMap(fn (UserGroup $group): array => $group->permissions());
+
+        return $direct->merge($viaGroups)->unique()->values()->all();
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return $this->isSuper() || in_array($permission, $this->permissions(), true);
+    }
+
+    public function isSuper(): bool
+    {
+        return in_array('super', $this->permissions(), true);
     }
 }
