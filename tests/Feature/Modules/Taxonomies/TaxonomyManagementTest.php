@@ -128,6 +128,21 @@ test('a term can be created and appears in the term manager', function () {
         ->assertSee('Politics');
 });
 
+test('a term requires a slug', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->set('title', 'Politics')
+        ->set('slug', '')
+        ->set('data.color', 'red')
+        ->set('data.description', 'Political news')
+        ->call('save')
+        ->assertHasErrors(['slug' => 'required']);
+});
+
 test('non-localizable term fields share one value from the taxonomy default site across all languages', function () {
     $this->actingAs(User::factory()->create());
     makeTaxonomySites();
