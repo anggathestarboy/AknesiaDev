@@ -558,7 +558,7 @@ class TermForm extends Component
     {
         $validated = $this->validate(array_merge([
             'title' => ['required', 'string', 'max:300'],
-            'slug' => ['nullable', 'string', 'max:255'],
+            'slug' => ['required', 'string', 'max:255'],
             'blueprintHandle' => ['required', Rule::in($this->availableBlueprints->pluck('handle')->all())],
         ], $this->fieldRules()));
 
@@ -575,7 +575,7 @@ class TermForm extends Component
             'origin_id' => $this->originId,
             'taxonomy' => $this->taxonomy->handle,
             'blueprint' => $validated['blueprintHandle'],
-            'slug' => $validated['slug'] ?: null,
+            'slug' => $validated['slug'],
             'data' => $data,
         ]);
 
