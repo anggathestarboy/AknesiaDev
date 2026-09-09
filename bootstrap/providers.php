@@ -11,6 +11,7 @@ use App\Modules\Sitemap\SitemapServiceProvider;
 use App\Modules\Sites\SitesServiceProvider;
 use App\Modules\Structure\StructureServiceProvider;
 use App\Modules\Taxonomies\TaxonomiesServiceProvider;
+use App\Modules\Users\UsersServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\FortifyServiceProvider;
 
@@ -30,4 +31,5 @@ return [
     SitesServiceProvider::class,
     SitemapServiceProvider::class,
     RedirectsServiceProvider::class,
+    UsersServiceProvider::class,
 ];

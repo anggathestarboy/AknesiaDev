@@ -25,7 +25,12 @@
                 <div>
                     @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
                         <flux:field>
-                            <flux:label>{{ $field["display"] }}@if ($field["required"] ?? false)<span class="text-red-500">*</span>@endif</flux:label>
+                            <flux:label
+                                >{{ $field["display"] }}
+                                @if ($field["required"] ?? false)
+                                    <span class="text-red-500">*</span>
+                                @endif
+                            </flux:label>
                             <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
                             <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
                         </flux:field>
@@ -57,7 +62,12 @@
                             <div>
                                 @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
                                     <flux:field>
-                                        <flux:label>{{ $field["display"] }}@if ($field["required"] ?? false)<span class="text-red-500">*</span>@endif</flux:label>
+                                        <flux:label
+                                            >{{ $field["display"] }}
+                                            @if ($field["required"] ?? false)
+                                                <span class="text-red-500">*</span>
+                                            @endif
+                                        </flux:label>
                                         <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
                                         <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
                                     </flux:field>
@@ -69,7 +79,7 @@
                                             "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
                                             "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
                                             "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
+                                            "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
                                         ])
                                 @endif
                             </div>
@@ -95,7 +105,7 @@
                 </div>
             @endif
 
-            @if ($this->availableBlueprints->count() > 1)
+            {{-- @if ($this->availableBlueprints->count() > 1)
                 <flux:select wire:model.live="blueprintHandle" :label="__('Blueprint')" size="sm">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
                         <flux:select.option value="{{ $availableBlueprint->handle }}">{{ $availableBlueprint->handle }}</flux:select.option>
@@ -106,14 +116,17 @@
                     <flux:text class="text-xs font-medium text-zinc-500">{{ __("Blueprint") }}</flux:text>
                     <flux:text>{{ $blueprintHandle }}</flux:text>
                 </div>
-            @endif
+            @endif --}}
 
             <flux:field>
-                <flux:label>{{ __('Title') }} <span class="text-red-500">*</span></flux:label>
+                <flux:label>{{ __("Title") }} <span class="text-red-500">*</span></flux:label>
                 <flux:input wire:model="title" placeholder="{{ __('Term title') }}" maxlength="300" required size="sm" />
             </flux:field>
 
-            <flux:input wire:model="slug" :label="__('Slug')" placeholder="my-term-slug" size="sm" />
+            <flux:field>
+                <flux:label>{{ __("Slug") }} <span class="text-red-500">*</span></flux:label>
+                <flux:input wire:model="slug" required placeholder="my-term-slug" size="sm" />
+            </flux:field>
 
             <div class="flex justify-end gap-2 pt-2">
                 <flux:button :href="route('taxonomies.terms', $taxonomy->handle)" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
