@@ -49,6 +49,18 @@
                 <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
             </div>
 
+            @unless ($createBlueprint)
+                <flux:select wire:model="blueprint" size="sm" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
+                    @foreach ($this->availableBlueprints as $availableBlueprint)
+                        <flux:select.option value="{{ $availableBlueprint->handle }}"> {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }} </flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                @if ($this->availableBlueprints->isEmpty())
+                    <flux:text class="text-zinc-500">{{ __("No blueprints yet — create one in the Blueprints module first.") }}</flux:text>
+                @endif
+            @endunless
+
             @if ($this->availableSites->isNotEmpty())
                 <flux:checkbox.group wire:model="sites" :label="__('Languages')" :description="__('Which sites does this taxonomy support? The default site is the origin language and is always included.')">
                     @foreach ($this->availableSites as $availableSite)
@@ -59,18 +71,6 @@
 
             @unless ($editingId)
                 <flux:checkbox wire:model.live="createBlueprint" :label="__('Create a blueprint for this taxonomy')" :description="__('Recommended — you\'ll add its fields right after saving. Turn off to pick an existing blueprint instead.')" />
-            @endunless
-
-            @unless ($createBlueprint)
-                <flux:select wire:model="blueprint" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
-                    @foreach ($this->availableBlueprints as $availableBlueprint)
-                        <flux:select.option value="{{ $availableBlueprint->handle }}"> {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }} </flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                @if ($this->availableBlueprints->isEmpty())
-                    <flux:text class="text-zinc-500">{{ __("No blueprints yet — create one in the Blueprints module first.") }}</flux:text>
-                @endif
             @endunless
 
             <div class="flex justify-end gap-2">
