@@ -9,6 +9,7 @@ use App\Modules\Blueprints\Support\HasFieldBuilder;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
+use App\Modules\Navigation\Models\Navigation;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\File;
@@ -87,15 +88,16 @@ class BlueprintManager extends Component
         return $this->blueprints->groupBy(function (Blueprint $blueprint): string {
             $prefix = explode('.', (string) $blueprint->namespace, 2)[0];
 
-            return in_array($prefix, ['collections', 'globals', 'taxonomies'], true) ? $prefix : 'other';
+            return in_array($prefix, ['collections', 'globals', 'taxonomies', 'navigations'], true) ? $prefix : 'other';
         });
     }
 
     /**
-     * Blueprint namespaces are derived from existing collections and global
-     * sets (e.g. a "blog" collection gives the namespace "collections.blog",
-     * a "site-settings" global set gives "globals.site-settings"), mirroring
-     * how Statamic scopes blueprints to the thing they belong to.
+     * Blueprint namespaces are derived from existing collections, global
+     * sets, taxonomies and navigations (e.g. a "blog" collection gives the
+     * namespace "collections.blog", a "site-settings" global set gives
+     * "globals.site-settings"), mirroring how Statamic scopes blueprints to
+     * the thing they belong to.
      */
     #[Computed]
     public function availableNamespaces()
@@ -118,7 +120,13 @@ class BlueprintManager extends Component
                 'label' => "{$taxonomy->title} (taxonomies.{$taxonomy->handle})",
             ]);
 
-        return $collectionNamespaces->concat($globalSetNamespaces)->concat($taxonomyNamespaces)->values();
+        $navigationNamespaces = Navigation::orderBy('title')->get()
+            ->map(fn (Navigation $navigation): array => [
+                'value' => "navigations.{$navigation->handle}",
+                'label' => "{$navigation->title} (navigations.{$navigation->handle})",
+            ]);
+
+        return $collectionNamespaces->concat($globalSetNamespaces)->concat($taxonomyNamespaces)->concat($navigationNamespaces)->values();
     }
 
     /**
