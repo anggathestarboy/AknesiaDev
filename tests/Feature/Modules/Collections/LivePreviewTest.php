@@ -98,3 +98,24 @@ test('the preview route 404s for an unknown token', function () {
 
     $this->get(route('collections.preview', ['token' => 'does-not-exist']))->assertNotFound();
 });
+
+test('the live preview panel shows a desktop/tablet/mobile switcher and pixel sizes', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeLivePreviewCollection(livePreview: true);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSeeHtml("device = 'desktop'")
+        ->assertSeeHtml("device = 'tablet'")
+        ->assertSeeHtml("device = 'mobile'")
+        ->assertSee('1280, 800', escape: false)
+        ->assertSee('768, 1024', escape: false)
+        ->assertSee('375, 667', escape: false);
+});
+
+test('the live preview panel is not shown when live preview is off', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeLivePreviewCollection(livePreview: false);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertDontSeeHtml("device = 'desktop'");
+});
