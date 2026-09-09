@@ -2,6 +2,7 @@
 
 namespace App\Modules\Redirects;
 
+use App\Modules\Redirects\Http\Middleware\ApplyRedirects;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +21,8 @@ class RedirectsServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'redirects');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        $this->app['router']->pushMiddlewareToGroup('web', ApplyRedirects::class);
 
         Route::middleware(['web', 'auth', 'verified'])
             ->prefix(config('cms.route'))
