@@ -9,9 +9,9 @@ test('admin:sidebar creates the sidebar-admin navigation with default items', fu
     $navigation = Navigation::where('handle', 'sidebar-admin')->sole();
     $tree = app(NavigationTreeService::class)->load($navigation);
 
-    expect($tree)->toHaveCount(13);
+    expect($tree)->toHaveCount(14);
     expect(collect($tree)->pluck('title')->all())->toBe([
-        'Dashboard', 'Media Library', 'Collections', 'Taxonomies', 'Globals', 'Blueprints',
+        'Dashboard', 'Pages', 'Media Library', 'Collections', 'Taxonomies', 'Globals', 'Blueprints',
         'Fieldsets', 'Navigations', 'Redirect Manager', 'Sites', 'Users', 'Roles', 'User Groups',
     ]);
     expect($tree[0]['url'])->toBe('/admin-panel/dashboard');
@@ -26,11 +26,11 @@ test('admin:sidebar is idempotent unless --force is passed', function () {
     $this->artisan('admin:sidebar')->assertSuccessful();
 
     $tree = app(NavigationTreeService::class)->load($navigation);
-    expect($tree)->toHaveCount(14);
-    expect($tree[13]['title'])->toBe('Custom Link');
+    expect($tree)->toHaveCount(15);
+    expect($tree[14]['title'])->toBe('Custom Link');
 
     $this->artisan('admin:sidebar', ['--force' => true])->assertSuccessful();
 
     $tree = app(NavigationTreeService::class)->load($navigation->fresh());
-    expect($tree)->toHaveCount(13);
+    expect($tree)->toHaveCount(14);
 });

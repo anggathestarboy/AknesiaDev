@@ -53,6 +53,7 @@ class SeedAdminSidebarCommand extends Command
     {
         return [
             ['title' => 'Dashboard', 'url' => route('dashboard', absolute: false)],
+            ['title' => 'Pages', 'url' => '/admin-panel/collections/pages'],
             ['title' => 'Media Library', 'url' => route('media.index', absolute: false)],
             ['title' => 'Collections', 'url' => route('collections.index', absolute: false)],
             ['title' => 'Taxonomies', 'url' => route('taxonomies.index', absolute: false)],
