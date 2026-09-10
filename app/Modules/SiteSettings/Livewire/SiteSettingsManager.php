@@ -14,6 +14,7 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Title('Site Settings')]
@@ -32,6 +33,7 @@ class SiteSettingsManager extends Component
      */
     public array $schemaBlocks = [];
 
+    #[Url('q')]
     public string $activeTab = 'robots';
 
     public string $robotsTxt = '';
@@ -62,10 +64,7 @@ class SiteSettingsManager extends Component
         $this->llmsTaxonomies = $settings->llms_config['taxonomies'] ?? [];
         $this->llmsLimit = $settings->llms_config['limit'] ?? 1000;
         $this->llmsAdditionalContent = (string) ($settings->llms_config['additional_content'] ?? '');
-        $this->schemaBlocks = array_map(
-            fn (array $block): array => array_merge($this->defaultSchemaBlock(), $block),
-            $settings->schemaBlocks(),
-        );
+        $this->schemaBlocks = array_map(fn (array $block): array => array_merge($this->defaultSchemaBlock(), $block), $settings->schemaBlocks());
     }
 
     /**
@@ -118,12 +117,7 @@ class SiteSettingsManager extends Component
 
     public function generateLlms(): void
     {
-        $this->llmsTxt = app(LlmsTxtGenerator::class)->generate(
-            $this->llmsCollections,
-            $this->llmsTaxonomies,
-            $this->llmsLimit,
-            $this->llmsAdditionalContent,
-        );
+        $this->llmsTxt = app(LlmsTxtGenerator::class)->generate($this->llmsCollections, $this->llmsTaxonomies, $this->llmsLimit, $this->llmsAdditionalContent);
     }
 
     public function toggleAllCollections(): void
@@ -223,10 +217,7 @@ class SiteSettingsManager extends Component
             'schemaBlocks.*.area_served' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $schemaBlocks = array_map(
-            fn (array $block): array => array_merge($block, ['same_as' => array_values(array_filter($block['same_as'] ?? []))]),
-            $validated['schemaBlocks'],
-        );
+        $schemaBlocks = array_map(fn (array $block): array => array_merge($block, ['same_as' => array_values(array_filter($block['same_as'] ?? []))]), $validated['schemaBlocks']);
 
         SiteSetting::current()->update([
             'robots_txt' => $validated['robotsTxt'] ?: null,
