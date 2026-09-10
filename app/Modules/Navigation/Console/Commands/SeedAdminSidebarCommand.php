@@ -53,12 +53,19 @@ class SeedAdminSidebarCommand extends Command
     {
         return [
             ['title' => 'Dashboard', 'url' => route('dashboard', absolute: false)],
+            ['title' => 'Pages', 'url' => '/admin-panel/collections/pages'],
             ['title' => 'Media Library', 'url' => route('media.index', absolute: false)],
             ['title' => 'Collections', 'url' => route('collections.index', absolute: false)],
             ['title' => 'Taxonomies', 'url' => route('taxonomies.index', absolute: false)],
             ['title' => 'Globals', 'url' => route('globals.index', absolute: false)],
             ['title' => 'Blueprints', 'url' => route('blueprints.index', absolute: false)],
+            ['title' => 'Fieldsets', 'url' => route('blueprints.fieldsets', absolute: false)],
+            ['title' => 'Navigations', 'url' => route('navigation.index', absolute: false)],
+            ['title' => 'Redirect Manager', 'url' => route('redirects.index', absolute: false)],
             ['title' => 'Sites', 'url' => route('sites.sites.index', absolute: false)],
+            ['title' => 'Users', 'url' => route('users.index', absolute: false)],
+            ['title' => 'Roles', 'url' => route('users.roles.index', absolute: false)],
+            ['title' => 'User Groups', 'url' => route('users.groups.index', absolute: false)],
         ];
     }
 }

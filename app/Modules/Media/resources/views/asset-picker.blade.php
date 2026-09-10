@@ -1,24 +1,33 @@
 <div x-data="{}">
     <flux:modal name="asset-picker" class="max-w-4xl space-y-6">
-        <div class="flex items-center justify-between gap-4">
+        <div class="pr-8">
             <flux:heading size="lg">{{ __('Select assets') }}</flux:heading>
-            <flux:input wire:model.live.debounce.300ms="search" placeholder="{{ __('Search...') }}" size="sm" class="max-w-xs" />
         </div>
 
-        @if ($search === '')
-            <flux:breadcrumbs>
-                <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToFolder('')" :current="$folder === ''">{{ __('Home') }}</flux:breadcrumbs.item>
-                @foreach ($this->breadcrumbs as $crumb)
-                    <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToFolder('{{ $crumb['path'] }}')" :current="$crumb['path'] === $folder">{{ $crumb['name'] }}</flux:breadcrumbs.item>
-                @endforeach
-            </flux:breadcrumbs>
-        @endif
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            @if ($search === '')
+                <flux:breadcrumbs>
+                    <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToFolder('')" :current="$folder === ''">{{ __('Home') }}</flux:breadcrumbs.item>
+                    @foreach ($this->breadcrumbs as $crumb)
+                        <flux:breadcrumbs.item class="cursor-pointer" wire:click="goToFolder('{{ $crumb['path'] }}')" :current="$crumb['path'] === $folder">{{ $crumb['name'] }}</flux:breadcrumbs.item>
+                    @endforeach
+                </flux:breadcrumbs>
+            @else
+                <div></div>
+            @endif
 
-        <div class="max-h-96 overflow-y-auto">
-            <div class="grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6">
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="{{ __('Search...') }}" size="sm" class="w-full sm:w-64" />
+        </div>
+
+        <div class="max-h-96 overflow-y-auto px-1">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7">
                 @foreach ($this->listing['folders'] as $folderItem)
-                    <button type="button" wire:click="goToFolder('{{ $folderItem['path'] }}')" class="flex flex-col items-center gap-1 rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                        <flux:icon.folder class="size-10 text-blue-400" />
+                    <button type="button" wire:click="goToFolder('{{ $folderItem['path'] }}')" class="group flex flex-col items-center gap-1 rounded-lg p-1">
+                        <div class="flex aspect-square w-full items-center justify-center rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 80 66" class="size-full text-(--color-accent)/90 group-hover:text-(--color-accent)">
+                                <path fill="currentColor" d="M73.684 8.8h-40a2.1 2.1 0 0 1-1.516-.66L26.526 2.2A6.4 6.4 0 0 0 24.467.616 6.2 6.2 0 0 0 21.98 0H7.537C5.538 0 3.62.83 2.207 2.307.794 3.784 0 5.787 0 7.876v50.248c0 2.089.794 4.092 2.207 5.57C3.621 65.17 5.538 66 7.537 66h64.926c2 0 3.916-.83 5.33-2.307C79.206 62.216 80 60.213 80 58.124V15.4c0-1.75-.665-3.43-1.85-4.667C76.966 9.495 75.36 8.8 73.684 8.8"></path>
+                            </svg>
+                        </div>
                         <span class="w-full truncate text-center text-xs">{{ $folderItem['name'] }}</span>
                     </button>
                 @endforeach
