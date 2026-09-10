@@ -11,6 +11,10 @@
     <title>{{ filled($title) ? $title . " - " . config("app.name") : config("app.name") }}</title>
     <link rel="icon" href="/favicon.png" sizes="any" />
     @vite (["resources/css/site.css"])
+
+    @foreach (\App\Modules\SiteSettings\Models\SiteSetting::current()->structuredDataBlocks() as $structuredData)
+        <script type="application/ld+json">{!! json_encode($structuredData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    @endforeach
 </head>
 <body class="">
     <x-layouts::site.header :site="$site" />

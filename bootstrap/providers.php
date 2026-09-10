@@ -6,9 +6,11 @@ use App\Modules\Forms\FormsServiceProvider;
 use App\Modules\Globals\GlobalsServiceProvider;
 use App\Modules\Media\MediaServiceProvider;
 use App\Modules\Navigation\NavigationServiceProvider;
+use App\Modules\NotFoundDetector\NotFoundDetectorServiceProvider;
 use App\Modules\Redirects\RedirectsServiceProvider;
 use App\Modules\Sitemap\SitemapServiceProvider;
 use App\Modules\Sites\SitesServiceProvider;
+use App\Modules\SiteSettings\SiteSettingsServiceProvider;
 use App\Modules\Structure\StructureServiceProvider;
 use App\Modules\Taxonomies\TaxonomiesServiceProvider;
 use App\Modules\Users\UsersServiceProvider;
@@ -32,4 +34,6 @@ return [
     SitemapServiceProvider::class,
     RedirectsServiceProvider::class,
     UsersServiceProvider::class,
+    SiteSettingsServiceProvider::class,
+    NotFoundDetectorServiceProvider::class,
 ];
