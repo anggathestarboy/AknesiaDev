@@ -55,16 +55,54 @@
                 <flux:input wire:model="locale" :label="__('Locale')" placeholder="en_US" required />
                 <flux:field>
                     <flux:label>{{ __('Language') }}</flux:label>
-                    <flux:dropdown class="block" gap="8">
-                        <flux:button class="w-full justify-between!" icon:trailing="chevron-down">
+                    <div
+                        x-data="{
+                            search: '',
+                            positionMenu() {
+                                const rect = $refs.languageTrigger.getBoundingClientRect();
+                                Object.assign($refs.languageMenu.style, {
+                                    top: `${rect.bottom + 8}px`,
+                                    left: `${rect.left}px`,
+                                    width: `${rect.width}px`,
+                                });
+                            },
+                        }"
+                    >
+                        <flux:button
+                            x-ref="languageTrigger"
+                            type="button"
+                            class="w-full justify-between!"
+                            icon:trailing="chevron-down"
+                            x-on:click="positionMenu(); $refs.languageMenu.togglePopover()"
+                        >
                             {{ $lang !== '' ? ($this->languageOptions[$lang] ?? $lang) . " ({$lang})" : __('Select a language') }}
                         </flux:button>
-                        <flux:menu class="max-h-64 overflow-y-auto">
-                            @foreach ($this->languageOptions as $code => $languageName)
-                                <flux:menu.item wire:click="$set('lang', '{{ $code }}')">{{ $languageName }} ({{ $code }})</flux:menu.item>
-                            @endforeach
-                        </flux:menu>
-                    </flux:dropdown>
+
+                        <div
+                            x-ref="languageMenu"
+                            popover
+                            x-on:beforetoggle="if ($event.newState === 'open') { search = ''; positionMenu(); $nextTick(() => $refs.languageSearchInput.focus()) }"
+                            class="fixed m-0 rounded-lg border border-zinc-200 bg-white p-[.3125rem] shadow-lg dark:border-zinc-600 dark:bg-zinc-700"
+                        >
+                            <div class="mb-1 border-b border-zinc-200 pb-2 dark:border-zinc-600">
+                                <flux:input x-ref="languageSearchInput" x-model="search" size="sm" icon="magnifying-glass" placeholder="{{ __('Search language...') }}" autocomplete="off" />
+                            </div>
+
+                            <div class="max-h-64 overflow-y-auto">
+                                @foreach ($this->languageOptions as $code => $languageName)
+                                    <button
+                                        type="button"
+                                        wire:click="$set('lang', '{{ $code }}')"
+                                        x-on:click="$refs.languageMenu.hidePopover()"
+                                        x-show="search === '' || {{ \Illuminate\Support\Js::from(strtolower("{$languageName} {$code}")) }}.includes(search.toLowerCase())"
+                                        class="flex w-full items-center rounded-md px-2 py-1.5 text-start text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:text-white dark:hover:bg-zinc-600"
+                                    >
+                                        {{ $languageName }} ({{ $code }})
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
                     <flux:error name="lang" />
                 </flux:field>
             </div>
