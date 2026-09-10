@@ -47,10 +47,26 @@
 
             <div class="grid grid-cols-2 gap-4">
                 <flux:input wire:model="name" :label="__('Name')" placeholder="English" required autofocus />
-                <flux:input wire:model="handle" :label="__('Handle')" placeholder="english" required />
+                <div class="flex items-start gap-2">
+                    <flux:input wire:model="handle" :label="__('Handle')" placeholder="english" class="flex-1" required />
+                    <flux:button size="sm" type="button" icon="arrow-path" class="mt-7" wire:click="regenerateHandle" :tooltip="__('Regenerate from name')" />
+                </div>
                 <flux:input wire:model="url" :label="__('URL')" placeholder="https://example.com/" required />
                 <flux:input wire:model="locale" :label="__('Locale')" placeholder="en_US" required />
-                <flux:input wire:model="lang" :label="__('Language')" placeholder="en" required />
+                <flux:field>
+                    <flux:label>{{ __('Language') }}</flux:label>
+                    <flux:dropdown class="block" gap="8">
+                        <flux:button class="w-full justify-between!" icon:trailing="chevron-down">
+                            {{ $lang !== '' ? ($this->languageOptions[$lang] ?? $lang) . " ({$lang})" : __('Select a language') }}
+                        </flux:button>
+                        <flux:menu class="max-h-64 overflow-y-auto">
+                            @foreach ($this->languageOptions as $code => $languageName)
+                                <flux:menu.item wire:click="$set('lang', '{{ $code }}')">{{ $languageName }} ({{ $code }})</flux:menu.item>
+                            @endforeach
+                        </flux:menu>
+                    </flux:dropdown>
+                    <flux:error name="lang" />
+                </flux:field>
             </div>
 
             <div class="space-y-3">
@@ -73,10 +89,6 @@
                             </div>
                         </div>
                     @endforeach
-
-                    @if (empty($customAttributes))
-                        <flux:text class="text-zinc-500">{{ __("No custom attributes yet.") }}</flux:text>
-                    @endif
                 </div>
             </div>
 
