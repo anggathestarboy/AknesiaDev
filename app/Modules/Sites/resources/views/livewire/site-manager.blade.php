@@ -82,10 +82,10 @@
                             x-ref="languageMenu"
                             popover
                             x-on:beforetoggle="if ($event.newState === 'open') { search = ''; positionMenu(); $nextTick(() => $refs.languageSearchInput.focus()) }"
-                            class="fixed m-0 rounded-lg border border-zinc-200 bg-white p-[.3125rem] shadow-lg dark:border-zinc-600 dark:bg-zinc-700"
+                            class="fixed m-0 rounded-lg border border-zinc-200 bg-white p-1.25 shadow-lg dark:border-zinc-600 dark:bg-zinc-700"
                         >
                             <div class="mb-1 border-b border-zinc-200 pb-2 dark:border-zinc-600">
-                                <flux:input x-ref="languageSearchInput" x-model="search" size="sm" icon="magnifying-glass" placeholder="{{ __('Search language...') }}" autocomplete="off" />
+                                <flux:input x-ref="languageSearchInput" x-model="search" size="sm" icon="magnifying-glass" placeholder="{{ __('Search language...') }}" autocomplete="off" class:input="outline-none" />
                             </div>
 
                             <div class="max-h-64 overflow-y-auto">
