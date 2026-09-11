@@ -5,10 +5,12 @@ namespace App\Modules\Sites\Livewire;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Symfony\Component\Intl\Languages;
 
 #[Title('Sites')]
 class SiteManager extends Component
@@ -39,6 +41,18 @@ class SiteManager extends Component
         return Site::orderBy('order')->get();
     }
 
+    /**
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function languageOptions(): array
+    {
+        $names = Languages::getNames(app()->getLocale());
+        asort($names);
+
+        return $names;
+    }
+
     public function create(): void
     {
         $this->reset(['editingId', 'name', 'handle', 'url', 'locale', 'lang', 'customAttributes']);
@@ -61,6 +75,11 @@ class SiteManager extends Component
             ->all();
 
         Flux::modal('site-form')->show();
+    }
+
+    public function regenerateHandle(): void
+    {
+        $this->handle = Str::slug($this->name, '_');
     }
 
     public function addAttribute(): void
