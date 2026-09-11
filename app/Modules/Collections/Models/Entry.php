@@ -4,6 +4,7 @@ namespace App\Modules\Collections\Models;
 
 use App\Models\TaxonomyTerm;
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Collections\Services\EntryUrlResolver;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Fluent;
@@ -46,11 +47,65 @@ class Entry extends Model
      * terms (each with its own data as $data->fieldHandle->title, etc.) —
      * a single term directly for a single-select field, a list of terms
      * for a multi-select one — instead of leaving raw ids for the template
-     * to look up itself.
+     * to look up itself. A "link" field pointing at an entry (stored as
+     * "entry::{id}"), at any nesting depth inside a replicator, is resolved
+     * to that entry's public URL, so a template can use it directly as an
+     * <a href> instead of the raw "entry::..." marker.
      */
     public function fluentData(): Fluent
     {
-        return static::wrapFluent($this->resolveTaxonomyFields($this->data));
+        return static::wrapFluent($this->resolveLinkFields($this->resolveTaxonomyFields($this->data), $this->blueprintFields()));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function blueprintFields(): array
+    {
+        return Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? [];
+    }
+
+    /**
+     * Recursively resolves every "link" field in $fields against $data,
+     * walking into a "replicator" field's own rows (each row matching
+     * "replicator_fields") to any depth.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
+    protected function resolveLinkFields(array $data, array $fields): array
+    {
+        $resolver = app(EntryUrlResolver::class);
+
+        foreach ($fields as $field) {
+            $handle = $field['handle'];
+
+            if ($field['type'] === 'replicator') {
+                $data[$handle] = collect($data[$handle] ?? [])
+                    ->map(fn (array $row): array => $this->resolveLinkFields($row, $field['replicator_fields'] ?? []))
+                    ->all();
+
+                continue;
+            }
+
+            if ($field['type'] !== 'link') {
+                continue;
+            }
+
+            $value = $data[$handle] ?? null;
+
+            if (! is_string($value) || ! str_starts_with($value, 'entry::')) {
+                continue;
+            }
+
+            $linkedEntry = static::find(substr($value, 7));
+            $collection = $linkedEntry ? Collection::where('handle', $linkedEntry->collection)->first() : null;
+
+            $data[$handle] = ($linkedEntry && $collection) ? $resolver->url($collection, $linkedEntry) : null;
+        }
+
+        return $data;
     }
 
     /**
@@ -59,8 +114,7 @@ class Entry extends Model
      */
     protected function resolveTaxonomyFields(array $data): array
     {
-        $taxonomyFields = collect(Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? [])
-            ->where('type', 'taxonomy');
+        $taxonomyFields = collect($this->blueprintFields())->where('type', 'taxonomy');
 
         foreach ($taxonomyFields as $field) {
             $handle = $field['handle'];

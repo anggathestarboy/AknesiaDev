@@ -17,18 +17,23 @@
         </section>
 
         <div class="">{{ $data->test_taxonomy->title ?? "" }}</div>
-        @dump ($data->test_taxonomy)
 
         <div class="">
             <h1>{{ $data->title }}</h1>
             <div class="">{{ $data->areas }}</div>
-            <div class="">{!! $data->contentss !!}</div>
+            <div class="bg-red-200 my-5 p-3 rounded-2xl">{!! $data->contentss !!}</div>
 
-            @foreach ($data->test_replicator as $test)
-                <div class="">
-                    <h2>{{ $test->headers }}</h2>
-                </div>
-            @endforeach
+            <div class="bg-amber-400 p-3 rounded-2xl my-5 space-y-3">
+                @foreach ($data->test_replicator as $test)
+                    <div class="">
+                        <h2>{{ $test->headers }}</h2>
+                        <p>{{ $test->description }}</p>
+                        @if ($test->button_url)
+                            <a href="{{ $test->button_url }}">{{ $test->button_text ?: __("Learn more") }}</a>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
         </div>
     </div>
 </x-layouts::site.layout>

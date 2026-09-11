@@ -284,3 +284,68 @@ test('a multi-select taxonomy field resolves to a list of terms, in the stored o
         File::delete($path);
     }
 });
+
+test('a link field pointing at an entry resolves to that entry\'s public url', function () {
+    $path = resource_path('views/pages/dynamic/page_controller_test_link.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<a href="{{ $data->button_url }}">Go</a>');
+    $template = 'pages.dynamic.page_controller_test_link';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => [
+            ['handle' => 'button_url', 'display' => 'Button Url', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'options' => []],
+        ]]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        $target = Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'target-page', 'uri' => 'target-page',
+            'data' => ['title' => 'Target'],
+        ]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'link-test', 'uri' => 'link-test',
+            'data' => ['title' => 'Post', 'button_url' => "entry::{$target->id}"],
+        ]);
+
+        $this->get('/link-test')->assertOk()->assertSee('http://127.0.0.1/target-page', false);
+    } finally {
+        File::delete($path);
+    }
+});
+
+test('a link field nested inside a replicator row also resolves to the linked entry\'s public url', function () {
+    $path = resource_path('views/pages/dynamic/page_controller_test_link_replicator.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '@foreach ($data->rows as $row)<a href="{{ $row->button_url }}">{{ $row->headers }}</a>@endforeach');
+    $template = 'pages.dynamic.page_controller_test_link_replicator';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => [
+            ['handle' => 'rows', 'display' => 'Rows', 'type' => 'replicator', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'replicator_fields' => [
+                ['handle' => 'headers', 'display' => 'Headers', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+                ['handle' => 'button_url', 'display' => 'Button Url', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'options' => []],
+            ]],
+        ]]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        $target = Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'target-page', 'uri' => 'target-page',
+            'data' => ['title' => 'Target'],
+        ]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'link-replicator-test', 'uri' => 'link-replicator-test',
+            'data' => ['title' => 'Post', 'rows' => [['headers' => 'Go', 'button_url' => "entry::{$target->id}"]]],
+        ]);
+
+        $this->get('/link-replicator-test')->assertOk()->assertSee('http://127.0.0.1/target-page', false);
+    } finally {
+        File::delete($path);
+    }
+});

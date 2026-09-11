@@ -10,11 +10,17 @@
 @endphp
 
 @if ($field["type"] === "toggle")
-    @if ($preview)
-        <flux:checkbox wire:model.live="{{ $prefix }}" :description="$field['instructions']" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:checkbox>
-    @else
-        <flux:checkbox wire:model="{{ $prefix }}" :description="$field['instructions']" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:checkbox>
-    @endif
+    <flux:field>
+        <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
+        @if ($preview)
+            <flux:switch wire:model.live="{{ $prefix }}" title="{{ $field['handle'] }}" />
+        @else
+            <flux:switch wire:model="{{ $prefix }}" title="{{ $field['handle'] }}" />
+        @endif
+        @if ($field["instructions"])
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
+        @endif
+    </flux:field>
     @error ($prefix)
         <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
     @enderror
