@@ -46,15 +46,15 @@
             <flux:heading size="lg">{{ $editingId ? __("Edit site") : __("Add site") }}</flux:heading>
 
             <div class="grid grid-cols-2 gap-4">
-                <flux:input wire:model="name" :label="__('Name')" placeholder="English" required autofocus />
-                <div class="flex items-start gap-2">
-                    <flux:input wire:model="handle" :label="__('Handle')" placeholder="english" class="flex-1" required />
-                    <flux:button size="sm" type="button" icon="arrow-path" class="mt-7" wire:click="regenerateHandle" :tooltip="__('Regenerate from name')" />
+                <flux:input wire:model="name" :label="__('Name')" size="sm" placeholder="English" required autofocus />
+                <div class="flex items-end gap-2">
+                    <flux:input size="sm" wire:model="handle" :label="__('Handle')" placeholder="english" class="flex-1" required />
+                    <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateHandle" :tooltip="__('Regenerate from name')" />
                 </div>
-                <flux:input wire:model="url" :label="__('URL')" placeholder="https://example.com/" required />
-                <flux:input wire:model="locale" :label="__('Locale')" placeholder="en_US" required />
-                <flux:field>
-                    <flux:label>{{ __('Language') }}</flux:label>
+                <flux:input size="sm" wire:model="url" :label="__('URL')" placeholder="https://example.com/" required />
+                <flux:input size="sm" wire:model="locale" :label="__('Locale')" placeholder="en_US" required />
+                <flux:field class="col-span-2">
+                    <flux:label>{{ __("Language") }}</flux:label>
                     <div
                         x-data="{
                             search: '',
@@ -69,19 +69,29 @@
                         }"
                     >
                         <flux:button
+                            size="sm"
                             x-ref="languageTrigger"
                             type="button"
                             class="w-full justify-between!"
                             icon:trailing="chevron-down"
-                            x-on:click="positionMenu(); $refs.languageMenu.togglePopover()"
+                            x-on:click="
+                                positionMenu();
+                                $refs.languageMenu.togglePopover();
+                            "
                         >
-                            {{ $lang !== '' ? ($this->languageOptions[$lang] ?? $lang) . " ({$lang})" : __('Select a language') }}
+                            {{ $lang !== "" ? ($this->languageOptions[$lang] ?? $lang) . " ({$lang})" : __("Select a language") }}
                         </flux:button>
 
                         <div
                             x-ref="languageMenu"
                             popover
-                            x-on:beforetoggle="if ($event.newState === 'open') { search = ''; positionMenu(); $nextTick(() => $refs.languageSearchInput.focus()) }"
+                            x-on:beforetoggle="
+                                if ($event.newState === 'open') {
+                                    search = '';
+                                    positionMenu();
+                                    $nextTick(() => $refs.languageSearchInput.focus());
+                                }
+                            "
                             class="fixed m-0 rounded-lg border border-zinc-200 bg-white p-1.25 shadow-lg dark:border-zinc-600 dark:bg-zinc-700"
                         >
                             <div class="mb-1 border-b border-zinc-200 pb-2 dark:border-zinc-600">

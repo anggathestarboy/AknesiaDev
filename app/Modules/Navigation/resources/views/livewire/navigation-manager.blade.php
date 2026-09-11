@@ -1,18 +1,18 @@
 <section class="w-full space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <flux:heading size="lg">{{ __('Navigation') }}</flux:heading>
-            <flux:subheading>{{ __('Menus shown around the site.') }}</flux:subheading>
+            <flux:heading size="lg">{{ __("Navigation") }}</flux:heading>
+            <flux:subheading>{{ __("Menus shown around the site.") }}</flux:subheading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __('Add navigation') }}</flux:button>
+        <flux:button variant="primary" wire:click="create">{{ __("Add navigation") }}</flux:button>
     </div>
 
     <flux:table>
         <flux:table.columns>
-            <flux:table.column>{{ __('Title') }}</flux:table.column>
-            <flux:table.column>{{ __('Handle') }}</flux:table.column>
-            <flux:table.column>{{ __('Blueprint') }}</flux:table.column>
+            <flux:table.column>{{ __("Title") }}</flux:table.column>
+            <flux:table.column>{{ __("Handle") }}</flux:table.column>
+            <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
             <flux:table.column></flux:table.column>
         </flux:table.columns>
 
@@ -21,34 +21,32 @@
                 <flux:table.row wire:key="navigation-{{ $navigation->id }}">
                     <flux:table.cell>{{ $navigation->title }}</flux:table.cell>
                     <flux:table.cell>{{ $navigation->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ $navigation->effectiveBlueprint()?->handle ?? '—' }}</flux:table.cell>
+                    <flux:table.cell>{{ $navigation->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-1">
-                        @if (! $this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data['fields'] ?? []) === 0)
-                            <flux:button size="sm" variant="primary" disabled tooltip="{{ __('Add fields to this navigation\'s blueprint first.') }}">{{ __('Edit content') }}</flux:button>
+                        @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0)
+                            <flux:button size="sm" variant="primary" disabled tooltip="{{ __('Add fields to this navigation\'s blueprint first.') }}">{{ __("Edit content") }}</flux:button>
                         @else
-                            <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __('Edit tree') : __('Edit content') }}</flux:button>
+                            <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __("Edit tree") : __("Edit content") }}</flux:button>
                         @endif
                         @if ($this->isProtected($navigation))
-                            <flux:button size="sm" disabled tooltip="{{ __('This navigation is protected and cannot be edited.') }}">{{ __('Edit') }}</flux:button>
+                            <flux:button size="sm" disabled tooltip="{{ __('This navigation is protected and cannot be edited.') }}">{{ __("Edit") }}</flux:button>
                         @else
-                            <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __('Edit') }}</flux:button>
+                            <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __("Edit") }}</flux:button>
                         @endif
                         @if ($this->isProtected($navigation))
-                            <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __('Delete') }}</flux:button>
+                            <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __("Delete") }}</flux:button>
                         @else
-                            <flux:button size="sm" variant="danger" wire:click="delete({{ $navigation->id }})" wire:confirm="{{ __('Delete this navigation?') }}">{{ __('Delete') }}</flux:button>
+                            <flux:button size="sm" variant="danger" wire:click="delete({{ $navigation->id }})" wire:confirm="{{ __('Delete this navigation?') }}">{{ __("Delete") }}</flux:button>
                         @endif
                     </flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                   <flux:table.cell colspan="4">
-    {{ __('No navigations yet. Run') }}
-    <code class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-        php artisan admin:sidebar
-    </code>
-    {{ __('to create the default admin navigation.') }}
-</flux:table.cell>
+                    <flux:table.cell colspan="4">
+                        {{ __("No navigations yet. Run") }}
+                        <code class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"> php artisan admin:sidebar </code>
+                        {{ __("to create the default admin navigation.") }}
+                    </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
@@ -56,14 +54,16 @@
 
     <flux:modal name="navigation-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">
-            <flux:heading size="lg">{{ $editingId ? __('Edit navigation') : __('Add navigation') }}</flux:heading>
+            <flux:heading size="lg">{{ $editingId ? __("Edit navigation") : __("Add navigation") }}</flux:heading>
 
             <div class="space-y-4">
-                <flux:input wire:model="title" :label="__('Title')" placeholder="Main menu" required autofocus />
+                <flux:input size="sm" wire:model="title" :label="__('Title')" placeholder="Main menu" required autofocus />
 
-                <div class="flex items-start gap-2">
-                    <flux:input wire:model="handle" :label="__('Handle')" placeholder="main" class="flex-1" required />
-                    <flux:button size="sm" type="button" icon="arrow-path" class="mt-7" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
+                <div class="flex items-end gap-2">
+                    <div class="flex-1">
+                        <flux:input size="sm" wire:model="handle" :label="__('Handle')" placeholder="main" class="flex-1" required />
+                    </div>
+                    <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
                 </div>
             </div>
 
@@ -74,22 +74,20 @@
             @unless ($createBlueprint)
                 <flux:select wire:model="blueprint" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
-                        <flux:select.option value="{{ $availableBlueprint->handle }}">
-                            {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }}
-                        </flux:select.option>
+                        <flux:select.option value="{{ $availableBlueprint->handle }}"> {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }} </flux:select.option>
                     @endforeach
                 </flux:select>
 
                 @if ($this->availableBlueprints->isEmpty())
-                    <flux:text class="text-zinc-500">{{ __('No blueprints yet — create one in the Blueprints module first.') }}</flux:text>
+                    <flux:text class="text-zinc-500">{{ __("No blueprints yet — create one in the Blueprints module first.") }}</flux:text>
                 @endif
             @endunless
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
-                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
                 </flux:modal.close>
-                <flux:button variant="primary" type="submit">{{ __('Save') }}</flux:button>
+                <flux:button variant="primary" type="submit">{{ __("Save") }}</flux:button>
             </div>
         </form>
     </flux:modal>
