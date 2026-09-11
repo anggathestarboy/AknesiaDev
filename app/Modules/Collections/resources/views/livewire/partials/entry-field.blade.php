@@ -230,14 +230,21 @@
         @enderror
     </flux:field>
 @elseif ($field["type"] === "link")
-    @php $isEntryLink = str_starts_with((string) ($linkValue ?? ""), "entry::"); @endphp
-    <div x-data="{ mode: '{{ $isEntryLink ? 'entry' : 'url' }}' }">
+    @php
+        $isRequired = $field["required"] ?? false;
+        $isEntryLink = str_starts_with((string) ($linkValue ?? ""), "entry::");
+        $initialMode = $isEntryLink ? "entry" : ($isRequired || filled($linkValue) ? "url" : "none");
+    @endphp
+    <div x-data="{ mode: '{{ $initialMode }}' }">
         <flux:text class="text-sm font-medium" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:text>
         @if ($field["instructions"])
             <flux:text class="block text-xs text-zinc-500">{{ $field["instructions"] }}</flux:text>
         @endif
 
         <div class="mt-1 mb-2 inline-flex overflow-hidden rounded border border-zinc-200 text-xs dark:border-zinc-700">
+            @unless ($isRequired)
+                <button type="button" x-on:click="mode = 'none'; $wire.set('{{ $prefix }}', '')" x-bind:class="mode === 'none' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("None") }}</button>
+            @endunless
             <button type="button" x-on:click="mode = 'url'" x-bind:class="mode === 'url' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("URL") }}</button>
             <button type="button" x-on:click="mode = 'entry'" x-bind:class="mode === 'entry' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("Entry") }}</button>
         </div>
@@ -262,16 +269,42 @@
         @enderror
     </div>
 @elseif ($field["type"] === "replicator")
+    @php $replicatorKey = implode('-', $path); @endphp
     <div>
-        <flux:text class="text-sm font-medium" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:text>
-        @if ($field["instructions"])
-            <flux:text class="block text-xs text-zinc-500">{{ $field["instructions"] }}</flux:text>
-        @endif
+        <div class="flex items-center justify-between gap-2">
+            <div>
+                <flux:text class="text-sm font-medium" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:text>
+                @if ($field["instructions"])
+                    <flux:text class="block text-xs text-zinc-500">{{ $field["instructions"] }}</flux:text>
+                @endif
+            </div>
+            @if (! empty($rows))
+                <div class="flex shrink-0 gap-1">
+                    <flux:button size="xs" variant="ghost" icon="chevron-double-down" type="button" title="{{ __('Expand all') }}" x-on:click="$dispatch('replicator-expand-{{ $replicatorKey }}')" />
+                    <flux:button size="xs" variant="ghost" icon="chevron-double-up" type="button" title="{{ __('Collapse all') }}" x-on:click="$dispatch('replicator-collapse-{{ $replicatorKey }}')" />
+                </div>
+            @endif
+        </div>
 
         <div class="mt-2 space-y-3">
             @forelse ($rows ?? [] as $rowIndex => $row)
-                <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                    <div class="grid gap-3">
+                <div
+                    wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}"
+                    class="rounded-lg border border-zinc-200 px-2 pt-1 pb-2 dark:border-zinc-700"
+                    x-data="{ collapsed: false }"
+                    x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true"
+                    x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false"
+                >
+                    <div class="flex items-center justify-between gap-4">
+                        <button type="button" class="flex min-w-0 items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-300" x-on:click="collapsed = !collapsed">
+                            <flux:icon.chevron-right x-show="collapsed" class="size-4 shrink-0" />
+                            <flux:icon.chevron-down x-show="!collapsed" x-cloak class="size-4 shrink-0" />
+                            <span class="truncate">{{ __(":label #:number", ["label" => $field["display"], "number" => $rowIndex + 1]) }}</span>
+                        </button>
+                        <flux:button size="sm" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                    </div>
+
+                    <div class="mt-3 grid gap-3" x-show="!collapsed" x-cloak>
                         @foreach ($field["replicator_fields"] ?? [] as $sub)
                             <div>
                                 @include ("collections::livewire.partials.entry-field",
@@ -287,9 +320,6 @@
                                     ])
                             </div>
                         @endforeach
-                    </div>
-                    <div class="mt-2 flex justify-end">
-                        <flux:button size="sm" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})'>{{ __("Remove") }}</flux:button>
                     </div>
                 </div>
             @empty

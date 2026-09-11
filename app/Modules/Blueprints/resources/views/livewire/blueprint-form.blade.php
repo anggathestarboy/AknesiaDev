@@ -36,7 +36,7 @@
         </div>
 
         <div class="space-y-3">
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-end bg-white z-999 sticky top-0 p-2 border rounded-b-xl">
                 <div class="flex gap-2">
                     <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('collapse-all-fields')">{{ __("Collapse all") }}</flux:button>
                     <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('expand-all-fields')">{{ __("Expand all") }}</flux:button>
