@@ -64,12 +64,12 @@
             @foreach ($tabSections as $section)
                 @php $sectionFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === $section["handle"]); @endphp
                 @if ($sectionFields->isNotEmpty())
-                    <div class="border border-gray-300 p-2 rounded-lg">
-                        <div class="border-b pb-1.5 mb-4 font-semibold">
+                    <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80">
+                        <div class="font-semibold text-black px-2">
                             <flux:subheading>{{ $section["display"] }}</flux:subheading>
                         </div>
 
-                        <div class="space-y-6">
+                        <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
                             @foreach ($sectionFields as $field)
                                 <div>
                                     @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())

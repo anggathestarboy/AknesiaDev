@@ -262,7 +262,7 @@
             <flux:text class="block text-xs text-zinc-500">{{ $field["instructions"] }}</flux:text>
         @endif
 
-        <div class="mt-2 space-y-3 border-l-2 border-zinc-200 pl-3 dark:border-zinc-700">
+        <div class="mt-2 space-y-3">
             @forelse ($rows ?? [] as $rowIndex => $row)
                 <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                     <div class="grid gap-3">
