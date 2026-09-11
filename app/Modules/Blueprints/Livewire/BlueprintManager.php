@@ -308,6 +308,33 @@ class BlueprintManager extends Component
     }
 
     /**
+     * Drag-and-drop reorder handler for a tab's sections list (see
+     * blueprint-manager.blade.php's wire:sort container around
+     * $tab["sections"]). $id is the dragged section's index within the tab
+     * at the time the drag started, $groupId is that tab's index (passed via
+     * wire:sort:group-id, one group per tab so sections can't be dragged
+     * across tabs). Fields reference their section by handle, not index, so
+     * reordering sections never disturbs which fields belong to which.
+     */
+    public function reorderSections(string $id, int $position, string $groupId): void
+    {
+        $tabIndex = (int) $groupId;
+        $sections = $this->tabs[$tabIndex]['sections'] ?? [];
+        $oldIndex = (int) $id;
+
+        if (! array_key_exists($oldIndex, $sections)) {
+            return;
+        }
+
+        $moved = array_splice($sections, $oldIndex, 1)[0];
+        $position = max(0, min($position, count($sections)));
+        array_splice($sections, $position, 0, [$moved]);
+
+        $this->tabs[$tabIndex]['sections'] = array_values($sections);
+        $this->editingSection = null;
+    }
+
+    /**
      * Validate $this->tabs (forcing index 0 to always be the reserved
      * "main" tab, not user-editable) and each tab's own sections, requiring
      * unique, valid handles throughout.

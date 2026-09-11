@@ -1,10 +1,13 @@
-<section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
+<section class="w-full max-w-8xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div class="">
-        <flux:link :href="route('taxonomies.terms', $taxonomy->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :taxonomy terms", ["taxonomy" => $taxonomy->title]) }}</flux:link>
-        <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit term") : __("New term") }}</flux:heading>
+        {{-- <flux:link :href="route('taxonomies.terms', $taxonomy->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :taxonomy terms", ["taxonomy" => $taxonomy->title]) }}</flux:link> --}}
+        <div class="flex gap-3 items-center border border-gray-200 py-2 px-3.5 rounded-xl">
+            <div class="w-2.5 h-2.5 bg-sky-500 rounded-full"></div>
+            <flux:heading size="xl">{{ $editingId ? __("Edit term") : __("New term") }}</flux:heading>
+        </div>
     </div>
 
-    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7 lg:gap-10">
+    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7">
         <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6">
             @if (count($this->blueprintTabs) > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">

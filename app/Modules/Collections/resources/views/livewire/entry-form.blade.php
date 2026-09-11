@@ -1,11 +1,20 @@
-<section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
+<section class="w-full max-w-8xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     @php
         $preview = $this->collection->livePreview();
     @endphp
 
     <div class="">
-        <flux:link :href="route('collections.entries', $collection->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link>
-        <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit entry") : __("New entry") }}</flux:heading>
+        {{-- <flux:link :href="route('collections.entries', $collection->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link> --}}
+        <div class="flex gap-3 items-center border border-gray-200 py-2 px-3.5 rounded-xl">
+            @if ($status == "published")
+                <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+            @elseif ($status == "need_review")
+                <div class="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>
+            @elseif ($status == "draft")
+                <div class="w-2.5 h-2.5 bg-gray-500 rounded-full"></div>
+            @endif
+            <flux:heading size="xl">{{ $editingId ? $title : __("New Entry") }}</flux:heading>
+        </div>
     </div>
 
     @if ($errors->any())
@@ -18,7 +27,7 @@
         </flux:callout>
     @endif
 
-    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7 lg:gap-10">
+    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7">
         <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6">
             @if (count($this->blueprintTabs) > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
