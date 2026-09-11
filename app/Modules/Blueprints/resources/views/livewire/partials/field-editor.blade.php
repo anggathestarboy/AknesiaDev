@@ -52,7 +52,9 @@
                 <flux:button size="xs" variant="ghost" icon="plus" type="button" class="cursor-pointer" x-show="collapsed" x-cloak x-on:click="collapsed = !collapsed" />
             </div>
             <flux:button size="xs" variant="ghost" icon="document-duplicate" type="button" class="cursor-pointer" title="{{ __('Duplicate') }}" wire:click="duplicateField({{ $pathJson }})" />
-            <flux:button size="xs" variant="ghost" icon="trash" type="button" class="cursor-pointer" wire:click="removeField({{ $pathJson }})" />
+            <flux:modal.trigger name="confirm-remove-field">
+                <flux:button size="xs" variant="ghost" icon="trash" type="button" class="cursor-pointer" x-on:click="deleteFieldPath = {{ $pathJson }}" />
+            </flux:modal.trigger>
 
             <div class="">
                 @if ($isTopLevelField && (count($tabs) > 1 || $fieldTabSections !== []))

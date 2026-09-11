@@ -2,6 +2,7 @@
 
 use App\Models\Taxonomy;
 use App\Models\User;
+use App\Modules\Blueprints\Livewire\BlueprintForm;
 use App\Modules\Blueprints\Livewire\BlueprintManager;
 use App\Modules\Blueprints\Livewire\FieldsetManager;
 use App\Modules\Blueprints\Models\Blueprint;
@@ -45,7 +46,7 @@ test('namespace options are derived from existing collections', function () {
     Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
     Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => []]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->assertSee('collections.blog')
         ->assertSee('collections.pages');
 });
@@ -54,12 +55,11 @@ test('namespace options also include existing global sets, and a globals-namespa
     $this->actingAs(User::factory()->create());
     GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site-settings', 'settings' => []]);
 
-    Livewire::test(BlueprintManager::class)->assertSee('globals.site-settings');
+    Livewire::test(BlueprintForm::class)->assertSee('globals.site-settings');
 
     $blueprint = Blueprint::create(['namespace' => 'globals.site-settings', 'handle' => 'default', 'data' => ['fields' => []]]);
 
-    Livewire::test(BlueprintManager::class)
-        ->call('edit', $blueprint->id)
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
         ->assertSet('namespace', 'globals.site-settings')
         ->set('fields', [
             ['handle' => 'site_name', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -75,12 +75,11 @@ test('namespace options also include existing navigations, and a navigations-nam
     Taxonomy::create(['title' => 'News Category', 'handle' => 'news_category']);
     Navigation::create(['title' => 'Header', 'handle' => 'header']);
 
-    Livewire::test(BlueprintManager::class)->assertSee('navigations.header');
+    Livewire::test(BlueprintForm::class)->assertSee('navigations.header');
 
     $blueprint = Blueprint::create(['namespace' => 'navigations.header', 'handle' => 'header', 'data' => ['fields' => []]]);
 
-    Livewire::test(BlueprintManager::class)
-        ->call('edit', $blueprint->id)
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
         ->assertSet('namespace', 'navigations.header')
         ->set('fields', [
             ['handle' => 'icon', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -95,7 +94,7 @@ test('namespace options also include existing navigations, and a navigations-nam
 test('a message is shown when no collections exist yet for the namespace picker', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->assertSee('No collections yet');
 });
 
@@ -103,7 +102,7 @@ test('blueprint namespace must match an existing collection', function () {
     $this->actingAs(User::factory()->create());
     Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('namespace', 'collections.does-not-exist')
         ->set('handle', 'post')
         ->set('fields', [
@@ -116,7 +115,7 @@ test('blueprint namespace must match an existing collection', function () {
 test('blueprint handle rejects spaces and dashes', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'blog post')
         ->set('fields', [
             ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -124,7 +123,7 @@ test('blueprint handle rejects spaces and dashes', function () {
         ->call('save')
         ->assertHasErrors(['handle']);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'blog-post')
         ->set('fields', [
             ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -136,7 +135,7 @@ test('blueprint handle rejects spaces and dashes', function () {
 test('blueprint can be created with no namespace', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'seo')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -151,7 +150,7 @@ test('blueprint can be created with fields via the field builder', function () {
     $this->actingAs(User::factory()->create());
     Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('namespace', 'collections.blog')
         ->set('handle', 'post')
         ->set('fields', [
@@ -191,7 +190,7 @@ test('blueprint can be created with fields via the field builder', function () {
 test('a bard field can have its toolbar buttons restricted', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'options' => '', 'toolbar' => ['bold', 'italic']],
@@ -205,7 +204,7 @@ test('a bard field can have its toolbar buttons restricted', function () {
 test('a bard field toolbar button must be a known key', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'options' => '', 'toolbar' => ['not-a-real-button']],
@@ -222,7 +221,7 @@ test('blueprint can be assigned a template selected from resources/views/pages',
     File::put($path, '');
 
     try {
-        Livewire::test(BlueprintManager::class)
+        Livewire::test(BlueprintForm::class)
             ->set('handle', 'home')
             ->set('template', 'pages.dynamic.blueprint_test_home')
             ->set('fields', [
@@ -240,7 +239,7 @@ test('blueprint can be assigned a template selected from resources/views/pages',
 test('blueprint template must be an existing file under resources/views/pages', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'home')
         ->set('template', 'pages.dynamic.does_not_exist')
         ->set('fields', [
@@ -253,7 +252,7 @@ test('blueprint template must be an existing file under resources/views/pages', 
 test('blueprint field can show when another field matches a value', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'type', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'article, video', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => true, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
@@ -276,7 +275,7 @@ test('blueprint field can show when another field matches a value', function () 
 test('blueprint field can hide when another field matches a value', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'status', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'draft, published', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
@@ -295,7 +294,7 @@ test('blueprint field can hide when another field matches a value', function () 
 test('blueprint condition requires a target field to be selected', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => 'x'],
@@ -307,7 +306,7 @@ test('blueprint condition requires a target field to be selected', function () {
 test('blueprint condition cannot reference the field itself', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => 'headline', 'condition_operator' => 'equals', 'condition_value' => 'x'],
@@ -319,7 +318,7 @@ test('blueprint condition cannot reference the field itself', function () {
 test('blueprint condition requires a value to compare against', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
@@ -332,8 +331,7 @@ test('blueprint condition requires a value to compare against', function () {
 test('condition inputs only appear once show or hide is selected, and reset when set back to always', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->call('addField')
         ->set('fields.0.handle', 'title')
         ->set('fields.1.condition_mode', 'show')
@@ -348,7 +346,7 @@ test('condition inputs only appear once show or hide is selected, and reset when
 test('blueprint rejects an invalid Laravel validation rule string', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'not_a_real_rule', 'instructions' => ''],
@@ -360,7 +358,7 @@ test('blueprint rejects an invalid Laravel validation rule string', function () 
 test('blueprint rejects a validation rule string with disallowed characters', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'max:255; DROP TABLE users;', 'instructions' => ''],
@@ -372,7 +370,7 @@ test('blueprint rejects a validation rule string with disallowed characters', fu
 test('blueprint accepts a valid date default value', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'published_at', 'display' => '', 'type' => 'date', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '2026-01-15', 'validation' => '', 'instructions' => ''],
@@ -389,7 +387,7 @@ test('blueprint accepts a valid date default value', function () {
 test('blueprint rejects a malformed date default value', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'published_at', 'display' => '', 'type' => 'date', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => 'not-a-date', 'validation' => '', 'instructions' => ''],
@@ -401,8 +399,7 @@ test('blueprint rejects a malformed date default value', function () {
 test('changing a field type to date clears its placeholder', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->set('fields.0.placeholder', 'some placeholder')
         ->set('fields.0.type', 'date')
         ->assertSet('fields.0.placeholder', '');
@@ -414,7 +411,7 @@ test('blueprint handle must be unique within its namespace', function () {
 
     Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('namespace', 'collections.blog')
         ->set('handle', 'post')
         ->set('fields', [['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '']])
@@ -425,7 +422,7 @@ test('blueprint handle must be unique within its namespace', function () {
 test('blueprint requires at least one field', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [])
         ->call('save')
@@ -435,7 +432,7 @@ test('blueprint requires at least one field', function () {
 test('blueprint field handles must be unique within the blueprint', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -448,7 +445,7 @@ test('blueprint field handles must be unique within the blueprint', function () 
 test('blueprint field handle must match the allowed format', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'Not Valid!', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -460,7 +457,7 @@ test('blueprint field handle must match the allowed format', function () {
 test('blueprint field handle cannot be "title" — it is a reserved default field', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -472,7 +469,7 @@ test('blueprint field handle cannot be "title" — it is a reserved default fiel
 test('replicator field can be created with sub-fields', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -497,7 +494,7 @@ test('replicator field can be created with sub-fields', function () {
 test('replicator field requires at least one sub-field', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
@@ -509,7 +506,7 @@ test('replicator field requires at least one sub-field', function () {
 test('replicator sub-field handle cannot be "title"', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -526,7 +523,7 @@ test('replicator sub-field handle cannot be "title"', function () {
 test('replicator sub-field default value, placeholder and instructions round-trip through the blueprint builder', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -555,7 +552,7 @@ test('replicator sub-field default value, placeholder and instructions round-tri
 test('replicator sub-field with an invalid validation rule string fails', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -572,7 +569,7 @@ test('replicator sub-field with an invalid validation rule string fails', functi
 test('replicator field can contain another replicator, nested to any depth', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -602,7 +599,7 @@ test('replicator field can contain another replicator, nested to any depth', fun
 test('nested replicator requires at least one sub-field, with an error at the correct depth', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -619,7 +616,7 @@ test('nested replicator requires at least one sub-field, with an error at the co
 test('replicator sub-field can be a select with options and sometimes', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -644,7 +641,7 @@ test('replicator sub-field can be a select with options and sometimes', function
 test('replicator sub-field can have a show-when condition scoped to its own sibling sub-fields', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -674,7 +671,7 @@ test('replicator sub-field can have a show-when condition scoped to its own sibl
 test('replicator sub-field condition cannot reference a field outside the replicator', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             [
@@ -694,8 +691,7 @@ test('replicator sub-field condition cannot reference a field outside the replic
 test('changing a field type resets its stale default value', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->set('fields.0.default', 'some text default')
         ->set('fields.0.type', 'toggle')
         ->assertSet('fields.0.default', '');
@@ -704,8 +700,7 @@ test('changing a field type resets its stale default value', function () {
 test('blueprint always has a reserved "main" tab that new fields default to', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->assertSet('tabs', [['handle' => 'main', 'display' => 'Main', 'sections' => [
             ['handle' => 'main', 'display' => 'Main'],
         ]]])
@@ -716,7 +711,7 @@ test('blueprint always has a reserved "main" tab that new fields default to', fu
 test('blueprint can add a tab and assign a field to it', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('tabs', [
             ['handle' => 'main', 'display' => 'Main'],
@@ -742,8 +737,7 @@ test('blueprint can add a tab and assign a field to it', function () {
 test('adding a field via a specific tab assigns it to that tab', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->call('addTab')
         ->set('tabs.1.handle', 'sidebar')
         ->call('addField', 'sidebar')
@@ -754,8 +748,7 @@ test('adding a field via a specific tab assigns it to that tab', function () {
 test('moving a top-level field up or down only reorders within its own tab', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->call('addTab')
         ->set('tabs.1.handle', 'sidebar')
         ->set('fields.0.handle', 'main_one')
@@ -776,8 +769,7 @@ test('moving a top-level field up or down only reorders within its own tab', fun
 test('dragging a top-level field only reorders within its own tab/section group', function () {
     $this->actingAs(User::factory()->create());
 
-    $component = Livewire::test(BlueprintManager::class)
-        ->call('create')
+    $component = Livewire::test(BlueprintForm::class)
         ->call('addTab')
         ->set('tabs.1.handle', 'sidebar')
         ->set('fields.0.handle', 'main_one')
@@ -801,8 +793,7 @@ test('dragging a top-level field only reorders within its own tab/section group'
 test('dragging a top-level field into another section moves it there', function () {
     $this->actingAs(User::factory()->create());
 
-    $component = Livewire::test(BlueprintManager::class)
-        ->call('create')
+    $component = Livewire::test(BlueprintForm::class)
         ->call('addSection', 0)
         ->set('tabs.0.sections.0.handle', 'intro')
         ->call('addSection', 0)
@@ -825,8 +816,7 @@ test('dragging a top-level field into another section moves it there', function 
 test('dragging a top-level field into another tab moves it there', function () {
     $this->actingAs(User::factory()->create());
 
-    $component = Livewire::test(BlueprintManager::class)
-        ->call('create')
+    $component = Livewire::test(BlueprintForm::class)
         ->call('addTab')
         ->set('tabs.1.handle', 'seo_tools')
         ->set('fields.0.handle', 'main_one')
@@ -844,8 +834,7 @@ test('dragging a top-level field into another tab moves it there', function () {
 test('dragging a replicator sub-field reorders within that replicator only', function () {
     $this->actingAs(User::factory()->create());
 
-    $component = Livewire::test(BlueprintManager::class)
-        ->call('create')
+    $component = Livewire::test(BlueprintForm::class)
         ->set('fields.0.type', 'replicator')
         ->call('addReplicatorField', [0])
         ->set('fields.0.replicator_fields.0.handle', 'first')
@@ -865,8 +854,7 @@ test('dragging a replicator sub-field reorders within that replicator only', fun
 test('reordering ignores an unknown field id', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->set('fields.0.handle', 'only_field')
         ->call('reorderFields', 'not-a-real-uid', 0, json_encode(['tab' => 'main', 'section' => '']))
         ->assertSet('fields.0.handle', 'only_field');
@@ -875,8 +863,7 @@ test('reordering ignores an unknown field id', function () {
 test('the "main" tab cannot be renamed or removed', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->set('tabs.0.handle', 'renamed')
         ->call('removeTab', 0)
         ->assertCount('tabs', 1)
@@ -895,8 +882,7 @@ test('the "main" tab cannot be renamed or removed', function () {
 test('removing a tab reassigns its fields back to main', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->call('addTab')
         ->set('tabs.1.handle', 'sidebar')
         ->set('tabs.1.display', 'Sidebar')
@@ -910,8 +896,7 @@ test('removing a tab reassigns its fields back to main', function () {
 test('a newly added tab opens in edit mode and can be closed once named', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->assertSet('editingTabIndex', null)
         ->call('addTab')
         ->assertSet('editingTabIndex', 1)
@@ -925,8 +910,7 @@ test('a newly added tab opens in edit mode and can be closed once named', functi
 test('removing the tab currently being edited exits edit mode', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->call('addTab')
         ->assertSet('editingTabIndex', 1)
         ->call('removeTab', 1)
@@ -936,7 +920,7 @@ test('removing the tab currently being edited exits edit mode', function () {
 test('a section can be added to a tab and a field assigned to it', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('tabs', [
             ['handle' => 'main', 'display' => 'Main', 'sections' => [
@@ -962,8 +946,7 @@ test('a section can be added to a tab and a field assigned to it', function () {
 test('a freshly added, not-yet-named section does not duplicate ungrouped fields in the builder', function () {
     $this->actingAs(User::factory()->create());
 
-    $component = Livewire::test(BlueprintManager::class)
-        ->call('create')
+    $component = Livewire::test(BlueprintForm::class)
         ->set('fields.0.handle', 'headline')
         ->set('fields.0.section', '')
         ->call('addSection', 0);
@@ -976,8 +959,7 @@ test('a freshly added, not-yet-named section does not duplicate ungrouped fields
 test('a newly added section opens in edit mode', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->assertSet('editingSection', null)
         ->call('addSection', 0)
         ->assertSet('editingSection', [0, 1])
@@ -990,8 +972,7 @@ test('a newly added section opens in edit mode', function () {
 test('removing a section ungroups its fields back to no section', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->call('addSection', 0)
         ->set('tabs.0.sections.1.handle', 'seo')
         ->set('fields.0.handle', 'seo_title')
@@ -1004,7 +985,7 @@ test('removing a section ungroups its fields back to no section', function () {
 test('a field cannot be assigned to a section that does not exist in its tab', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'does_not_exist'],
@@ -1016,7 +997,7 @@ test('a field cannot be assigned to a section that does not exist in its tab', f
 test('a section handle must be unique within its tab', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -1034,7 +1015,7 @@ test('a section handle must be unique within its tab', function () {
 test('a new tab requires a unique, valid handle other than "main"', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
@@ -1050,7 +1031,7 @@ test('a new tab requires a unique, valid handle other than "main"', function () 
 test('a field cannot be assigned to a tab that does not exist', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'does_not_exist'],
@@ -1062,8 +1043,7 @@ test('a field cannot be assigned to a tab that does not exist', function () {
 test('field builder can add, reorder and remove fields', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->assertCount('fields', 1)
         ->call('addField')
         ->assertCount('fields', 2)
@@ -1081,8 +1061,7 @@ test('field builder can add, reorder and remove fields', function () {
 test('field builder can add, reorder and remove fields nested inside a replicator, to any depth', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
-        ->call('create')
+    Livewire::test(BlueprintForm::class)
         ->set('fields.0.type', 'replicator')
         ->call('addReplicatorField', [0])
         ->assertCount('fields.0.replicator_fields', 1)
@@ -1112,8 +1091,7 @@ test('blueprint can be updated and fields round-trip through edit, including con
         ]],
     ]);
 
-    Livewire::test(BlueprintManager::class)
-        ->call('edit', $blueprint->id)
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
         ->assertSet('fields.1.sometimes', true)
         ->assertSet('fields.1.condition_mode', 'show')
         ->assertSet('fields.1.condition_field', 'type')
@@ -1222,7 +1200,7 @@ test('assets field can be created scoped to an asset container', function () {
 
     AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos'],
@@ -1241,7 +1219,7 @@ test('taxonomy field can be created scoped to a taxonomy with min/max selections
 
     Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'categories', 'display' => '', 'type' => 'taxonomy', 'required' => false, 'options' => 'categories', 'min_items' => '1', 'max_items' => '3'],
@@ -1260,7 +1238,7 @@ test('taxonomy field can be created scoped to a taxonomy with min/max selections
 test('taxonomy field requires a taxonomy to be selected', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'categories', 'display' => '', 'type' => 'taxonomy', 'required' => false, 'options' => ''],
@@ -1276,7 +1254,7 @@ test('a blueprint field can import an existing fieldset', function () {
         ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
     ]]]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'seo', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => 'seo'],
@@ -1293,7 +1271,7 @@ test('a blueprint field can import an existing fieldset', function () {
 test('a fieldset field requires an existing fieldset to be selected', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'seo', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => ''],
@@ -1305,7 +1283,7 @@ test('a fieldset field requires an existing fieldset to be selected', function (
 test('assets field requires an asset container to be selected', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => ''],
@@ -1317,7 +1295,7 @@ test('assets field requires an asset container to be selected', function () {
 test('assets field container must reference an existing asset container', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'does-not-exist'],
@@ -1331,7 +1309,7 @@ test('assets field can be given a min and max item count', function () {
 
     AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '1', 'max_items' => '3'],
@@ -1350,7 +1328,7 @@ test('assets field max items cannot be less than min items', function () {
 
     AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '5', 'max_items' => '2'],
@@ -1362,7 +1340,7 @@ test('assets field max items cannot be less than min items', function () {
 test('radio field can be created with options and a default value', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'size', 'display' => '', 'type' => 'radio', 'required' => false, 'options' => 'small, medium, large', 'default' => 'medium'],
@@ -1380,7 +1358,7 @@ test('radio field can be created with options and a default value', function () 
 test('checkbox field stores its options and preset default values as arrays', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'default' => 'cheese, olives'],
@@ -1398,7 +1376,7 @@ test('checkbox field stores its options and preset default values as arrays', fu
 test('checkbox field can be given a min and max selection count', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'min_items' => '1', 'max_items' => '2'],
@@ -1415,7 +1393,7 @@ test('checkbox field can be given a min and max selection count', function () {
 test('checkbox field max selections cannot be less than min selections', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives', 'min_items' => '3', 'max_items' => '1'],
@@ -1430,7 +1408,7 @@ test('link field can be scoped to allowed collections', function () {
     Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => []]);
     Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'pages, blog'],
@@ -1448,7 +1426,7 @@ test('link field can be scoped to allowed collections', function () {
 test('link field can be left unrestricted (any collection allowed)', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => ''],
@@ -1462,7 +1440,7 @@ test('link field can be left unrestricted (any collection allowed)', function ()
 test('link field rejects an allowed-collection handle that does not exist', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(BlueprintManager::class)
+    Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'does-not-exist'],
