@@ -14,20 +14,20 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-#[Title('Media Library')]
+#[Title("Media Library")]
 class Index extends Component
 {
     use WithFileUploads;
 
-    #[Url]
-    public string $container = '';
+    #[Url(as: "container")]
+    public string $container = "";
 
     #[Url]
-    public string $path = '';
+    public string $path = "";
 
-    public string $viewMode = 'grid';
+    public string $viewMode = "grid";
 
-    public string $search = '';
+    public string $search = "";
 
     public array $clipboard = [];
 
@@ -35,17 +35,17 @@ class Index extends Component
 
     public $uploads = [];
 
-    public string $newFolderName = '';
+    public string $newFolderName = "";
 
     public bool $showCreateFolder = false;
 
-    public string $renameFolderPath = '';
+    public string $renameFolderPath = "";
 
-    public string $renameFolderValue = '';
+    public string $renameFolderValue = "";
 
     public bool $showRenameFolder = false;
 
-    public string $deleteFolderPath = '';
+    public string $deleteFolderPath = "";
 
     public bool $showDeleteFolder = false;
 
@@ -55,9 +55,9 @@ class Index extends Component
 
     public int $renameFileId = 0;
 
-    public string $renameFileValue = '';
+    public string $renameFileValue = "";
 
-    public string $renameFileExtension = '';
+    public string $renameFileExtension = "";
 
     public bool $showRenameFile = false;
 
@@ -65,23 +65,23 @@ class Index extends Component
 
     public bool $showPreview = false;
 
-    public string $previewTitle = '';
+    public string $previewTitle = "";
 
-    public string $previewAlt = '';
+    public string $previewAlt = "";
 
-    public string $previewLoading = 'lazy';
+    public string $previewLoading = "lazy";
 
     public function mount(): void
     {
-        if ($this->container === '' || ! AssetContainer::where('handle', $this->container)->exists()) {
-            $this->container = AssetContainer::orderBy('title')->value('handle') ?? '';
+        if ($this->container === "" || !AssetContainer::where("handle", $this->container)->exists()) {
+            $this->container = AssetContainer::orderBy("title")->value("handle") ?? "";
         }
     }
 
     public function updatedContainer(): void
     {
-        $this->path = '';
-        $this->search = '';
+        $this->path = "";
+        $this->search = "";
         $this->selected = [];
         unset($this->listing);
     }
@@ -89,28 +89,30 @@ class Index extends Component
     #[Computed]
     public function containers(): Collection
     {
-        return AssetContainer::orderBy('title')->get();
+        return AssetContainer::orderBy("title")->get();
     }
 
     #[Computed]
     public function listing(): array
     {
-        if ($this->container === '') {
-            return ['folders' => collect(), 'files' => collect()];
+        if ($this->container === "") {
+            return ["folders" => collect(), "files" => collect()];
         }
 
         $service = app(MediaService::class);
 
-        if ($this->search !== '') {
+        if ($this->search !== "") {
             return $service->search($this->container, $this->search);
         }
 
         $listing = $service->listFolder($this->container, $this->path);
 
-        $listing['folders'] = $listing['folders']->map(fn (string $name) => [
-            'name' => $name,
-            'path' => trim($this->path.'/'.$name, '/'),
-        ]);
+        $listing["folders"] = $listing["folders"]->map(
+            fn(string $name) => [
+                "name" => $name,
+                "path" => trim($this->path . "/" . $name, "/"),
+            ],
+        );
 
         return $listing;
     }
@@ -123,17 +125,17 @@ class Index extends Component
     #[Computed]
     public function breadcrumbs(): array
     {
-        if ($this->path === '') {
+        if ($this->path === "") {
             return [];
         }
 
-        $segments = explode('/', $this->path);
+        $segments = explode("/", $this->path);
         $crumbs = [];
-        $accumulated = '';
+        $accumulated = "";
 
         foreach ($segments as $segment) {
-            $accumulated = trim($accumulated.'/'.$segment, '/');
-            $crumbs[] = ['name' => $segment, 'path' => $accumulated];
+            $accumulated = trim($accumulated . "/" . $segment, "/");
+            $crumbs[] = ["name" => $segment, "path" => $accumulated];
         }
 
         return $crumbs;
@@ -142,15 +144,13 @@ class Index extends Component
     #[Computed]
     public function previewAsset(): ?AssetMeta
     {
-        return $this->previewAssetId
-            ? AssetMeta::where('container', $this->container)->find($this->previewAssetId)
-            : null;
+        return $this->previewAssetId ? AssetMeta::where("container", $this->container)->find($this->previewAssetId) : null;
     }
 
     public function goToPath(string $path): void
     {
         $this->path = $path;
-        $this->search = '';
+        $this->search = "";
         $this->selected = [];
         unset($this->listing);
     }
@@ -178,21 +178,21 @@ class Index extends Component
 
     public function startCreateFolder(): void
     {
-        $this->newFolderName = '';
+        $this->newFolderName = "";
         $this->showCreateFolder = true;
     }
 
     public function createFolder(): void
     {
-        $this->validate(['newFolderName' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
+        $this->validate(["newFolderName" => ["required", "string", "max:255", 'regex:/^[^\/\\\\]+$/']]);
 
         try {
-            app(MediaService::class)->createFolder($this->container, trim($this->path.'/'.$this->newFolderName, '/'));
+            app(MediaService::class)->createFolder($this->container, trim($this->path . "/" . $this->newFolderName, "/"));
             $this->showCreateFolder = false;
             unset($this->listing);
-            Flux::toast(text: 'Folder created.', variant: 'success');
+            Flux::toast(text: "Folder created.", variant: "success");
         } catch (MediaException $e) {
-            Flux::toast(text: $e->getMessage(), variant: 'danger');
+            Flux::toast(text: $e->getMessage(), variant: "danger");
         }
     }
 
@@ -205,26 +205,26 @@ class Index extends Component
 
     public function renameFolder(): void
     {
-        $this->validate(['renameFolderValue' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
+        $this->validate(["renameFolderValue" => ["required", "string", "max:255", 'regex:/^[^\/\\\\]+$/']]);
 
-        $parent = trim(dirname($this->renameFolderPath), '.');
-        $newPath = trim($parent.'/'.$this->renameFolderValue, '/');
+        $parent = trim(dirname($this->renameFolderPath), ".");
+        $newPath = trim($parent . "/" . $this->renameFolderValue, "/");
 
         try {
             app(MediaService::class)->renameFolder($this->container, $this->renameFolderPath, $newPath);
             $this->showRenameFolder = false;
             $this->clearSelection();
             unset($this->listing);
-            Flux::toast(text: 'Folder renamed.', variant: 'success');
+            Flux::toast(text: "Folder renamed.", variant: "success");
         } catch (MediaException $e) {
-            Flux::toast(text: $e->getMessage(), variant: 'danger');
+            Flux::toast(text: $e->getMessage(), variant: "danger");
         }
     }
 
     public function askDeleteFolder(string $path): void
     {
         $listing = app(MediaService::class)->listFolder($this->container, $path);
-        $this->deleteFolderHasContents = $listing['folders']->isNotEmpty() || $listing['files']->isNotEmpty();
+        $this->deleteFolderHasContents = $listing["folders"]->isNotEmpty() || $listing["files"]->isNotEmpty();
         $this->deleteFolderPath = $path;
         $this->showDeleteFolder = true;
     }
@@ -234,37 +234,37 @@ class Index extends Component
         app(MediaService::class)->deleteFolder($this->container, $this->deleteFolderPath);
         $this->showDeleteFolder = false;
         unset($this->listing);
-        Flux::toast(text: 'Folder deleted.', variant: 'success');
+        Flux::toast(text: "Folder deleted.", variant: "success");
     }
 
     public function duplicateFolder(string $path): void
     {
-        $this->duplicateItems([['type' => 'folder', 'key' => $path]]);
+        $this->duplicateItems([["type" => "folder", "key" => $path]]);
     }
 
     public function duplicateFile(int $assetId): void
     {
-        $this->duplicateItems([['type' => 'file', 'key' => $assetId]]);
+        $this->duplicateItems([["type" => "file", "key" => $assetId]]);
     }
 
     public function cutFolder(string $path): void
     {
-        $this->cutItems([['type' => 'folder', 'key' => $path]]);
+        $this->cutItems([["type" => "folder", "key" => $path]]);
     }
 
     public function cutFile(int $assetId): void
     {
-        $this->cutItems([['type' => 'file', 'key' => $assetId]]);
+        $this->cutItems([["type" => "file", "key" => $assetId]]);
     }
 
     public function deleteFile(int $assetId): void
     {
-        $this->deleteItems([['type' => 'file', 'key' => $assetId]]);
+        $this->deleteItems([["type" => "file", "key" => $assetId]]);
     }
 
     public function startRenameFile(int $assetId): void
     {
-        $asset = AssetMeta::where('container', $this->container)->findOrFail($assetId);
+        $asset = AssetMeta::where("container", $this->container)->findOrFail($assetId);
         $this->renameFileId = $asset->id;
         $this->renameFileValue = $asset->filename;
         $this->renameFileExtension = $asset->extension;
@@ -273,25 +273,25 @@ class Index extends Component
 
     public function renameFile(): void
     {
-        $this->validate(['renameFileValue' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
+        $this->validate(["renameFileValue" => ["required", "string", "max:255", 'regex:/^[^\/\\\\]+$/']]);
 
-        $asset = AssetMeta::where('container', $this->container)->findOrFail($this->renameFileId);
-        $newBasename = $asset->extension !== '' ? "{$this->renameFileValue}.{$asset->extension}" : $this->renameFileValue;
+        $asset = AssetMeta::where("container", $this->container)->findOrFail($this->renameFileId);
+        $newBasename = $asset->extension !== "" ? "{$this->renameFileValue}.{$asset->extension}" : $this->renameFileValue;
 
         try {
             app(MediaService::class)->renameFile($this->container, $asset, $newBasename);
             $this->showRenameFile = false;
             $this->clearSelection();
             unset($this->listing);
-            Flux::toast(text: 'File renamed.', variant: 'success');
+            Flux::toast(text: "File renamed.", variant: "success");
         } catch (MediaException $e) {
-            Flux::toast(text: $e->getMessage(), variant: 'danger');
+            Flux::toast(text: $e->getMessage(), variant: "danger");
         }
     }
 
     public function dropOnFolder(string $draggedType, string $draggedKey, string $targetPath): void
     {
-        if ($draggedType === 'folder' && ($draggedKey === $targetPath || str_starts_with($targetPath, $draggedKey.'/'))) {
+        if ($draggedType === "folder" && ($draggedKey === $targetPath || str_starts_with($targetPath, $draggedKey . "/"))) {
             return;
         }
 
@@ -299,15 +299,15 @@ class Index extends Component
         $moved = false;
 
         try {
-            if ($draggedType === 'file') {
-                $asset = AssetMeta::where('container', $this->container)->find((int) $draggedKey);
+            if ($draggedType === "file") {
+                $asset = AssetMeta::where("container", $this->container)->find((int) $draggedKey);
 
                 if ($asset && $asset->folder !== $targetPath) {
                     $service->moveFile($this->container, $asset, $targetPath);
                     $moved = true;
                 }
             } else {
-                $to = trim($targetPath.'/'.basename($draggedKey), '/');
+                $to = trim($targetPath . "/" . basename($draggedKey), "/");
 
                 if ($to !== $draggedKey) {
                     $service->moveFolder($this->container, $draggedKey, $to);
@@ -317,10 +317,10 @@ class Index extends Component
 
             if ($moved) {
                 unset($this->listing);
-                Flux::toast(text: 'Moved.', variant: 'success');
+                Flux::toast(text: "Moved.", variant: "success");
             }
         } catch (MediaException $e) {
-            Flux::toast(text: $e->getMessage(), variant: 'danger');
+            Flux::toast(text: $e->getMessage(), variant: "danger");
         }
     }
 
@@ -334,10 +334,10 @@ class Index extends Component
 
         $item = $items[0];
 
-        if ($item['type'] === 'file') {
-            $this->startRenameFile($item['key']);
+        if ($item["type"] === "file") {
+            $this->startRenameFile($item["key"]);
         } else {
-            $this->startRenameFolder($item['key']);
+            $this->startRenameFolder($item["key"]);
         }
     }
 
@@ -376,25 +376,25 @@ class Index extends Component
         }
 
         $service = app(MediaService::class);
-        $mode = $this->clipboard['mode'];
+        $mode = $this->clipboard["mode"];
 
         try {
-            foreach ($this->clipboard['items'] as $item) {
-                if ($item['type'] === 'folder') {
-                    if ($mode === 'cut') {
-                        $to = trim($this->path.'/'.basename((string) $item['key']), '/');
-                        $service->moveFolder($this->container, $item['key'], $to);
+            foreach ($this->clipboard["items"] as $item) {
+                if ($item["type"] === "folder") {
+                    if ($mode === "cut") {
+                        $to = trim($this->path . "/" . basename((string) $item["key"]), "/");
+                        $service->moveFolder($this->container, $item["key"], $to);
                     } else {
-                        $service->copyFolderTo($this->container, $item['key'], $this->path);
+                        $service->copyFolderTo($this->container, $item["key"], $this->path);
                     }
                 } else {
-                    $asset = AssetMeta::where('container', $this->container)->find($item['key']);
+                    $asset = AssetMeta::where("container", $this->container)->find($item["key"]);
 
-                    if (! $asset) {
+                    if (!$asset) {
                         continue;
                     }
 
-                    if ($mode === 'cut') {
+                    if ($mode === "cut") {
                         $service->moveFile($this->container, $asset, $this->path);
                     } else {
                         $service->copyFileTo($this->container, $asset, $this->path);
@@ -404,9 +404,9 @@ class Index extends Component
 
             $this->clipboard = [];
             unset($this->listing);
-            Flux::toast(text: 'Done.', variant: 'success');
+            Flux::toast(text: "Done.", variant: "success");
         } catch (MediaException $e) {
-            Flux::toast(text: $e->getMessage(), variant: 'danger');
+            Flux::toast(text: $e->getMessage(), variant: "danger");
         }
     }
 
@@ -416,7 +416,7 @@ class Index extends Component
             return;
         }
 
-        $this->validate(['uploads.*' => ['required', 'file', 'max:51200']]);
+        $this->validate(["uploads.*" => ["required", "file", "max:51200"]]);
 
         $service = app(MediaService::class);
         $failures = [];
@@ -433,15 +433,15 @@ class Index extends Component
         unset($this->listing);
 
         if ($failures) {
-            Flux::toast(text: implode(' ', $failures), variant: 'danger');
+            Flux::toast(text: implode(" ", $failures), variant: "danger");
         } else {
-            Flux::toast(text: 'Upload complete.', variant: 'success');
+            Flux::toast(text: "Upload complete.", variant: "success");
         }
     }
 
     public function openPreview(int $assetId): void
     {
-        $asset = AssetMeta::where('container', $this->container)->findOrFail($assetId);
+        $asset = AssetMeta::where("container", $this->container)->findOrFail($assetId);
 
         $this->previewAssetId = $asset->id;
         $this->previewTitle = $asset->title;
@@ -453,28 +453,28 @@ class Index extends Component
     public function savePreviewMeta(): void
     {
         $this->validate([
-            'previewTitle' => ['nullable', 'string', 'max:255'],
-            'previewAlt' => ['nullable', 'string', 'max:255'],
-            'previewLoading' => ['required', 'in:lazy,eager'],
+            "previewTitle" => ["nullable", "string", "max:255"],
+            "previewAlt" => ["nullable", "string", "max:255"],
+            "previewLoading" => ["required", "in:lazy,eager"],
         ]);
 
-        $asset = AssetMeta::where('container', $this->container)->findOrFail($this->previewAssetId);
+        $asset = AssetMeta::where("container", $this->container)->findOrFail($this->previewAssetId);
 
         $meta = $asset->meta ?? [];
-        $meta['data']['title'] = $this->previewTitle;
-        $meta['data']['alt'] = $this->previewAlt;
-        $meta['data']['loading'] = $this->previewLoading;
+        $meta["data"]["title"] = $this->previewTitle;
+        $meta["data"]["alt"] = $this->previewAlt;
+        $meta["data"]["loading"] = $this->previewLoading;
 
-        $asset->update(['meta' => $meta]);
+        $asset->update(["meta" => $meta]);
 
         $this->showPreview = false;
         unset($this->listing);
-        Flux::toast(text: 'Saved.', variant: 'success');
+        Flux::toast(text: "Saved.", variant: "success");
     }
 
     public function downloadFile(int $assetId)
     {
-        $asset = AssetMeta::where('container', $this->container)->findOrFail($assetId);
+        $asset = AssetMeta::where("container", $this->container)->findOrFail($assetId);
 
         return app(MediaService::class)->downloadFile($asset);
     }
@@ -486,25 +486,27 @@ class Index extends Component
 
     protected function selectedItems(): array
     {
-        return collect($this->selected)->map(function (string $item) {
-            [$type, $key] = explode(':', $item, 2);
+        return collect($this->selected)
+            ->map(function (string $item) {
+                [$type, $key] = explode(":", $item, 2);
 
-            return ['type' => $type, 'key' => $type === 'file' ? (int) $key : $key];
-        })->all();
+                return ["type" => $type, "key" => $type === "file" ? (int) $key : $key];
+            })
+            ->all();
     }
 
     protected function cutItems(array $items): void
     {
-        $this->clipboard = ['mode' => 'cut', 'items' => $items];
+        $this->clipboard = ["mode" => "cut", "items" => $items];
         $this->clearSelection();
-        Flux::toast(text: 'Cut. Navigate to a destination folder and paste.', variant: 'success');
+        Flux::toast(text: "Cut. Navigate to a destination folder and paste.", variant: "success");
     }
 
     protected function copyItems(array $items): void
     {
-        $this->clipboard = ['mode' => 'copy', 'items' => $items];
+        $this->clipboard = ["mode" => "copy", "items" => $items];
         $this->clearSelection();
-        Flux::toast(text: 'Copied. Navigate to a destination folder and paste.', variant: 'success');
+        Flux::toast(text: "Copied. Navigate to a destination folder and paste.", variant: "success");
     }
 
     protected function duplicateItems(array $items): void
@@ -512,19 +514,19 @@ class Index extends Component
         $service = app(MediaService::class);
 
         foreach ($items as $item) {
-            if ($item['type'] === 'file') {
-                $asset = AssetMeta::where('container', $this->container)->find($item['key']);
+            if ($item["type"] === "file") {
+                $asset = AssetMeta::where("container", $this->container)->find($item["key"]);
 
                 if ($asset) {
                     $service->duplicateFile($this->container, $asset);
                 }
             } else {
-                $service->duplicateFolder($this->container, $item['key']);
+                $service->duplicateFolder($this->container, $item["key"]);
             }
         }
 
         unset($this->listing);
-        Flux::toast(text: 'Duplicated.', variant: 'success');
+        Flux::toast(text: "Duplicated.", variant: "success");
     }
 
     protected function deleteItems(array $items): void
@@ -532,23 +534,23 @@ class Index extends Component
         $service = app(MediaService::class);
 
         foreach ($items as $item) {
-            if ($item['type'] === 'file') {
-                $asset = AssetMeta::where('container', $this->container)->find($item['key']);
+            if ($item["type"] === "file") {
+                $asset = AssetMeta::where("container", $this->container)->find($item["key"]);
 
                 if ($asset) {
                     $service->deleteFile($this->container, $asset);
                 }
             } else {
-                $service->deleteFolder($this->container, $item['key']);
+                $service->deleteFolder($this->container, $item["key"]);
             }
         }
 
         unset($this->listing);
-        Flux::toast(text: 'Deleted.', variant: 'success');
+        Flux::toast(text: "Deleted.", variant: "success");
     }
 
     public function render()
     {
-        return view('media::index');
+        return view("media::index");
     }
 }
