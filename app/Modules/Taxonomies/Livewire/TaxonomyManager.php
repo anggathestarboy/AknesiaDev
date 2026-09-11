@@ -41,6 +41,12 @@ class TaxonomyManager extends Component
      */
     public array $sites = [];
 
+    /**
+     * Where the term form goes after saving one of this taxonomy's terms.
+     * Mirrors CollectionManager::$saveAction.
+     */
+    public string $saveAction = 'listing';
+
     #[Computed]
     public function taxonomies()
     {
@@ -75,6 +81,7 @@ class TaxonomyManager extends Component
     {
         $this->reset(['editingId', 'handle', 'title', 'blueprint']);
         $this->createBlueprint = true;
+        $this->saveAction = 'listing';
         $this->sites = array_values(array_filter([$this->defaultSiteHandle]));
         Flux::modal('taxonomy-form')->show();
     }
@@ -88,6 +95,7 @@ class TaxonomyManager extends Component
         $this->title = $taxonomy->title;
         $this->blueprint = (string) ($taxonomy->settings['blueprint'] ?? $taxonomy->effectiveBlueprint()?->handle ?? '');
         $this->createBlueprint = false;
+        $this->saveAction = $taxonomy->saveAction();
         $this->sites = array_values(array_unique(array_merge(
             $taxonomy->sites ?? [],
             array_filter([$this->defaultSiteHandle])
@@ -115,13 +123,14 @@ class TaxonomyManager extends Component
             'blueprint' => [$this->createBlueprint ? 'exclude' : 'nullable', 'string', Rule::exists('blueprints', 'handle')],
             'sites' => ['array'],
             'sites.*' => [Rule::in($siteOrder)],
+            'saveAction' => ['required', Rule::in(['listing', 'editing', 'create_another'])],
         ]);
 
         $taxonomy = Taxonomy::updateOrCreate(['id' => $this->editingId], [
             'handle' => $validated['handle'],
             'title' => $validated['title'],
             'sites' => $validated['sites'],
-            'settings' => ['blueprint' => $validated['blueprint'] ?? null],
+            'settings' => ['blueprint' => $validated['blueprint'] ?? null, 'save_action' => $validated['saveAction']],
         ]);
 
         $blueprintCreated = false;

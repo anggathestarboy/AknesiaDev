@@ -41,4 +41,15 @@ class Taxonomy extends Model
 
         return Blueprint::where('namespace', "taxonomies.{$this->handle}")->first();
     }
+
+    /**
+     * Where the term form sends you after saving one of this taxonomy's
+     * terms: 'listing' (back to the term list — the default), 'editing'
+     * (stay on the term), or 'create_another' (a fresh create form for the
+     * same taxonomy/site). Mirrors Collection::saveAction().
+     */
+    public function saveAction(): string
+    {
+        return $this->settings['save_action'] ?? 'listing';
+    }
 }

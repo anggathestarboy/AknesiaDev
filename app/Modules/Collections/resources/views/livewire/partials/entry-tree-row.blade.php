@@ -13,16 +13,13 @@
         </div>
 
         <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-                <a href="{{route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])}}" class="font-medium" wire:navigate>{{ $entry->data["title"] ?? "—" }}</a>
-
+            <div class="flex flex-wrap items-center gap-1.5 group w-max">
                 @if ($entry->order === 1)
-                    <flux:badge size="sm">
-                        <svg class="w-5 h-5 text-gray-800" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
-                        </svg>
-                    </flux:badge>
+                    <svg class="w-3.5 h-3.5 text-gray-800" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
+                    </svg>
                 @endif
+                <a href="{{route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])}}" class="font-medium text-sm w-max group-hover:text-orange-700" wire:navigate>{{ $entry->data["title"] ?? "—" }}</a>
             </div>
             <div class="text-xs text-zinc-500">{{ $entry->slug ?? "—" }} · {{ $entry->blueprint ?? "—" }} · {{ $entry->updated_at?->diffForHumans() }}</div>
         </div>
@@ -33,8 +30,8 @@
         'need_review' => 'amber',
         default => 'zinc',
     }">{{ $statuses[$entry->status] ?? $entry->status }}</flux:badge>
-            <flux:button size="xs" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-            <flux:button size="xs" variant="danger" wire:click="delete('{{ $entry->id }}')" wire:confirm="{{ __('Delete this entry?') }}">{{ __("Delete") }}</flux:button>
+            <flux:button size="sm" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:button>
+            <flux:button size="sm" variant="danger" wire:click="delete('{{ $entry->id }}')" wire:confirm="{{ __('Delete this entry?') }}">{{ __("Delete") }}</flux:button>
         </div>
     </div>
 

@@ -44,6 +44,12 @@ class GlobalSetManager extends Component
      */
     public array $sites = [];
 
+    /**
+     * Where the values form goes after saving this global set's values.
+     * Mirrors CollectionManager::$saveAction.
+     */
+    public string $saveAction = 'listing';
+
     #[Computed]
     public function globalSets()
     {
@@ -78,6 +84,7 @@ class GlobalSetManager extends Component
     {
         $this->reset(['editingId', 'handle', 'title', 'blueprint']);
         $this->createBlueprint = true;
+        $this->saveAction = 'listing';
         $this->sites = array_values(array_filter([$this->defaultSiteHandle]));
         Flux::modal('global-set-form')->show();
     }
@@ -91,6 +98,7 @@ class GlobalSetManager extends Component
         $this->title = $globalSet->title;
         $this->blueprint = (string) ($globalSet->settings['blueprint'] ?? $globalSet->effectiveBlueprint()?->handle ?? '');
         $this->createBlueprint = false;
+        $this->saveAction = $globalSet->saveAction();
         $this->sites = array_values(array_unique(array_merge(
             $globalSet->settings['sites'] ?? [],
             array_filter([$this->defaultSiteHandle])
@@ -118,12 +126,13 @@ class GlobalSetManager extends Component
             'blueprint' => [$this->createBlueprint ? 'exclude' : 'nullable', 'string', Rule::exists('blueprints', 'handle')],
             'sites' => ['array'],
             'sites.*' => [Rule::in($siteOrder)],
+            'saveAction' => ['required', Rule::in(['listing', 'editing'])],
         ]);
 
         $globalSet = GlobalSet::updateOrCreate(['id' => $this->editingId], [
             'handle' => $validated['handle'],
             'title' => $validated['title'],
-            'settings' => ['blueprint' => $validated['blueprint'] ?? null, 'sites' => $validated['sites']],
+            'settings' => ['blueprint' => $validated['blueprint'] ?? null, 'sites' => $validated['sites'], 'save_action' => $validated['saveAction']],
         ]);
 
         $locales = $validated['sites'] !== [] ? $validated['sites'] : [null];

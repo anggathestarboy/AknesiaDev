@@ -40,32 +40,17 @@
         <form wire:submit="save" class="space-y-6">
             <flux:heading size="lg">{{ $editingId ? __("Edit global set") : __("New global set") }}</flux:heading>
 
-            <flux:input wire:model="title" :label="__('Title')" required autofocus />
+            <flux:input wire:model="title" size="sm" :label="__('Title')" required autofocus />
 
-            <div class="flex items-start gap-2">
-                <flux:input wire:model="handle" :label="__('Handle')" description:trailing="{{ __('Lowercase letters, numbers and underscores only — no spaces.') }}" class="flex-1" required />
-                <flux:button size="sm" type="button" icon="arrow-path" class="mt-7" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
+            <div class="flex items-end gap-2">
+                <div class="flex-1">
+                    <flux:input wire:model="handle" size="sm" :label="__('Handle')" class="flex-1" required />
+                </div>
+                <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
             </div>
 
-            @unless ($editingId)
-                <flux:checkbox wire:model.live="createBlueprint" :label="__('Create a blueprint for this global set')" :description="__('Recommended — you\'ll add its fields right after saving. Turn off to pick an existing blueprint instead.')" />
-            @endunless
-
-            @if ($this->availableSites->isNotEmpty())
-                <flux:checkbox.group wire:model="sites" :label="__('Languages')" :description="__('Which sites does this global set have values for? The default site is the origin language and is always included.')">
-                    @foreach ($this->availableSites as $availableSite)
-                        <flux:checkbox
-                            value="{{ $availableSite->handle }}"
-                            label="{{ $availableSite->name }}"
-                            :description="$availableSite->handle === $this->defaultSiteHandle ? __('Default — origin language') : null"
-                            :disabled="$availableSite->handle === $this->defaultSiteHandle"
-                        />
-                    @endforeach
-                </flux:checkbox.group>
-            @endif
-
             @unless ($createBlueprint)
-                <flux:select wire:model="blueprint" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
+                <flux:select size="sm" wire:model="blueprint" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
                         <flux:select.option value="{{ $availableBlueprint->handle }}"> {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }} </flux:select.option>
                     @endforeach
@@ -75,6 +60,23 @@
                     <flux:text class="text-zinc-500">{{ __("No blueprints yet — create one in the Blueprints module first.") }}</flux:text>
                 @endif
             @endunless
+
+            @unless ($editingId)
+                <flux:checkbox wire:model.live="createBlueprint" :label="__('Create a blueprint for this global set')" :description="__('Recommended — you\'ll add its fields right after saving. Turn off to pick an existing blueprint instead.')" />
+            @endunless
+
+            @if ($this->availableSites->isNotEmpty())
+                <flux:checkbox.group wire:model="sites" :label="__('Languages')" :description="__('Which sites does this global set have values for? The default site is the origin language and is always included.')">
+                    @foreach ($this->availableSites as $availableSite)
+                        <flux:checkbox value="{{ $availableSite->handle }}" label="{{ $availableSite->name }}" :description="$availableSite->handle === $this->defaultSiteHandle ? __('Default — origin language') : null" :disabled="$availableSite->handle === $this->defaultSiteHandle" />
+                    @endforeach
+                </flux:checkbox.group>
+            @endif
+
+            <flux:radio.group wire:model="saveAction" :label="__('Action after save')" :description="__('Where the values form goes after saving this global set\'s values.')">
+                <flux:radio value="listing" :label="__('Go to listing')" />
+                <flux:radio value="editing" :label="__('Continue editing')" />
+            </flux:radio.group>
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>

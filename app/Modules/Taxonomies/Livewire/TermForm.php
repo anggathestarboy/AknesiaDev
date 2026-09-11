@@ -596,7 +596,7 @@ class TermForm extends Component
             $this->overlayNonLocalizableData($this->blueprintFields(), $data, $originData);
         }
 
-        TaxonomyTerm::updateOrCreate(['id' => $this->editingId], [
+        $term = TaxonomyTerm::updateOrCreate(['id' => $this->editingId], [
             'site' => $this->site,
             'origin_id' => $this->originId,
             'taxonomy' => $this->taxonomy->handle,
@@ -607,7 +607,18 @@ class TermForm extends Component
 
         Flux::toast(variant: 'success', text: __('Term saved.'));
 
-        $this->redirectRoute('taxonomies.terms', ['taxonomy' => $this->taxonomy->handle], navigate: true);
+        match ($this->taxonomy->saveAction()) {
+            'editing' => $this->redirectRoute('taxonomies.terms.edit', [
+                'taxonomy' => $this->taxonomy->handle,
+                'term' => $term->id,
+            ], navigate: true),
+            'create_another' => $this->redirectRoute('taxonomies.terms.create', [
+                'taxonomy' => $this->taxonomy->handle,
+                'site' => $this->site,
+                'blueprint' => $this->blueprintHandle,
+            ], navigate: true),
+            default => $this->redirectRoute('taxonomies.terms', ['taxonomy' => $this->taxonomy->handle], navigate: true),
+        };
     }
 
     public function render(): View

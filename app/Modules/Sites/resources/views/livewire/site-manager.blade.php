@@ -29,7 +29,7 @@
                     <flux:table.cell class="flex justify-end gap-1">
                         <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="moveUp({{ $site->id }})" :disabled="$index === 0" />
                         <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="moveDown({{ $site->id }})" :disabled="$index === $this->sites->count() - 1" />
-                        <flux:button size="sm" wire:click="edit({{ $site->id }})">{{ __("Edit") }}</flux:button>
+                        <flux:button size="sm" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:button>
                         <flux:button size="sm" variant="danger" wire:click="delete({{ $site->id }})" wire:confirm="{{ __('Delete this site?') }}">{{ __("Delete") }}</flux:button>
                     </flux:table.cell>
                 </flux:table.row>

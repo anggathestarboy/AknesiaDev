@@ -461,7 +461,13 @@ class GlobalSetForm extends Component
 
         Flux::toast(variant: 'success', text: __('Global set saved.'));
 
-        $this->redirectRoute('globals.index', navigate: true);
+        match ($this->globalSet->saveAction()) {
+            'editing' => $this->redirectRoute('globals.edit', array_filter([
+                'globalSet' => $this->globalSet->handle,
+                'site' => $this->activeSite,
+            ]), navigate: true),
+            default => $this->redirectRoute('globals.index', navigate: true),
+        };
     }
 
     public function render(): View

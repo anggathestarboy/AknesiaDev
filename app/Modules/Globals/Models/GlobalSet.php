@@ -37,4 +37,14 @@ class GlobalSet extends Model
 
         return Blueprint::where('namespace', "globals.{$this->handle}")->first();
     }
+
+    /**
+     * Where the values form sends you after saving this global set's
+     * values: 'listing' (back to the global sets list — the default) or
+     * 'editing' (stay on the values form). Mirrors Collection::saveAction().
+     */
+    public function saveAction(): string
+    {
+        return $this->settings['save_action'] ?? 'listing';
+    }
 }

@@ -1,18 +1,18 @@
 <section class="w-full space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <flux:heading size="lg">{{ __('Collections') }}</flux:heading>
-            <flux:subheading>{{ __('Content types (e.g. blog, pages).') }}</flux:subheading>
+            <flux:heading size="lg">{{ __("Collections") }}</flux:heading>
+            <flux:subheading>{{ __("Content types (e.g. blog, pages).") }}</flux:subheading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __('New collection') }}</flux:button>
+        <flux:button variant="primary" wire:click="create">{{ __("New collection") }}</flux:button>
     </div>
 
     <flux:table>
         <flux:table.columns>
-            <flux:table.column>{{ __('Title') }}</flux:table.column>
-            <flux:table.column>{{ __('Handle') }}</flux:table.column>
-            <flux:table.column>{{ __('Blueprint') }}</flux:table.column>
+            <flux:table.column>{{ __("Title") }}</flux:table.column>
+            <flux:table.column>{{ __("Handle") }}</flux:table.column>
+            <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
             <flux:table.column></flux:table.column>
         </flux:table.columns>
 
@@ -21,16 +21,16 @@
                 <flux:table.row wire:key="collection-{{ $collection->id }}">
                     <flux:table.cell>{{ $collection->title }}</flux:table.cell>
                     <flux:table.cell>{{ $collection->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ $collection->effectiveBlueprint()?->handle ?? '—' }}</flux:table.cell>
+                    <flux:table.cell>{{ $collection->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-2">
-                        <flux:button size="sm" :href="route('collections.entries', $collection->handle)" wire:navigate>{{ __('Entries') }}</flux:button>
-                        <flux:button size="sm" wire:click="edit({{ $collection->id }})">{{ __('Edit') }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $collection->id }})" wire:confirm="{{ __('Delete this collection?') }}">{{ __('Delete') }}</flux:button>
+                        <flux:button size="sm" :href="route('collections.entries', $collection->handle)" wire:navigate>{{ __("Entries") }}</flux:button>
+                        <flux:button size="sm" wire:click="edit({{ $collection->id }})">{{ __("Settings") }}</flux:button>
+                        <flux:button size="sm" variant="danger" wire:click="delete({{ $collection->id }})" wire:confirm="{{ __('Delete this collection?') }}">{{ __("Delete") }}</flux:button>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="4">{{ __('No collections yet.') }}</flux:table.cell>
+                    <flux:table.cell colspan="4">{{ __("No collections yet.") }}</flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
@@ -38,7 +38,7 @@
 
     <flux:modal name="collection-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">
-            <flux:heading size="lg">{{ $editingId ? __('Edit collection') : __('New collection') }}</flux:heading>
+            <flux:heading size="lg">{{ $editingId ? __("Edit collection") : __("New collection") }}</flux:heading>
 
             <flux:input wire:model="title" :label="__('Title')" required autofocus />
             <flux:input wire:model="handle" :label="__('Handle')" required />
@@ -46,12 +46,7 @@
             @if ($this->availableSites->isNotEmpty())
                 <flux:checkbox.group wire:model.live="sites" :label="__('Sites')" :description="__('Which sites is this collection available on? Leave all checked for no restriction. The default site is the origin language and can\'t be removed.')">
                     @foreach ($this->availableSites as $availableSite)
-                        <flux:checkbox
-                            value="{{ $availableSite->handle }}"
-                            label="{{ $availableSite->name }}"
-                            :description="$availableSite->handle === $this->defaultSiteHandle ? __('Default — origin language') : null"
-                            :disabled="$availableSite->handle === $this->defaultSiteHandle"
-                        />
+                        <flux:checkbox value="{{ $availableSite->handle }}" label="{{ $availableSite->name }}" :description="$availableSite->handle === $this->defaultSiteHandle ? __('Default — origin language') : null" :disabled="$availableSite->handle === $this->defaultSiteHandle" />
                     @endforeach
                 </flux:checkbox.group>
             @endif
@@ -63,26 +58,16 @@
                 </flux:radio.group>
             @endif
 
-            @php $routeVariables = __('Available variables: {slug}, {year}, {month}, {day}').($structured ? ', {parent_uri}' : ''); @endphp
+            @php $routeVariables = __("Available variables: {slug}, {year}, {month}, {day}") . ($structured ? ", {parent_uri}" : ""); @endphp
 
-            @if ($routeMode === 'per_site' && count($sites) > 1)
+            @if ($routeMode === "per_site" && count($sites) > 1)
                 <div class="space-y-4">
-                    @foreach ($this->availableSites->whereIn('handle', $sites) as $routeSite)
-                        <flux:input
-                            wire:model="routes.{{ $routeSite->handle }}"
-                            :label="__(':site route', ['site' => $routeSite->name])"
-                            placeholder="blog/{slug}"
-                            :description="$routeVariables"
-                        />
+                    @foreach ($this->availableSites->whereIn("handle", $sites) as $routeSite)
+                        <flux:input wire:model="routes.{{ $routeSite->handle }}" :label="__(':site route', ['site' => $routeSite->name])" placeholder="blog/{slug}" :description="$routeVariables" />
                     @endforeach
                 </div>
             @else
-                <flux:input
-                    wire:model="route"
-                    :label="count($sites) > 1 ? null : __('Route')"
-                    placeholder="{{ $structured ? '{parent_uri}/{slug}' : 'blog/{slug}' }}"
-                    :description="$routeVariables"
-                />
+                <flux:input wire:model="route" :label="count($sites) > 1 ? null : __('Route')" placeholder="{{ $structured ? '{parent_uri}/{slug}' : 'blog/{slug}' }}" :description="$routeVariables" />
             @endif
 
             <div class="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-700">
@@ -107,9 +92,9 @@
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
-                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
                 </flux:modal.close>
-                <flux:button variant="primary" type="submit">{{ __('Save') }}</flux:button>
+                <flux:button variant="primary" type="submit">{{ __("Save") }}</flux:button>
             </div>
         </form>
     </flux:modal>
