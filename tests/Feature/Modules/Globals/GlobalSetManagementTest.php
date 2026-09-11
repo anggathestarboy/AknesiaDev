@@ -146,7 +146,8 @@ test('global set values require blueprint required fields', function () {
     Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
         ->set('data.site_name', '')
         ->call('save')
-        ->assertHasErrors(['data.site_name']);
+        ->assertHasErrors(['data.site_name'])
+        ->assertSee('The Site name field is required.');
 });
 
 test('creating a global set defaults to checking the first configured site', function () {

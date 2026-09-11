@@ -143,6 +143,23 @@ test('a term requires a slug', function () {
         ->assertHasErrors(['slug' => 'required']);
 });
 
+test('a required blueprint field on a term shows its display label, not the raw data key, in the error message', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+
+    Blueprint::create(['namespace' => null, 'handle' => 'news_categories', 'data' => ['fields' => [
+        ['handle' => 'seo_keyword', 'display' => 'SEO Keyword', 'type' => 'text', 'required' => true, 'localizable' => true, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->set('title', 'Politics')
+        ->set('slug', 'politics')
+        ->call('save')
+        ->assertHasErrors(['data.seo_keyword'])
+        ->assertSee('The SEO Keyword field is required.');
+});
+
 test('non-localizable term fields share one value from the taxonomy default site across all languages', function () {
     $this->actingAs(User::factory()->create());
     makeTaxonomySites();

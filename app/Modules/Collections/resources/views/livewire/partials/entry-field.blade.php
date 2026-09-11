@@ -15,6 +15,9 @@
     @else
         <flux:checkbox wire:model="{{ $prefix }}" :description="$field['instructions']" title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:checkbox>
     @endif
+    @error ($prefix)
+        <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+    @enderror
 @elseif ($field["type"] === "select")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
@@ -34,6 +37,9 @@
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @elseif ($field["type"] === "radio")
     <flux:field>
@@ -54,6 +60,9 @@
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @elseif ($field["type"] === "checkbox")
     @php
@@ -83,6 +92,9 @@
         @if ($checkboxDescription !== "")
             <flux:description>{{ $checkboxDescription }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @elseif ($field["type"] === "date")
     <flux:field>
@@ -95,6 +107,9 @@
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @elseif ($field["type"] === "number")
     <flux:field>
@@ -107,6 +122,9 @@
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @elseif ($field["type"] === "textarea" || $field["type"] === "markdown")
     <flux:field>
@@ -119,6 +137,9 @@
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @elseif ($field["type"] === "bard")
     @php
@@ -230,6 +251,9 @@
                 @endforeach
             </flux:select>
         </div>
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </div>
 @elseif ($field["type"] === "replicator")
     <div>
@@ -241,7 +265,7 @@
         <div class="mt-2 space-y-3 border-l-2 border-zinc-200 pl-3 dark:border-zinc-700">
             @forelse ($rows ?? [] as $rowIndex => $row)
                 <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid gap-3">
                         @foreach ($field["replicator_fields"] ?? [] as $sub)
                             <div>
                                 @include ("collections::livewire.partials.entry-field",
@@ -332,12 +356,15 @@
     @else
         <flux:field>
             <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-            <flux:select wire:model="{{ $prefix }}.0" error:name="{{ $prefix }}" placeholder="{{ __('Select a term') }}">
+            <flux:select wire:model="{{ $prefix }}.0" placeholder="{{ __('Select a term') }}">
                 @foreach ($taxonomyOptions as $term)
                     <flux:select.option value="{{ $term->id }}">{{ $term->data["title"] ?? $term->slug }}</flux:select.option>
                 @endforeach
             </flux:select>
             <flux:description>{{ trim(($field["instructions"] ?? "") . " " . ($taxonomyHint ?? "")) }}</flux:description>
+            @error ($prefix)
+                <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+            @enderror
         </flux:field>
     @endif
 @elseif ($field["type"] === "assets")
@@ -396,5 +423,8 @@
         @if ($field["instructions"])
             <flux:description>{{ $field["instructions"] }}</flux:description>
         @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
     </flux:field>
 @endif

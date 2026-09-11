@@ -306,6 +306,32 @@ class GlobalSetForm extends Component
         return $this->fieldRulesFor($this->blueprintFields(), 'data');
     }
 
+    /**
+     * Maps each "data.*" validation key to its field's own display label,
+     * so a validation message reads "The Halo field is required." instead
+     * of "The data.halo field is required."
+     */
+    public function validationAttributes(): array
+    {
+        return $this->fieldAttributesFor($this->blueprintFields(), 'data');
+    }
+
+    protected function fieldAttributesFor(array $fields, string $prefix): array
+    {
+        $attributes = [];
+
+        foreach ($fields as $field) {
+            $key = "{$prefix}.{$field['handle']}";
+            $attributes[$key] = $field['display'] ?? $field['handle'];
+
+            if ($field['type'] === 'replicator') {
+                $attributes = array_merge($attributes, $this->fieldAttributesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+            }
+        }
+
+        return $attributes;
+    }
+
     protected function fieldRulesFor(array $fields, string $prefix): array
     {
         $rules = [];

@@ -330,7 +330,7 @@ test('a failed multi-select taxonomy field shows its validation error message', 
         ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasErrors(['data.categories'])
-        ->assertSee('The data.categories field is required.');
+        ->assertSee('The Categories field is required.');
 });
 
 test('a failed single-select taxonomy field shows its validation error message', function () {
@@ -349,7 +349,7 @@ test('a failed single-select taxonomy field shows its validation error message',
         ->set('entryDate', '2024-01-01T00:00')
         ->call('save')
         ->assertHasErrors(['data.categories'])
-        ->assertSee('The data.categories field is required.');
+        ->assertSee('The Categories field is required.');
 });
 
 test('a term from a different taxonomy is rejected by the taxonomy field', function () {
@@ -1857,7 +1857,23 @@ test('a required field left blank shows a visible error banner instead of silent
         ->call('save')
         ->assertHasErrors(['data.status'])
         ->assertSeeHtml('Please fix the following before saving')
-        ->assertSee('The data.status field is required.');
+        ->assertSee('The Status field is required.');
 
     expect(Entry::count())->toBe(0);
+});
+
+test('a required field with an error shows the message inline under the field, not just in the top banner', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $html = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->call('save')
+        ->assertHasErrors(['data.status'])
+        ->html();
+
+    // Once in the top "Please fix the following" banner, once again right
+    // under the Status field itself.
+    expect(substr_count($html, 'The Status field is required.'))->toBe(2);
 });
