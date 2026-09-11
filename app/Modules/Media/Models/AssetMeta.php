@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class AssetMeta extends Model
 {
@@ -66,12 +67,22 @@ class AssetMeta extends Model
 
     public function getTitleAttribute()
     {
-        return data_get($this->meta, 'data.title') ?: $this->basename;
+        return data_get($this->meta, 'data.title') ?: $this->humanizedFilename();
     }
 
     public function getAltAttribute()
     {
-        return data_get($this->meta, 'data.alt') ?: '';
+        return data_get($this->meta, 'data.alt') ?: $this->humanizedFilename();
+    }
+
+    /**
+     * A readable default for title/alt derived from the file's name — e.g.
+     * "summer-sale_banner.jpg" becomes "Summer Sale Banner" — used until an
+     * admin sets an explicit value (see getTitleAttribute()/getAltAttribute()).
+     */
+    protected function humanizedFilename(): string
+    {
+        return (string) Str::of($this->filename)->replace(['-', '_'], ' ')->squish()->title();
     }
 
     public function getLoadingAttribute()
