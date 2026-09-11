@@ -145,6 +145,39 @@ trait HasFieldBuilder
     }
 
     /**
+     * Insert a copy of the field at $path right after itself, including any
+     * nested replicator fields. The copy's handle gets a "_copy" suffix (and
+     * every field, at any depth, a fresh "_uid") so it doesn't collide with
+     * the original until renamed.
+     */
+    public function duplicateField(array $path): void
+    {
+        $field = $this->fieldAt($path);
+
+        $duplicate = $field;
+        $duplicate['_uid'] = (string) Str::uuid();
+        $duplicate['handle'] = $field['handle'] !== '' ? "{$field['handle']}_copy" : '';
+        $duplicate['replicator_fields'] = $this->duplicateFieldsTree($field['replicator_fields'] ?? []);
+
+        $index = array_pop($path);
+        $siblings = &$this->siblingsAt($path);
+        array_splice($siblings, $index + 1, 0, [$duplicate]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function duplicateFieldsTree(array $fields): array
+    {
+        return array_map(function (array $field): array {
+            $field['_uid'] = (string) Str::uuid();
+            $field['replicator_fields'] = $this->duplicateFieldsTree($field['replicator_fields'] ?? []);
+
+            return $field;
+        }, $fields);
+    }
+
+    /**
      * Drag-and-drop reorder handler for wire:sort (see field-editor.blade.php
      * and the tab/section field lists in blueprint-manager.blade.php). $id
      * is the dragged field's stable "_uid" (matching its wire:key, so

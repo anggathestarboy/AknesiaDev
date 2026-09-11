@@ -136,7 +136,7 @@
                                 </div>
                                 <div class="flex gap-2">
                                     <flux:button size="xs" variant="ghost" type="button" wire:click="addSection({{ $tabIndex }})">{{ __("Add section") }}</flux:button>
-                                    <flux:button size="xs" type="button" wire:click="addField('{{ $tab['handle'] }}')">{{ __("Add field") }}</flux:button>
+                                    {{-- <flux:button size="xs" type="button" wire:click="addField('{{ $tab['handle'] }}')">{{ __("Add field") }}</flux:button> --}}
                                 </div>
                             </div>
                         @endif

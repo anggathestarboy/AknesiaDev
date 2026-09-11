@@ -51,6 +51,7 @@
                 <flux:button size="xs" variant="ghost" icon="minus" type="button" class="cursor-pointer" x-show="!collapsed" x-on:click="collapsed = !collapsed" />
                 <flux:button size="xs" variant="ghost" icon="plus" type="button" class="cursor-pointer" x-show="collapsed" x-cloak x-on:click="collapsed = !collapsed" />
             </div>
+            <flux:button size="xs" variant="ghost" icon="document-duplicate" type="button" class="cursor-pointer" title="{{ __('Duplicate') }}" wire:click="duplicateField({{ $pathJson }})" />
             <flux:button size="xs" variant="ghost" icon="trash" type="button" class="cursor-pointer" wire:click="removeField({{ $pathJson }})" />
 
             <div class="">
