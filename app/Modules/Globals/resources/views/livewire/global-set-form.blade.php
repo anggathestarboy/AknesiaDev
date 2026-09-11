@@ -1,11 +1,11 @@
-<section class="w-full max-w-5xl space-y-6">
+<section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div>
         <flux:link :href="route('globals.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Globals") }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $globalSet->title }}</flux:heading>
     </div>
 
-    <form wire:submit="save" class="grid grid-cols-1 gap-6 @if (count($this->siteLinks) > 0) md:grid-cols-3 @endif">
-        <div class="space-y-6 @if (count($this->siteLinks) > 0) md:col-span-2 @endif">
+    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7 lg:gap-10 @if (count($this->siteLinks) > 0) md:grid-cols-3 @endif">
+        <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6 @if (count($this->siteLinks) > 0) md:col-span-2 @endif">
             @if (count($this->blueprintTabs) > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
                     @foreach ($this->blueprintTabs as $tab)
@@ -25,7 +25,12 @@
                 <div>
                     @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
                         <flux:field>
-                            <flux:label>{{ $field["display"] }}@if ($field["required"] ?? false)<span class="text-red-500">*</span>@endif</flux:label>
+                            <flux:label
+                                >{{ $field["display"] }}
+                                @if ($field["required"] ?? false)
+                                    <span class="text-red-500">*</span>
+                                @endif
+                            </flux:label>
                             <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
                             <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
                         </flux:field>
@@ -66,7 +71,12 @@
                             <div>
                                 @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
                                     <flux:field>
-                                        <flux:label>{{ $field["display"] }}@if ($field["required"] ?? false)<span class="text-red-500">*</span>@endif</flux:label>
+                                        <flux:label
+                                            >{{ $field["display"] }}
+                                            @if ($field["required"] ?? false)
+                                                <span class="text-red-500">*</span>
+                                            @endif
+                                        </flux:label>
                                         <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
                                         <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
                                     </flux:field>
@@ -78,7 +88,7 @@
                                             "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
                                             "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
                                             "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
+                                            "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
                                         ])
                                 @endif
                             </div>
@@ -86,27 +96,28 @@
                     </div>
                 @endif
             @endforeach
-
-            <div class="flex justify-end gap-2 border-t border-zinc-200 pt-6 dark:border-zinc-700">
-                <flux:button :href="route('globals.index')" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
-                <flux:button variant="primary" type="submit">{{ __("Save") }}</flux:button>
-            </div>
         </div>
 
-        @if (count($this->siteLinks) > 0)
-            <div class="space-y-3 md:col-span-1">
-                <flux:text class="text-xs font-medium text-zinc-500">{{ __("Language") }}</flux:text>
-                <div class="flex flex-col gap-1 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700">
-                    @foreach ($this->siteLinks as $siteLink)
-                        @if ($siteLink["active"])
-                            <flux:button size="sm" variant="primary" disabled class="justify-start">{{ $siteLink["name"] }}</flux:button>
-                        @else
-                            <flux:button size="sm" variant="filled" :href="$siteLink['href']" wire:navigate class="justify-start">{{ $siteLink["name"] }}</flux:button>
-                        @endif
-                    @endforeach
-                </div>
+        <div class="w-full lg:w-[40%] xl:w-[30%] space-y-6 border border-zinc-200 p-4 rounded-xl h-max">
+            <div class="flex justify-end gap-2 dark:border-zinc-700 mb-6">
+                <flux:button variant="primary" class="w-full" type="submit">{{ __("Save") }}</flux:button>
+                <flux:button :href="route('globals.index')" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
             </div>
-        @endif
+
+            @if (count($this->siteLinks) > 0)
+                <div class="space-y-1 md:col-span-1 border border-gray-300 p-2 rounded-xl">
+                    <div class="flex flex-col gap-1 dark:border-zinc-700">
+                        @foreach ($this->siteLinks as $siteLink)
+                            @if ($siteLink["active"])
+                                <flux:button size="sm" variant="primary" disabled class="justify-center">{{ $siteLink["name"] }}</flux:button>
+                            @else
+                                <flux:button size="sm" variant="filled" :href="$siteLink['href']" wire:navigate class="justify-center">{{ $siteLink["name"] }}</flux:button>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </div>
     </form>
 
     @livewire ("media::asset-picker")

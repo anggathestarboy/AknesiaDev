@@ -1,11 +1,11 @@
-<section class="w-full max-w-6xl space-y-6">
+<section class="w-full max-w-6xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div class="">
         <flux:link :href="route('taxonomies.terms', $taxonomy->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :taxonomy terms", ["taxonomy" => $taxonomy->title]) }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit term") : __("New term") }}</flux:heading>
     </div>
 
-    <form wire:submit="save" class="grid grid-cols-3 gap-6">
-        <div class="col-span-2 space-y-6">
+    <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7 lg:gap-10">
+        <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6">
             @if (count($this->blueprintTabs) > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
                     @foreach ($this->blueprintTabs as $tab)
@@ -89,11 +89,15 @@
             @endforeach
         </div>
 
-        <div class="col-span-1 space-y-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+        <div class="w-full lg:w-[40%] xl:w-[30%] space-y-6 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+            <div class="flex gap-2">
+                <flux:button variant="primary" class="w-full" type="submit">{{ __("Save") }}</flux:button>
+                <flux:button :href="route('taxonomies.terms', $taxonomy->handle)" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
+            </div>
+
             @if (count($this->siteLinks) > 1)
-                <div>
-                    <flux:text class="text-xs font-medium text-zinc-500">{{ __("Site") }}</flux:text>
-                    <div class="mt-1 flex flex-wrap gap-1">
+                <div class="border border-gray-300 p-2 rounded-xl">
+                    <div class="grid gap-1">
                         @foreach ($this->siteLinks as $siteLink)
                             @if ($siteLink["active"])
                                 <flux:button size="sm" variant="primary" disabled>{{ $siteLink["name"] }}</flux:button>
@@ -127,11 +131,6 @@
                 <flux:label>{{ __("Slug") }} <span class="text-red-500">*</span></flux:label>
                 <flux:input wire:model="slug" required placeholder="my-term-slug" size="sm" />
             </flux:field>
-
-            <div class="flex justify-end gap-2 pt-2">
-                <flux:button :href="route('taxonomies.terms', $taxonomy->handle)" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>
-                <flux:button variant="primary" type="submit">{{ __("Save") }}</flux:button>
-            </div>
         </div>
     </form>
 
