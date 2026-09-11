@@ -8,6 +8,7 @@
         <button type="button" wire:click="setActiveTab('robots')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'robots' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' }}">{{ __('robots.txt') }}</button>
         <button type="button" wire:click="setActiveTab('llms')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'llms' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' }}">{{ __('llms.txt') }}</button>
         <button type="button" wire:click="setActiveTab('schema')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'schema' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' }}">{{ __('Schema') }}</button>
+        <button type="button" wire:click="setActiveTab('integrations')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'integrations' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' }}">{{ __('Integrasi') }}</button>
     </div>
 
     <form wire:submit="save" class="space-y-6">
@@ -67,7 +68,7 @@
                 <flux:textarea wire:model="llmsTxt" rows="14" class="font-mono text-xs" placeholder="# Site name&#10;&#10;> Summary" />
                 <flux:description>{{ __('This is what actually gets saved and served at /llms.txt — Generate fills it in, but you can still edit it by hand before saving.') }}</flux:description>
             </flux:field>
-        @else
+        @elseif ($activeTab === 'schema')
             <flux:text class="text-sm text-zinc-500">{{ __('Add as many schema.org blocks as you need — e.g. Organization and WebSite together. Types that need a specific page (Article, BlogPosting, NewsArticle) aren\'t offered here, since this schema is the same on every page.') }}</flux:text>
 
             <div class="space-y-4">
@@ -79,6 +80,20 @@
             </div>
 
             <flux:button size="sm" type="button" wire:click="addSchemaBlock">{{ __('Add schema') }}</flux:button>
+        @else
+            <div class="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-white/10">
+                <flux:switch wire:model.live="gaEnabled" label="{{ __('Google Analytics') }}" description="{{ __('Injects the GA4 tracking snippet into every page when enabled.') }}" />
+                @if ($gaEnabled)
+                    <flux:input wire:model="gaMeasurementId" :label="__('Measurement ID')" placeholder="G-XXXXXXXXXX" />
+                @endif
+            </div>
+
+            <div class="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-white/10">
+                <flux:switch wire:model.live="gscEnabled" label="{{ __('Google Search Console') }}" description="{{ __('Injects the site-verification meta tag into every page when enabled.') }}" />
+                @if ($gscEnabled)
+                    <flux:input wire:model="gscVerificationCode" :label="__('Verification code')" :description="__('The content value from the meta tag Search Console gives you, not the full <meta> tag.')" placeholder="abcdefg1234567" />
+                @endif
+            </div>
         @endif
 
         <div class="flex justify-end">

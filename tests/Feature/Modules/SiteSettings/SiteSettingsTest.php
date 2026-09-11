@@ -304,3 +304,63 @@ test('changing the schema type in the form swaps the visible fields', function (
         ->assertSeeHtml('schemaBlocks.0.service_type')
         ->assertDontSeeHtml('schemaBlocks.0.address_street');
 });
+
+test('google analytics and search console integrations can be enabled and saved', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(SiteSettingsManager::class)
+        ->set('gaEnabled', true)
+        ->set('gaMeasurementId', 'G-ABC123456')
+        ->set('gscEnabled', true)
+        ->set('gscVerificationCode', 'abcdefg1234567')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $settings = SiteSetting::current();
+
+    expect($settings->googleAnalyticsEnabled())->toBeTrue();
+    expect($settings->googleAnalyticsMeasurementId())->toBe('G-ABC123456');
+    expect($settings->googleSearchConsoleEnabled())->toBeTrue();
+    expect($settings->googleSearchConsoleVerificationCode())->toBe('abcdefg1234567');
+});
+
+test('an enabled integration requires its id/code to be filled in', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(SiteSettingsManager::class)
+        ->set('gaEnabled', true)
+        ->set('gaMeasurementId', '')
+        ->call('save')
+        ->assertHasErrors(['gaMeasurementId']);
+});
+
+test('the google analytics snippet and search console meta tag only render when enabled', function () {
+    $path = resource_path('views/pages/dynamic/site_settings_test_home.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<x-layouts::site.layout>content</x-layouts::site.layout>');
+    $template = 'pages.dynamic.site_settings_test_home';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => []]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'ga-test', 'uri' => 'ga-test', 'data' => ['title' => 'GA Test'],
+        ]);
+
+        $this->get('/ga-test')->assertOk()->assertDontSee('googletagmanager.com', false)->assertDontSee('google-site-verification', false);
+
+        SiteSetting::current()->update(['integrations' => [
+            'ga_enabled' => true, 'ga_measurement_id' => 'G-ABC123456',
+            'gsc_enabled' => true, 'gsc_verification_code' => 'abcdefg1234567',
+        ]]);
+
+        $this->get('/ga-test')
+            ->assertOk()
+            ->assertSee('googletagmanager.com/gtag/js?id=G-ABC123456', false)
+            ->assertSee('<meta name="google-site-verification" content="abcdefg1234567" />', false);
+    } finally {
+        File::delete($path);
+    }
+});

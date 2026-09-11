@@ -54,6 +54,14 @@ class SiteSettingsManager extends Component
 
     public string $llmsAdditionalContent = '';
 
+    public bool $gaEnabled = false;
+
+    public string $gaMeasurementId = '';
+
+    public bool $gscEnabled = false;
+
+    public string $gscVerificationCode = '';
+
     public function mount(): void
     {
         $settings = SiteSetting::current();
@@ -65,6 +73,10 @@ class SiteSettingsManager extends Component
         $this->llmsLimit = $settings->llms_config['limit'] ?? 1000;
         $this->llmsAdditionalContent = (string) ($settings->llms_config['additional_content'] ?? '');
         $this->schemaBlocks = array_map(fn (array $block): array => array_merge($this->defaultSchemaBlock(), $block), $settings->schemaBlocks());
+        $this->gaEnabled = $settings->googleAnalyticsEnabled();
+        $this->gaMeasurementId = (string) $settings->googleAnalyticsMeasurementId();
+        $this->gscEnabled = $settings->googleSearchConsoleEnabled();
+        $this->gscVerificationCode = (string) $settings->googleSearchConsoleVerificationCode();
     }
 
     /**
@@ -215,6 +227,10 @@ class SiteSettingsManager extends Component
             'schemaBlocks.*.address_country' => ['nullable', 'string', 'max:255'],
             'schemaBlocks.*.service_type' => ['nullable', 'string', 'max:255'],
             'schemaBlocks.*.area_served' => ['nullable', 'string', 'max:255'],
+            'gaEnabled' => ['boolean'],
+            'gaMeasurementId' => [Rule::requiredIf($this->gaEnabled), 'nullable', 'string', 'max:255'],
+            'gscEnabled' => ['boolean'],
+            'gscVerificationCode' => [Rule::requiredIf($this->gscEnabled), 'nullable', 'string', 'max:255'],
         ]);
 
         $schemaBlocks = array_map(fn (array $block): array => array_merge($block, ['same_as' => array_values(array_filter($block['same_as'] ?? []))]), $validated['schemaBlocks']);
@@ -229,6 +245,12 @@ class SiteSettingsManager extends Component
                 'additional_content' => $validated['llmsAdditionalContent'] ?: null,
             ],
             'schema' => $schemaBlocks,
+            'integrations' => [
+                'ga_enabled' => $validated['gaEnabled'],
+                'ga_measurement_id' => $validated['gaMeasurementId'] ?: null,
+                'gsc_enabled' => $validated['gscEnabled'],
+                'gsc_verification_code' => $validated['gscVerificationCode'] ?: null,
+            ],
         ]);
 
         Flux::toast(variant: 'success', text: __('Site settings saved.'));

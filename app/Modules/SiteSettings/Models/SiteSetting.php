@@ -15,17 +15,48 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $llms_txt
  * @property array|null $llms_config
  * @property array|null $schema
+ * @property array|null $integrations
  */
 class SiteSetting extends Model
 {
     protected $table = 'site_settings';
 
-    protected $fillable = ['robots_txt', 'llms_txt', 'llms_config', 'schema'];
+    protected $fillable = ['robots_txt', 'llms_txt', 'llms_config', 'schema', 'integrations'];
 
     protected $casts = [
         'llms_config' => 'array',
         'schema' => 'array',
+        'integrations' => 'array',
     ];
+
+    /**
+     * Whether the Google Analytics snippet should be injected into every
+     * page — off by default even when a measurement id is already saved,
+     * so a filled-in id doesn't silently start tracking.
+     */
+    public function googleAnalyticsEnabled(): bool
+    {
+        return (bool) ($this->integrations['ga_enabled'] ?? false);
+    }
+
+    public function googleAnalyticsMeasurementId(): ?string
+    {
+        return $this->integrations['ga_measurement_id'] ?? null;
+    }
+
+    /**
+     * Whether the Google Search Console verification meta tag should be
+     * injected into every page.
+     */
+    public function googleSearchConsoleEnabled(): bool
+    {
+        return (bool) ($this->integrations['gsc_enabled'] ?? false);
+    }
+
+    public function googleSearchConsoleVerificationCode(): ?string
+    {
+        return $this->integrations['gsc_verification_code'] ?? null;
+    }
 
     /**
      * The single settings row, creating it (empty) on first use.

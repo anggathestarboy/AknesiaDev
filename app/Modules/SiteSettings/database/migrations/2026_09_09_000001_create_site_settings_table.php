@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id();
             $table->text('robots_txt')->nullable();
             $table->text('llms_txt')->nullable();
+            $table->json('llms_config')->nullable();
             $table->json('schema')->nullable();
+            $table->json('integrations')->nullable();
             $table->timestamps();
         });
     }
