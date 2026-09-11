@@ -35,7 +35,7 @@
             </flux:select>
         @endif
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -58,7 +58,7 @@
             </flux:radio.group>
         @endif
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -90,7 +90,7 @@
         @endif
         @php $checkboxDescription = trim(($field["instructions"] ?? "") . " " . ($checkboxHint ?? "")); @endphp
         @if ($checkboxDescription !== "")
-            <flux:description>{{ $checkboxDescription }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $checkboxDescription }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -105,7 +105,7 @@
             <flux:input type="date" wire:model="{{ $prefix }}" />
         @endif
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -120,7 +120,7 @@
             <flux:input type="number" wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
         @endif
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -135,7 +135,7 @@
             <flux:textarea wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
         @endif
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -217,7 +217,7 @@
             </div>
         </div>
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -348,7 +348,7 @@
                     @endforelse
                 </div>
             </div>
-            <flux:description>{{ trim(($field["instructions"] ?? "") . " " . ($taxonomyHint ?? "")) }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ trim(($field["instructions"] ?? "") . " " . ($taxonomyHint ?? "")) }}</flux:description>
             @error ($prefix)
                 <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
             @enderror
@@ -361,7 +361,7 @@
                     <flux:select.option value="{{ $term->id }}">{{ $term->data["title"] ?? $term->slug }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:description>{{ trim(($field["instructions"] ?? "") . " " . ($taxonomyHint ?? "")) }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ trim(($field["instructions"] ?? "") . " " . ($taxonomyHint ?? "")) }}</flux:description>
             @error ($prefix)
                 <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
             @enderror
@@ -421,7 +421,7 @@
             <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
         @endif
         @if ($field["instructions"])
-            <flux:description>{{ $field["instructions"] }}</flux:description>
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
         @endif
         @error ($prefix)
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
