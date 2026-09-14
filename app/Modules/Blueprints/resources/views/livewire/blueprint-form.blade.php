@@ -57,10 +57,29 @@
                 <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200">
                     <div class="bg-white p-3 rounded-xl">
                         @if ($tabIndex !== 0 && $editingTabIndex === $tabIndex)
-                            <div class="flex items-center gap-1">
-                                <flux:input wire:model="tabs.{{ $tabIndex }}.handle" placeholder="handle" size="xs" class="w-28" />
-                                <flux:input wire:model="tabs.{{ $tabIndex }}.display" placeholder="{{ __('Label') }}" size="xs" class="w-28" />
-                                <flux:button size="xs" variant="primary" type="button" wire:click="$set('editingTabIndex', null)">{{ __("Done") }}</flux:button>
+                            <div class="flex items-center gap-3 mb-3">
+                                <flux:input wire:model="tabs.{{ $tabIndex }}.display" placeholder="{{ __('Label') }}" size="sm" class="w-28" x-ref="tabLabelInput" />
+                                <flux:input wire:model="tabs.{{ $tabIndex }}.handle" placeholder="handle" size="sm" class="w-28" x-ref="tabHandleInput" />
+                                <flux:button
+                                    size="sm"
+                                    variant="ghost"
+                                    icon="arrow-path"
+                                    type="button"
+                                    title="{{ __('Regenerate from label') }}"
+                                    x-on:click="
+                                        const handleEl = $refs.tabHandleInput.tagName === 'INPUT' ? $refs.tabHandleInput : $refs.tabHandleInput.querySelector('input');
+                                        const labelEl = $refs.tabLabelInput.tagName === 'INPUT' ? $refs.tabLabelInput : $refs.tabLabelInput.querySelector('input');
+                                        handleEl.value = labelEl.value
+                                            .toLowerCase()
+                                            .replace(/[^a-z\s_]/g, '')
+                                            .trim()
+                                            .replace(/\s+/g, '_')
+                                            .replace(/_+/g, '_');
+                                        handleEl.dispatchEvent(new Event('input'));
+                                    "
+                                />
+                                <flux:button size="sm" variant="filled" type="button" wire:click="cancelTab({{ $tabIndex }})">{{ __("Cancel") }}</flux:button>
+                                <flux:button size="sm" variant="primary" type="button" wire:click="confirmTab">{{ __("Done") }}</flux:button>
                             </div>
                             @error ("tabs.{$tabIndex}.handle")
                                 <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
@@ -119,10 +138,29 @@
 
                                 <div wire:key="section-{{ $tabIndex }}-{{ $sectionIndex }}" wire:sort:item="{{ $sectionIndex }}" class="space-y-3 mt-3 rounded-md border border-dashed border-zinc-300 p-3 dark:border-zinc-600">
                                     @if ($editingSection === [$tabIndex, $sectionIndex])
-                                        <div class="flex items-center gap-1">
-                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.display" required placeholder="{{ __('Label') }}" size="sm" class="w-28" />
-                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.handle" required placeholder="handle" size="sm" class="w-28" />
-                                            <flux:button size="sm" variant="primary" type="button" wire:click="$set('editingSection', null)">{{ __("Done") }}</flux:button>
+                                        <div class="flex items-center gap-3">
+                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.display" required placeholder="{{ __('Label') }}" size="sm" class="w-28" x-ref="sectionLabelInput" />
+                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.handle" required placeholder="handle" size="sm" class="w-28" x-ref="sectionHandleInput" />
+                                            <flux:button
+                                                size="sm"
+                                                variant="ghost"
+                                                icon="arrow-path"
+                                                type="button"
+                                                title="{{ __('Regenerate from label') }}"
+                                                x-on:click="
+                                                    const handleEl = $refs.sectionHandleInput.tagName === 'INPUT' ? $refs.sectionHandleInput : $refs.sectionHandleInput.querySelector('input');
+                                                    const labelEl = $refs.sectionLabelInput.tagName === 'INPUT' ? $refs.sectionLabelInput : $refs.sectionLabelInput.querySelector('input');
+                                                    handleEl.value = labelEl.value
+                                                        .toLowerCase()
+                                                        .replace(/[^a-z\s_]/g, '')
+                                                        .trim()
+                                                        .replace(/\s+/g, '_')
+                                                        .replace(/_+/g, '_');
+                                                    handleEl.dispatchEvent(new Event('input'));
+                                                "
+                                            />
+                                            <flux:button size="sm" variant="filled" type="button" wire:click="cancelSection({{ $tabIndex }}, {{ $sectionIndex }})">{{ __("Cancel") }}</flux:button>
+                                            <flux:button size="sm" variant="primary" type="button" wire:click="confirmSection">{{ __("Done") }}</flux:button>
                                         </div>
                                         @error ("tabs.{$tabIndex}.sections.{$sectionIndex}.handle")
                                             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>

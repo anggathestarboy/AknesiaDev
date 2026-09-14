@@ -908,6 +908,80 @@ test('a newly added tab opens in edit mode and can be closed once named', functi
         ->assertSet('tabs.1.handle', 'sidebar');
 });
 
+test('canceling a newly added, still-unnamed tab removes it entirely', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->call('addTab')
+        ->assertCount('tabs', 2)
+        ->call('cancelTab', 1)
+        ->assertCount('tabs', 1)
+        ->assertSet('editingTabIndex', null);
+});
+
+test('canceling a newly added tab removes it even if a label/handle was already typed in', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->call('addTab')
+        ->set('tabs.1.display', 'Sidebar')
+        ->set('tabs.1.handle', 'sidebar')
+        ->call('cancelTab', 1)
+        ->assertCount('tabs', 1)
+        ->assertSet('editingTabIndex', null);
+});
+
+test('canceling an already-confirmed tab just exits edit mode, without removing it', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->call('confirmTab')
+        ->set('editingTabIndex', 1)
+        ->call('cancelTab', 1)
+        ->assertCount('tabs', 2)
+        ->assertSet('editingTabIndex', null)
+        ->assertSet('tabs.1.handle', 'sidebar');
+});
+
+test('canceling a newly added, still-unnamed section removes it entirely', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->call('addSection', 0)
+        ->assertCount('tabs.0.sections', 2)
+        ->call('cancelSection', 0, 1)
+        ->assertCount('tabs.0.sections', 1)
+        ->assertSet('editingSection', null);
+});
+
+test('canceling a newly added section removes it even if a label/handle was already typed in', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->call('addSection', 0)
+        ->set('tabs.0.sections.1.display', 'SEO')
+        ->set('tabs.0.sections.1.handle', 'seo')
+        ->call('cancelSection', 0, 1)
+        ->assertCount('tabs.0.sections', 1)
+        ->assertSet('editingSection', null);
+});
+
+test('canceling an already-confirmed section just exits edit mode, without removing it', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->call('addSection', 0)
+        ->set('tabs.0.sections.1.handle', 'seo')
+        ->call('confirmSection')
+        ->set('editingSection', [0, 1])
+        ->call('cancelSection', 0, 1)
+        ->assertCount('tabs.0.sections', 2)
+        ->assertSet('editingSection', null)
+        ->assertSet('tabs.0.sections.1.handle', 'seo');
+});
+
 test('removing the tab currently being edited exits edit mode', function () {
     $this->actingAs(User::factory()->create());
 

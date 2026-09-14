@@ -70,6 +70,23 @@ class BlueprintForm extends Component
     public ?array $editingSection = null;
 
     /**
+     * Index of a tab added via addTab() that hasn't been confirmed with
+     * "Done" yet — null once confirmed, or when editing an existing tab
+     * instead. Lets cancelTab() distinguish "discard this brand-new tab"
+     * from "stop editing this already-saved one", regardless of whether
+     * the still-unconfirmed tab was given a label/handle before Cancel.
+     */
+    public ?int $newTabIndex = null;
+
+    /**
+     * [tabIndex, sectionIndex] of a section added via addSection() that
+     * hasn't been confirmed with "Done" yet. Mirrors $newTabIndex.
+     *
+     * @var array{0: int, 1: int}|null
+     */
+    public ?array $newSection = null;
+
+    /**
      * Whether fields start collapsed when the page loads (see field-editor
      * .blade.php's x-data). Toggling this also dispatches the
      * expand/collapse-all-fields window event so already-rendered fields
@@ -233,6 +250,40 @@ class BlueprintForm extends Component
     {
         $this->tabs[] = ['handle' => '', 'display' => '', 'sections' => []];
         $this->editingTabIndex = count($this->tabs) - 1;
+        $this->newTabIndex = $this->editingTabIndex;
+    }
+
+    /**
+     * Confirms the tab currently being edited (the "Done" button) — clears
+     * $newTabIndex too, so a freshly-added tab counts as saved from this
+     * point on and Cancel will no longer discard it.
+     */
+    public function confirmTab(): void
+    {
+        if ($this->editingTabIndex === $this->newTabIndex) {
+            $this->newTabIndex = null;
+        }
+
+        $this->editingTabIndex = null;
+    }
+
+    /**
+     * Leaves the tab's edit mode without saving. A brand-new, not-yet
+     * -confirmed tab (see $newTabIndex) is removed entirely regardless of
+     * whatever label/handle was typed into it — Cancel means "I don't want
+     * to create this tab after all". Canceling an already-confirmed tab
+     * just exits edit mode, leaving it as it was.
+     */
+    public function cancelTab(int $index): void
+    {
+        if ($this->newTabIndex === $index) {
+            $this->newTabIndex = null;
+            $this->removeTab($index);
+
+            return;
+        }
+
+        $this->editingTabIndex = null;
     }
 
     /**
@@ -271,6 +322,40 @@ class BlueprintForm extends Component
     {
         $this->tabs[$tabIndex]['sections'][] = ['handle' => '', 'display' => ''];
         $this->editingSection = [$tabIndex, count($this->tabs[$tabIndex]['sections']) - 1];
+        $this->newSection = $this->editingSection;
+    }
+
+    /**
+     * Confirms the section currently being edited (the "Done" button) —
+     * clears $newSection too, so a freshly-added section counts as saved
+     * from this point on and Cancel will no longer discard it.
+     */
+    public function confirmSection(): void
+    {
+        if ($this->editingSection === $this->newSection) {
+            $this->newSection = null;
+        }
+
+        $this->editingSection = null;
+    }
+
+    /**
+     * Leaves the section's edit mode without saving. A brand-new, not-yet
+     * -confirmed section (see $newSection) is removed entirely regardless
+     * of whatever label/handle was typed into it — Cancel means "I don't
+     * want to create this section after all". Canceling an already
+     * -confirmed section just exits edit mode, leaving it as it was.
+     */
+    public function cancelSection(int $tabIndex, int $sectionIndex): void
+    {
+        if ($this->newSection === [$tabIndex, $sectionIndex]) {
+            $this->newSection = null;
+            $this->removeSection($tabIndex, $sectionIndex);
+
+            return;
+        }
+
+        $this->editingSection = null;
     }
 
     /**
