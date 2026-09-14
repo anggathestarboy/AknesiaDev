@@ -28,33 +28,34 @@
         @foreach ($categories as $categoryKey => $categoryLabel)
             @php $group = $this->blueprintGroups->get($categoryKey, collect()); @endphp
             @if ($group->isNotEmpty())
-                <div class="space-y-3">
-                    <flux:heading size="md">{{ $categoryLabel }}</flux:heading>
+                <div class="bg-gray-200/80 px-2 py-2 rounded-2xl">
+                    <flux:heading size="md" class="pt-1 px-2 pb-2">{{ $categoryLabel }}</flux:heading>
+                    <div class="space-y-3 bg-white px-3 py-1 rounded-xl">
+                        <flux:table>
+                            <flux:table.columns>
+                                <flux:table.column class="">{{ __("Namespace") }}</flux:table.column>
+                                <flux:table.column class="w-[400px]">{{ __("Handle") }}</flux:table.column>
+                                <flux:table.column class="w-[100px]">{{ __("Fields") }}</flux:table.column>
+                                <flux:table.column class="w-[150px]"></flux:table.column>
+                            </flux:table.columns>
 
-                    <flux:table>
-                        <flux:table.columns>
-                            <flux:table.column class="">{{ __("Namespace") }}</flux:table.column>
-                            <flux:table.column class="w-[400px]">{{ __("Handle") }}</flux:table.column>
-                            <flux:table.column class="w-[100px]">{{ __("Fields") }}</flux:table.column>
-                            <flux:table.column class="w-[150px]"></flux:table.column>
-                        </flux:table.columns>
-
-                        <flux:table.rows>
-                            @foreach ($group as $blueprint)
-                                <flux:table.row wire:key="blueprint-{{ $blueprint->id }}">
-                                    <flux:table.cell>{{ $blueprint->namespace ?? "—" }}</flux:table.cell>
-                                    <flux:table.cell>{{ $blueprint->handle }}</flux:table.cell>
-                                    <flux:table.cell>{{ count($blueprint->data["fields"] ?? []) }}</flux:table.cell>
-                                    <flux:table.cell class="flex justify-end gap-2">
-                                        <flux:button size="sm" :href="route('blueprints.edit', $blueprint)" wire:navigate>{{ __("Edit") }}</flux:button>
-                                        <flux:modal.trigger name="confirm-delete-blueprint">
-                                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteBlueprintId = {{ $blueprint->id }}">{{ __("Delete") }}</flux:button>
-                                        </flux:modal.trigger>
-                                    </flux:table.cell>
-                                </flux:table.row>
-                            @endforeach
-                        </flux:table.rows>
-                    </flux:table>
+                            <flux:table.rows>
+                                @foreach ($group as $blueprint)
+                                    <flux:table.row wire:key="blueprint-{{ $blueprint->id }}">
+                                        <flux:table.cell>{{ $blueprint->namespace ?? "—" }}</flux:table.cell>
+                                        <flux:table.cell>{{ $blueprint->handle }}</flux:table.cell>
+                                        <flux:table.cell>{{ count($blueprint->data["fields"] ?? []) }}</flux:table.cell>
+                                        <flux:table.cell class="flex justify-end gap-2">
+                                            <flux:button size="xs" :href="route('blueprints.edit', $blueprint)" wire:navigate>{{ __("Edit") }}</flux:button>
+                                            <flux:modal.trigger name="confirm-delete-blueprint">
+                                                <flux:button size="xs" variant="danger" type="button" x-on:click="deleteBlueprintId = {{ $blueprint->id }}">{{ __("Delete") }}</flux:button>
+                                            </flux:modal.trigger>
+                                        </flux:table.cell>
+                                    </flux:table.row>
+                                @endforeach
+                            </flux:table.rows>
+                        </flux:table>
+                    </div>
                 </div>
             @endif
         @endforeach
