@@ -166,6 +166,7 @@ test('blueprint can be created with fields via the field builder', function () {
     expect($blueprint->handle)->toBe('post');
     expect($blueprint->data)->toBe([
         'template' => null,
+        'fields_collapsed_by_default' => false,
         'tabs' => [
             ['handle' => 'main', 'display' => 'Main', 'sections' => [
                 ['handle' => 'main', 'display' => 'Main'],
@@ -1108,6 +1109,24 @@ test('blueprint can be updated and fields round-trip through edit, including con
         'mode' => 'show', 'field' => 'type', 'operator' => 'equals', 'value' => 'video',
     ]);
     expect($blueprint->data['fields'][1]['validate_sometimes'])->toBeTrue();
+});
+
+test('the fields-collapsed-by-default preference is saved and reloaded on edit', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields.0.handle', 'headline')
+        ->set('fieldsCollapsedByDefault', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    expect($blueprint->data['fields_collapsed_by_default'])->toBeTrue();
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
+        ->assertSet('fieldsCollapsedByDefault', true);
 });
 
 test('blueprint can be deleted', function () {

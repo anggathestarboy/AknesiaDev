@@ -68,6 +68,20 @@ class BlueprintForm extends Component
      */
     public ?array $editingSection = null;
 
+    /**
+     * Whether fields start collapsed when the page loads (see field-editor
+     * .blade.php's x-data). Toggling this also dispatches the
+     * expand/collapse-all-fields window event so already-rendered fields
+     * follow it immediately, the same events the "Expand all"/"Collapse
+     * all" buttons use.
+     */
+    public bool $fieldsCollapsedByDefault = false;
+
+    public function updatedFieldsCollapsedByDefault(bool $value): void
+    {
+        $this->dispatch($value ? 'collapse-all-fields' : 'expand-all-fields');
+    }
+
     public function mount(?Blueprint $blueprint = null): void
     {
         if (! $blueprint) {
@@ -80,6 +94,7 @@ class BlueprintForm extends Component
         $this->namespace = (string) $blueprint->namespace;
         $this->handle = $blueprint->handle;
         $this->template = (string) ($blueprint->data['template'] ?? '');
+        $this->fieldsCollapsedByDefault = (bool) ($blueprint->data['fields_collapsed_by_default'] ?? false);
 
         $this->tabs = collect($blueprint->data['tabs'] ?? [])
             ->map(fn (array $tab): array => [
@@ -382,6 +397,7 @@ class BlueprintForm extends Component
 
         $data = [
             'template' => $validated['template'] ?: null,
+            'fields_collapsed_by_default' => $this->fieldsCollapsedByDefault,
             'tabs' => array_map(fn (array $tab): array => [
                 'handle' => $tab['handle'],
                 'display' => $tab['display'] ?: Str::headline($tab['handle']),

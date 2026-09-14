@@ -36,7 +36,8 @@
         </div>
 
         <div class="space-y-3">
-            <div class="flex items-center justify-end bg-white z-999 sticky top-0 p-2 border rounded-b-xl">
+            <div class="flex items-center justify-between bg-white z-999 sticky top-0 p-2 border rounded-b-xl">
+                <flux:switch wire:model.live="fieldsCollapsedByDefault" size="sm" :label="__('Collapse fields by default')" />
                 <div class="flex gap-2">
                     <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('collapse-all-fields')">{{ __("Collapse all") }}</flux:button>
                     <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('expand-all-fields')">{{ __("Expand all") }}</flux:button>
@@ -116,11 +117,11 @@
                             @foreach ($tab["sections"] ?? [] as $sectionIndex => $section)
                                 @php $sectionFieldIndexes = collect($fields)->keys()->filter(fn($i) => ($fields[$i]["tab"] ?? "main") === $tab["handle"] && trim($section["handle"] ?? "") !== "" && ($fields[$i]["section"] ?? "") === $section["handle"])->values(); @endphp
 
-                                <div wire:key="section-{{ $tabIndex }}-{{ $sectionIndex }}" wire:sort:item="{{ $sectionIndex }}" class="space-y-3 rounded-md border border-dashed border-zinc-300 p-3 dark:border-zinc-600">
+                                <div wire:key="section-{{ $tabIndex }}-{{ $sectionIndex }}" wire:sort:item="{{ $sectionIndex }}" class="space-y-3 mt-3 rounded-md border border-dashed border-zinc-300 p-3 dark:border-zinc-600">
                                     @if ($editingSection === [$tabIndex, $sectionIndex])
                                         <div class="flex items-center gap-1">
-                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.handle" placeholder="handle" size="sm" class="w-28" />
-                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.display" placeholder="{{ __('Label') }}" size="sm" class="w-28" />
+                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.display" required placeholder="{{ __('Label') }}" size="sm" class="w-28" />
+                                            <flux:input wire:model="tabs.{{ $tabIndex }}.sections.{{ $sectionIndex }}.handle" required placeholder="handle" size="sm" class="w-28" />
                                             <flux:button size="sm" variant="primary" type="button" wire:click="$set('editingSection', null)">{{ __("Done") }}</flux:button>
                                         </div>
                                         @error ("tabs.{$tabIndex}.sections.{$sectionIndex}.handle")
