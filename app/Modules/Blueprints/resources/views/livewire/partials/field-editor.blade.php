@@ -150,9 +150,9 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 justify-start">
-                    <flux:checkbox wire:model="{{ $prefix }}.required" :label="__('Required')" />
-                    <flux:checkbox wire:model="{{ $prefix }}.sometimes" :label="__('Sometimes')" />
-                    <flux:checkbox wire:model="{{ $prefix }}.localizable" :label="__('Localizable')" />
+                    <flux:checkbox wire:model.live="{{ $prefix }}.required" :label="__('Required')" />
+                    <flux:checkbox wire:model.live="{{ $prefix }}.sometimes" :label="__('Sometimes')" />
+                    <flux:checkbox wire:model.live="{{ $prefix }}.localizable" :label="__('Localizable')" />
                 </div>
             @endif
         </div>
@@ -271,7 +271,7 @@
                     @endif
 
                     @if ($field["type"] === "toggle")
-                        <flux:radio.group wire:model="{{ $prefix }}.default" :label="__('Default value')">
+                        <flux:radio.group wire:key="{{ $field['_uid'] }}-default" wire:model.live="{{ $prefix }}.default" :label="__('Default value')">
                             <flux:radio value="true" label="{{ __('True') }}" />
                             <flux:radio value="false" label="{{ __('False') }}" />
                         </flux:radio.group>
