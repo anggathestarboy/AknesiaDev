@@ -302,3 +302,24 @@ test('global set sites must reference existing site handles', function () {
         ->call('save')
         ->assertHasErrors(['sites.0']);
 });
+
+test('a blueprint tab with handle "sidebar" renders its fields in the global set form\'s right-hand sidebar column', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'sidebar', 'display' => 'Sidebar'],
+        ],
+        'fields' => [
+            ['handle' => 'site_name', 'display' => 'Site name', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'tab' => 'sidebar'],
+        ],
+    ]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->assertSee('Site name')
+        ->assertSee('Seo Title');
+});

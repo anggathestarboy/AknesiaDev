@@ -7,11 +7,18 @@
         </div>
     </div>
 
+    @php
+        $mainTabs = collect($this->blueprintTabs)->reject(fn($tab) => $tab["handle"] === "sidebar")->values();
+        $sidebarTab = collect($this->blueprintTabs)->firstWhere("handle", "sidebar");
+        $sidebarFields = collect($this->blueprintFields())->where("tab", "sidebar");
+        $sidebarSections = $sidebarTab["sections"] ?? [];
+    @endphp
+
     <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7">
         <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6">
-            @if (count($this->blueprintTabs) > 1)
+            @if ($mainTabs->count() > 1)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
-                    @foreach ($this->blueprintTabs as $tab)
+                    @foreach ($mainTabs as $tab)
                         <button type="button" wire:click="setActiveTab('{{ $tab['handle'] }}')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === $tab['handle'] ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300' }}">{{ $tab["display"] }}</button>
                     @endforeach
                 </div>
@@ -139,6 +146,8 @@
                 <flux:label>{{ __("Slug") }} <span class="text-red-500">*</span></flux:label>
                 <flux:input wire:model="slug" required placeholder="my-term-slug" size="sm" />
             </flux:field>
+
+            @include ("collections::livewire.partials.sidebar-fields", ["sidebarFields" => $sidebarFields, "sidebarSections" => $sidebarSections, "data" => $data, "preview" => false])
         </div>
     </form>
 

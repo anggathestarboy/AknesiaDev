@@ -197,3 +197,24 @@ test('non-localizable term fields share one value from the taxonomy default site
     expect($translation->data['description'])->toBe('Updated political news');
     expect($original->fresh()->data['color'])->toBe('red');
 });
+
+test('a blueprint tab with handle "sidebar" renders its fields in the term form\'s right-hand sidebar column', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+
+    Blueprint::create(['namespace' => null, 'handle' => 'news_categories', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'sidebar', 'display' => 'Sidebar'],
+        ],
+        'fields' => [
+            ['handle' => 'color', 'display' => 'Color', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'sidebar'],
+        ],
+    ]]);
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->assertSee('Color')
+        ->assertSee('Seo Title');
+});

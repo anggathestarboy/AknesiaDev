@@ -880,6 +880,25 @@ test('the "main" tab cannot be renamed or removed', function () {
     ]);
 });
 
+test('a tab with handle "sidebar" shows a special badge, unlike a regular tab', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintForm::class)
+        ->call('addTab')
+        ->set('tabs.1.handle', 'sidebar')
+        ->set('tabs.1.display', 'Sidebar')
+        ->call('confirmTab')
+        ->call('addTab')
+        ->set('tabs.2.handle', 'extra')
+        ->set('tabs.2.display', 'Extra')
+        ->call('confirmTab');
+
+    $html = $component->html();
+
+    expect($html)->toContain('bg-indigo-300');
+    expect($html)->toContain('bg-orange-300');
+});
+
 test('removing a tab reassigns its fields back to main', function () {
     $this->actingAs(User::factory()->create());
 

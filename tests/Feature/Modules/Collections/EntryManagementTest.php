@@ -84,6 +84,29 @@ test('entry form only shows fields belonging to the active tab', function () {
     Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => [
         'tabs' => [
             ['handle' => 'main', 'display' => 'Main'],
+            ['handle' => 'extra', 'display' => 'Extra'],
+        ],
+        'fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'tab' => 'extra'],
+        ],
+    ]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Headline')
+        ->assertDontSee('Seo Title')
+        ->call('setActiveTab', 'extra')
+        ->assertSee('Seo Title')
+        ->assertDontSee('Headline');
+});
+
+test('a blueprint tab with handle "sidebar" renders its fields in the right-hand sidebar column instead of the main tab area', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => [
+        'tabs' => [
+            ['handle' => 'main', 'display' => 'Main'],
             ['handle' => 'sidebar', 'display' => 'Sidebar'],
         ],
         'fields' => [
@@ -93,12 +116,12 @@ test('entry form only shows fields belonging to the active tab', function () {
     ]]);
     $collection = makeBlogCollection();
 
+    // The sidebar tab's own field renders alongside the main tab's field —
+    // no tab switch needed, and no "Sidebar" tab button to click at all.
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->assertSee('Headline')
-        ->assertDontSee('Seo Title')
-        ->call('setActiveTab', 'sidebar')
         ->assertSee('Seo Title')
-        ->assertDontSee('Headline');
+        ->assertDontSeeHtml('setActiveTab(\'sidebar\')');
 });
 
 test('a required field shows a red asterisk after its label, an optional one does not', function () {
