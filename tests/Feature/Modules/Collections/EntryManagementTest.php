@@ -1295,6 +1295,68 @@ test('entry can be deleted', function () {
     expect(Entry::find($entry->id))->toBeNull();
 });
 
+test('deleting an entry by default also deletes its other language versions', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'x', 'status' => 'draft']]);
+    $translation = Entry::create(['site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $origin->id, 'data' => ['title' => 'x en', 'status' => 'draft']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $origin->id);
+
+    expect(Entry::find($origin->id))->toBeNull();
+    expect(Entry::find($translation->id))->toBeNull();
+});
+
+test('deleting an entry with deleteLocaleSiblings false only deletes that one entry', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'x', 'status' => 'draft']]);
+    $translation = Entry::create(['site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $origin->id, 'data' => ['title' => 'x en', 'status' => 'draft']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $origin->id, false);
+
+    expect(Entry::find($origin->id))->toBeNull();
+    expect(Entry::find($translation->id))->not->toBeNull();
+});
+
+test('deleting a translated entry also deletes its origin and any sibling translations', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    Site::create(['handle' => 'french', 'name' => 'French', 'url' => 'https://example.fr', 'locale' => 'fr_FR', 'lang' => 'fr', 'attributes' => [], 'order' => 3]);
+    $collection = makeBlogCollection();
+
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'x', 'status' => 'draft']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $origin->id, 'data' => ['title' => 'x en', 'status' => 'draft']]);
+    $french = Entry::create(['site' => 'french', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $origin->id, 'data' => ['title' => 'x fr', 'status' => 'draft']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $english->id);
+
+    expect(Entry::find($origin->id))->toBeNull();
+    expect(Entry::find($english->id))->toBeNull();
+    expect(Entry::find($french->id))->toBeNull();
+});
+
+test('localeSiblingCount reflects the number of other-language versions of an entry', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'x', 'status' => 'draft']]);
+    Entry::create(['site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $origin->id, 'data' => ['title' => 'x en', 'status' => 'draft']]);
+
+    $count = Livewire::test(EntryManager::class, ['collection' => $collection])->instance()->localeSiblingCount($origin);
+
+    expect($count)->toBe(1);
+});
+
 test('entries from another collection are not shown', function () {
     $this->actingAs(User::factory()->create());
     makePostBlueprint();

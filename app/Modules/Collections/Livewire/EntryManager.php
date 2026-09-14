@@ -216,9 +216,47 @@ class EntryManager extends Component
             ->get();
     }
 
-    public function delete(string $id): void
+    /**
+     * This entry's other-language versions — every entry in the same
+     * "origin family" (its origin, and every entry translated from it),
+     * excluding itself. Mirrors TermForm::siblingTermForSite()'s
+     * origin/origin_id relationship.
+     *
+     * @return \Illuminate\Support\Collection<int, Entry>
+     */
+    protected function localeSiblings(Entry $entry)
+    {
+        $originId = $entry->origin_id ?? $entry->id;
+
+        return Entry::where('collection', $this->collection->handle)
+            ->where('id', '!=', $entry->id)
+            ->where(fn ($query) => $query->where('id', $originId)->orWhere('origin_id', $originId))
+            ->get();
+    }
+
+    /**
+     * Number of other-language versions this entry has — shown in the
+     * delete-confirmation modal so the "also delete" checkbox isn't a
+     * mystery when there's nothing else to delete.
+     */
+    public function localeSiblingCount(Entry $entry): int
+    {
+        return $this->localeSiblings($entry)->count();
+    }
+
+    public function delete(string $id, bool $deleteLocaleSiblings = true): void
     {
         $entry = Entry::where('collection', $this->collection->handle)->findOrFail($id);
+
+        if ($deleteLocaleSiblings) {
+            foreach ($this->localeSiblings($entry) as $sibling) {
+                if ($this->collection->structured()) {
+                    app(CollectionTreeService::class)->removeEntry($this->collection->handle, $sibling->site, $sibling->id);
+                }
+
+                $sibling->delete();
+            }
+        }
 
         if ($this->collection->structured()) {
             app(CollectionTreeService::class)->removeEntry($this->collection->handle, $entry->site, $id);
@@ -228,7 +266,7 @@ class EntryManager extends Component
 
         Flux::toast(variant: 'success', text: __('Entry deleted.'));
 
-        unset($this->entries);
+        unset($this->entries, $this->entryTree);
     }
 
     public function render(): View

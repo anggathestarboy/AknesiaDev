@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteEntryId: null, deleteSiblingCount: 0, deleteAllLocales: true }">
     <div class="flex items-start justify-between">
         <div>
             <flux:link :href="route('collections.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Collections") }}</flux:link>
@@ -123,7 +123,9 @@
                         </flux:table.cell>
                         <flux:table.cell class="flex justify-end gap-2 w-32">
                             <flux:button size="sm" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-                            <flux:button size="sm" variant="danger" wire:click="delete('{{ $entry->id }}')" wire:confirm="{{ __('Delete this entry?') }}">{{ __("Delete") }}</flux:button>
+                            <flux:modal.trigger name="confirm-delete-entry">
+                                <flux:button size="sm" variant="danger" type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:button>
+                            </flux:modal.trigger>
                         </flux:table.cell>
                     </flux:table.row>
                 @empty
@@ -134,4 +136,28 @@
             </flux:table.rows>
         </flux:table>
     @endif
+
+    <flux:modal name="confirm-delete-entry" class="min-w-[26rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this entry?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This cannot be undone.") }}</flux:text>
+
+            <template x-if="deleteSiblingCount > 0">
+                <flux:field variant="inline">
+                    <flux:checkbox x-model="deleteAllLocales" />
+                    <flux:label>{{ __("Also delete its other language versions") }}</flux:label>
+                    <flux:description><span x-text="deleteSiblingCount"></span> {{ __("other entries") }}</flux:description>
+                </flux:field>
+            </template>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteEntryId, deleteAllLocales)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </section>

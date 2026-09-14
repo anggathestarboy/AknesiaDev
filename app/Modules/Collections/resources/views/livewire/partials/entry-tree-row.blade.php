@@ -31,7 +31,9 @@
         default => 'zinc',
     }">{{ $statuses[$entry->status] ?? $entry->status }}</flux:badge>
             <flux:button size="sm" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-            <flux:button size="sm" variant="danger" wire:click="delete('{{ $entry->id }}')" wire:confirm="{{ __('Delete this entry?') }}">{{ __("Delete") }}</flux:button>
+            <flux:modal.trigger name="confirm-delete-entry">
+                <flux:button size="sm" variant="danger" type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:button>
+            </flux:modal.trigger>
         </div>
     </div>
 
