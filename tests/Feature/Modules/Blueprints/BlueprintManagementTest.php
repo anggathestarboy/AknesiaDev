@@ -4,6 +4,7 @@ use App\Models\Taxonomy;
 use App\Models\User;
 use App\Modules\Blueprints\Livewire\BlueprintForm;
 use App\Modules\Blueprints\Livewire\BlueprintManager;
+use App\Modules\Blueprints\Livewire\FieldsetForm;
 use App\Modules\Blueprints\Livewire\FieldsetManager;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
@@ -1290,11 +1291,26 @@ test('blueprint can be deleted', function () {
     expect(Blueprint::find($blueprint->id))->toBeNull();
 });
 
+test('fieldset can be deleted', function () {
+    $this->actingAs(User::factory()->create());
+
+    $fieldset = Fieldset::create(['handle' => 'seo', 'data' => ['fields' => []]]);
+
+    Livewire::test(FieldsetManager::class)->call('delete', $fieldset->id);
+
+    expect(Fieldset::find($fieldset->id))->toBeNull();
+});
+
+test('fieldsets page is displayed', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get('/admin-panel/fieldsets')->assertOk();
+});
+
 test('fieldset can be created with a field builder like blueprints', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(FieldsetManager::class)
-        ->call('create')
+    Livewire::test(FieldsetForm::class)
         ->set('handle', 'seo')
         ->set('fields.0.handle', 'meta_title')
         ->set('fields.0.display', 'Meta Title')
@@ -1315,8 +1331,7 @@ test('fieldset handle must be unique', function () {
 
     Fieldset::create(['handle' => 'seo', 'data' => ['fields' => []]]);
 
-    Livewire::test(FieldsetManager::class)
-        ->call('create')
+    Livewire::test(FieldsetForm::class)
         ->set('handle', 'seo')
         ->set('fields.0.handle', 'meta_title')
         ->call('save')
@@ -1326,7 +1341,7 @@ test('fieldset handle must be unique', function () {
 test('a fieldset requires at least one field', function () {
     $this->actingAs(User::factory()->create());
 
-    Livewire::test(FieldsetManager::class)
+    Livewire::test(FieldsetForm::class)
         ->set('handle', 'seo')
         ->set('fields', [])
         ->call('save')
@@ -1336,8 +1351,7 @@ test('a fieldset requires at least one field', function () {
 test('fieldset fields can be reordered by drag and drop', function () {
     $this->actingAs(User::factory()->create());
 
-    $component = Livewire::test(FieldsetManager::class)
-        ->call('create')
+    $component = Livewire::test(FieldsetForm::class)
         ->set('fields.0.handle', 'field_one')
         ->call('addField')
         ->set('fields.1.handle', 'field_two');
@@ -1355,14 +1369,41 @@ test('fieldset can be edited', function () {
         ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
     ]]]);
 
-    Livewire::test(FieldsetManager::class)
-        ->call('edit', $fieldset->id)
+    Livewire::test(FieldsetForm::class, ['fieldset' => $fieldset])
         ->assertSet('fields.0.handle', 'meta_title')
         ->set('fields.0.required', true)
         ->call('save')
         ->assertHasNoErrors();
 
     expect($fieldset->refresh()->data['fields'][0]['required'])->toBeTrue();
+});
+
+test('saving an already-existing fieldset stays on the form instead of redirecting to the listing', function () {
+    $this->actingAs(User::factory()->create());
+
+    $fieldset = Fieldset::create(['handle' => 'seo', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
+    ]]]);
+
+    Livewire::test(FieldsetForm::class, ['fieldset' => $fieldset])
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertNoRedirect();
+});
+
+test('saving a brand-new fieldset redirects to its own edit page, not the listing', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(FieldsetForm::class)
+        ->set('handle', 'seo')
+        ->set('fields.0.handle', 'meta_title')
+        ->set('fields.0.display', 'Meta Title')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $fieldset = Fieldset::sole();
+
+    $component->assertRedirect(route('blueprints.fieldsets.edit', $fieldset));
 });
 
 test('assets field can be created scoped to an asset container', function () {

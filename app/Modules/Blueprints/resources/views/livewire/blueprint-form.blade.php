@@ -87,12 +87,6 @@
                         @else
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center gap-1">
-                                    @if ($tab["handle"] === "sidebar")
-                                        <span class="text-[10px] bg-indigo-300 py-0.5 px-2 rounded-2xl inline-flex items-center gap-0.5"><flux:icon.view-columns class="size-3" /> {{ __("Sidebar") }}</span>
-                                    @else
-                                        <span class="text-[10px] bg-orange-300 py-0.5 px-2 rounded-2xl"> Tab</span>
-                                    @endif
-                                    <flux:text class="font-medium">{{ $tab["display"] ?: __("Main") }}</flux:text>
                                     @if ($tabIndex !== 0)
                                         <flux:dropdown>
                                             <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" />
@@ -102,6 +96,12 @@
                                             </flux:menu>
                                         </flux:dropdown>
                                     @endif
+                                    @if ($tab["handle"] === "sidebar")
+                                        <span class="text-[10px] bg-indigo-300 py-0.5 px-2 rounded-2xl inline-flex items-center gap-0.5"><flux:icon.view-columns class="size-3" /> {{ __("Sidebar") }}</span>
+                                    @else
+                                        <span class="text-[10px] bg-orange-300 py-0.5 px-2 rounded-2xl"> Tab</span>
+                                    @endif
+                                    <flux:text class="font-medium">{{ $tab["display"] ?: __("Main") }}</flux:text>
                                 </div>
                                 <div class="flex gap-2">
                                     @if ($tab["handle"] === "sidebar")
