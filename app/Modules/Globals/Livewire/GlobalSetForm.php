@@ -2,6 +2,7 @@
 
 namespace App\Modules\Globals\Livewire;
 
+use App\Models\User;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Globals\Models\GlobalSetVariable;
@@ -255,6 +256,16 @@ class GlobalSetForm extends Component
     }
 
     /**
+     * Users an "author" field may pick from.
+     *
+     * @return Collection<int, User>
+     */
+    public function availableAuthors()
+    {
+        return User::orderBy('name')->get();
+    }
+
+    /**
      * @return Collection<int, AssetMeta>
      */
     public function selectedAssets(array $ids)
@@ -427,6 +438,7 @@ class GlobalSetForm extends Component
                 'toggle' => 'boolean',
                 'date' => 'date',
                 'select', 'radio' => Rule::in($field['options'] ?? []),
+                'author' => Rule::exists('users', 'id'),
                 default => 'string',
             };
 

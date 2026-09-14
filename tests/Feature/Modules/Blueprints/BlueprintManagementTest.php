@@ -1405,6 +1405,24 @@ test('taxonomy field can be created scoped to a taxonomy with min/max selections
     expect($field['max_items'])->toBe(3);
 });
 
+test('an author field can be created with no extra configuration', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'author', 'display' => 'Author', 'type' => 'author', 'required' => false],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['type'])->toBe('author');
+    expect($field['placeholder'])->toBeNull();
+    expect($field['default'])->toBeNull();
+});
+
 test('taxonomy field requires a taxonomy to be selected', function () {
     $this->actingAs(User::factory()->create());
 

@@ -47,6 +47,29 @@
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
         @enderror
     </flux:field>
+@elseif ($field["type"] === "author")
+    <flux:field>
+        <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
+        @if ($preview)
+            <flux:select wire:model.live="{{ $prefix }}" placeholder="{{ __('Select an author') }}">
+                @foreach ($this->availableAuthors() as $author)
+                    <flux:select.option value="{{ $author->id }}">{{ $author->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        @else
+            <flux:select wire:model="{{ $prefix }}" placeholder="{{ __('Select an author') }}">
+                @foreach ($this->availableAuthors() as $author)
+                    <flux:select.option value="{{ $author->id }}">{{ $author->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        @endif
+        @if ($field["instructions"])
+            <flux:description class="mt-0! text-xs">{{ $field["instructions"] }}</flux:description>
+        @endif
+        @error ($prefix)
+            <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+        @enderror
+    </flux:field>
 @elseif ($field["type"] === "radio")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>

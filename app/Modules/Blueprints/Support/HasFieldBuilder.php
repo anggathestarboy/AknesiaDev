@@ -37,6 +37,7 @@ trait HasFieldBuilder
         'link' => 'Link',
         'fieldset' => 'Fieldset',
         'taxonomy' => 'Taxonomy',
+        'author' => 'Author',
     ];
 
     /**
@@ -382,7 +383,7 @@ trait HasFieldBuilder
 
             $field['default'] = '';
 
-            if (in_array($type, ['toggle', 'date', 'replicator', 'assets', 'fieldset', 'taxonomy'], true)) {
+            if (in_array($type, ['toggle', 'date', 'replicator', 'assets', 'fieldset', 'taxonomy', 'author'], true)) {
                 $field['placeholder'] = '';
             }
 
@@ -676,10 +677,10 @@ trait HasFieldBuilder
             'type' => $field['type'],
             'required' => (bool) $field['required'],
             'localizable' => (bool) ($field['localizable'] ?? false),
-            'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator', 'assets', 'fieldset', 'taxonomy'], true)
+            'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator', 'assets', 'fieldset', 'taxonomy', 'author'], true)
                 ? null
                 : (($field['placeholder'] ?? '') ?: null),
-            'default' => in_array($field['type'], ['replicator', 'assets', 'link', 'fieldset', 'taxonomy'], true) ? null : (($field['default'] ?? '') ?: null),
+            'default' => in_array($field['type'], ['replicator', 'assets', 'link', 'fieldset', 'taxonomy', 'author'], true) ? null : (($field['default'] ?? '') ?: null),
             'validation' => ($field['validation'] ?? '') ?: null,
             'instructions' => ($field['instructions'] ?? '') ?: null,
             'validate_sometimes' => (bool) ($field['sometimes'] ?? false),

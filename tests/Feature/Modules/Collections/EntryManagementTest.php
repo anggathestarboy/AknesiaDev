@@ -1900,3 +1900,42 @@ test('a required field with an error shows the message inline under the field, n
     // under the Status field itself.
     expect(substr_count($html, 'The Status field is required.'))->toBe(2);
 });
+
+test('an author field can be picked from existing users and saved', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    $author = User::factory()->create(['name' => 'Jane Editor']);
+
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'author', 'display' => 'Author', 'type' => 'author', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+    ]]]);
+    $collection = makeBlogCollection(null);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Jane Editor')
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.author', (string) $author->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->data['author'])->toBe((string) $author->id);
+});
+
+test('an author field rejects a user id that does not exist', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'author', 'display' => 'Author', 'type' => 'author', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+    ]]]);
+    $collection = makeBlogCollection(null);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('data.author', '999999')
+        ->call('save')
+        ->assertHasErrors(['data.author']);
+});

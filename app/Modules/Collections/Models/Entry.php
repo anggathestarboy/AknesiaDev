@@ -3,6 +3,7 @@
 namespace App\Modules\Collections\Models;
 
 use App\Models\TaxonomyTerm;
+use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Services\EntryUrlResolver;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -50,11 +51,41 @@ class Entry extends Model
      * to look up itself. A "link" field pointing at an entry (stored as
      * "entry::{id}"), at any nesting depth inside a replicator, is resolved
      * to that entry's public URL, so a template can use it directly as an
-     * <a href> instead of the raw "entry::..." marker.
+     * <a href> instead of the raw "entry::..." marker. An "author" field's
+     * stored user id is resolved to that user's name/email (never the
+     * password hash or other sensitive columns), so a template can use
+     * $data->fieldHandle->name directly.
      */
     public function fluentData(): Fluent
     {
-        return static::wrapFluent($this->resolveLinkFields($this->resolveTaxonomyFields($this->data), $this->blueprintFields()));
+        $data = $this->resolveTaxonomyFields($this->data);
+        $data = $this->resolveAuthorFields($data);
+        $data = $this->resolveLinkFields($data, $this->blueprintFields());
+
+        return static::wrapFluent($data);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function resolveAuthorFields(array $data): array
+    {
+        $authorFields = collect($this->blueprintFields())->where('type', 'author');
+
+        foreach ($authorFields as $field) {
+            $handle = $field['handle'];
+
+            if (empty($data[$handle])) {
+                continue;
+            }
+
+            $author = User::find($data[$handle]);
+
+            $data[$handle] = $author ? ['id' => $author->id, 'name' => $author->name, 'email' => $author->email] : null;
+        }
+
+        return $data;
     }
 
     /**

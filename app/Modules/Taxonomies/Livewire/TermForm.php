@@ -4,6 +4,7 @@ namespace App\Modules\Taxonomies\Livewire;
 
 use App\Models\Taxonomy;
 use App\Models\TaxonomyTerm;
+use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
@@ -366,6 +367,16 @@ class TermForm extends Component
     }
 
     /**
+     * Users an "author" field may pick from.
+     *
+     * @return Collection<int, User>
+     */
+    public function availableAuthors()
+    {
+        return User::orderBy('name')->get();
+    }
+
+    /**
      * @return Collection<int, AssetMeta>
      */
     public function selectedAssets(array $ids)
@@ -567,6 +578,7 @@ class TermForm extends Component
                 'toggle' => 'boolean',
                 'date' => 'date',
                 'select', 'radio' => Rule::in($field['options'] ?? []),
+                'author' => Rule::exists('users', 'id'),
                 default => 'string',
             };
 

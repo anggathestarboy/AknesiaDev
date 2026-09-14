@@ -260,7 +260,7 @@
 
         @unless ($field["type"] === "fieldset")
             <div class="mt-3 grid grid-cols-4 gap-3">
-                @if ($field["type"] === "replicator" || $field["type"] === "assets" || $field["type"] === "link" || $field["type"] === "taxonomy" || $field["type"] === "bard")
+                @if ($field["type"] === "replicator" || $field["type"] === "assets" || $field["type"] === "link" || $field["type"] === "taxonomy" || $field["type"] === "bard" || $field["type"] === "author")
                     <flux:input :label="__('Placeholder')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
                     <flux:input :label="__('Default value')" placeholder="{{ __('Not applicable for this type') }}" size="sm" disabled />
                 @else

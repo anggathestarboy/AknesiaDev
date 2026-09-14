@@ -3,6 +3,7 @@
 namespace App\Modules\Collections\Livewire;
 
 use App\Models\TaxonomyTerm;
+use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
@@ -560,6 +561,16 @@ class EntryForm extends Component
     }
 
     /**
+     * Users an "author" field may pick from.
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    public function availableAuthors()
+    {
+        return User::orderBy('name')->get();
+    }
+
+    /**
      * Terms a "taxonomy" field may pick from — every term of that taxonomy
      * on the entry's current site, since terms (like entries) are
      * per-site.
@@ -837,6 +848,7 @@ class EntryForm extends Component
                 'toggle' => 'boolean',
                 'date' => 'date',
                 'select', 'radio' => Rule::in($field['options'] ?? []),
+                'author' => Rule::exists('users', 'id'),
                 default => 'string',
             };
 

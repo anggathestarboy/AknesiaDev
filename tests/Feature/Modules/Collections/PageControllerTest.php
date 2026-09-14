@@ -349,3 +349,30 @@ test('a link field nested inside a replicator row also resolves to the linked en
         File::delete($path);
     }
 });
+
+test('an author field resolves to that user\'s name and email, not just the raw id', function () {
+    $path = resource_path('views/pages/dynamic/page_controller_test_author.blade.php');
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, '<p>{{ $data->author->name }} ({{ $data->author->email }})</p>');
+    $template = 'pages.dynamic.page_controller_test_author';
+
+    try {
+        Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://127.0.0.1', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+        $author = User::factory()->create(['name' => 'Jane Editor', 'email' => 'jane@example.com']);
+
+        Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['template' => $template, 'fields' => [
+            ['handle' => 'author', 'display' => 'Author', 'type' => 'author', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+        ]]]);
+        Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+        Entry::create([
+            'site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'status' => 'published',
+            'slug' => 'author-test', 'uri' => 'author-test',
+            'data' => ['title' => 'Post', 'author' => (string) $author->id],
+        ]);
+
+        $this->get('/author-test')->assertOk()->assertSee('Jane Editor')->assertSee('jane@example.com');
+    } finally {
+        File::delete($path);
+    }
+});
