@@ -35,6 +35,14 @@ class FormManager extends Component
 
     public string $redirectUrl = '';
 
+    /**
+     * Which field handles to show as columns in the submissions table.
+     * Empty means every field.
+     *
+     * @var array<int, string>
+     */
+    public array $previewFields = [];
+
     #[Computed]
     public function forms()
     {
@@ -47,9 +55,26 @@ class FormManager extends Component
         return Blueprint::orderBy('namespace')->orderBy('handle')->get();
     }
 
+    /**
+     * The currently-picked blueprint's fields, used by the "Preview
+     * columns" checkbox group. Empty while $createBlueprint is on (a
+     * brand-new blueprint starts with no fields anyway).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function selectedBlueprintFields(): array
+    {
+        if ($this->createBlueprint || $this->blueprint === '') {
+            return [];
+        }
+
+        return Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? [];
+    }
+
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'blueprint', 'redirectUrl']);
+        $this->reset(['editingId', 'handle', 'title', 'blueprint', 'redirectUrl', 'previewFields']);
         $this->createBlueprint = true;
         $this->storeSubmissions = true;
         Flux::modal('form-form')->show();
@@ -66,6 +91,7 @@ class FormManager extends Component
         $this->createBlueprint = false;
         $this->storeSubmissions = $form->storesSubmissions();
         $this->redirectUrl = (string) $form->redirectUrl();
+        $this->previewFields = $form->previewFieldHandles();
 
         Flux::modal('form-form')->show();
     }
@@ -83,6 +109,8 @@ class FormManager extends Component
             'blueprint' => [$this->createBlueprint ? 'exclude' : 'nullable', 'string', Rule::exists('blueprints', 'handle')],
             'storeSubmissions' => ['boolean'],
             'redirectUrl' => ['nullable', 'url', 'max:2048'],
+            'previewFields' => ['array'],
+            'previewFields.*' => ['string'],
         ]);
 
         $form = Form::updateOrCreate(['id' => $this->editingId], [
@@ -92,6 +120,7 @@ class FormManager extends Component
                 'blueprint' => $validated['blueprint'] ?? null,
                 'store_submissions' => $validated['storeSubmissions'],
                 'redirect_url' => $validated['redirectUrl'] ?: null,
+                'preview_fields' => $validated['previewFields'],
             ],
         ]);
 

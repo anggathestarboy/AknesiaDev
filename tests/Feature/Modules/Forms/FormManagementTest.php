@@ -130,6 +130,91 @@ test('a submission can be deleted from the submissions page', function () {
     expect(FormSubmission::find($submission->id))->toBeNull();
 });
 
+test('a form can choose which fields show as columns in the submissions table', function () {
+    $this->actingAs(User::factory()->create());
+    $blueprint = makeContactBlueprint();
+
+    Livewire::test(FormManager::class)
+        ->set('title', 'Contact Us')
+        ->set('handle', 'contact_us')
+        ->set('createBlueprint', false)
+        ->set('blueprint', $blueprint->handle)
+        ->set('previewFields', ['name', 'email'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $form = Form::where('handle', 'contact_us')->sole();
+
+    expect($form->previewFieldHandles())->toBe(['name', 'email']);
+});
+
+test('the submissions table only shows the configured preview columns when set', function () {
+    $this->actingAs(User::factory()->create());
+    makeContactBlueprint();
+    $form = Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => ['blueprint' => 'contact', 'preview_fields' => ['name']]]);
+    FormSubmission::create(['form' => 'contact', 'data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com', 'message' => 'Hi there']]);
+
+    $fields = Livewire::test(FormSubmissionManager::class, ['form' => $form])->instance()->fields();
+
+    expect(collect($fields)->pluck('handle')->all())->toBe(['name']);
+});
+
+test('the submissions table shows every field when no preview columns are configured', function () {
+    $this->actingAs(User::factory()->create());
+    makeContactBlueprint();
+    $form = Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => ['blueprint' => 'contact']]);
+
+    $fields = Livewire::test(FormSubmissionManager::class, ['form' => $form])->instance()->fields();
+
+    expect(collect($fields)->pluck('handle')->all())->toBe(['name', 'email', 'message']);
+});
+
+test('the submission detail page shows every field regardless of preview column configuration', function () {
+    $this->actingAs(User::factory()->create());
+    makeContactBlueprint();
+    $form = Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => ['blueprint' => 'contact', 'preview_fields' => ['name']]]);
+    $submission = FormSubmission::create(['form' => 'contact', 'data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com', 'message' => 'Hi there']]);
+
+    $this->get("/admin-panel/forms/contact/submissions/{$submission->id}")
+        ->assertOk()
+        ->assertSee('Jane Doe')
+        ->assertSee('jane@example.com')
+        ->assertSee('Hi there');
+});
+
+test('a submission from another form cannot be viewed through a mismatched form handle', function () {
+    $this->actingAs(User::factory()->create());
+    Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => []]);
+    Form::create(['handle' => 'newsletter', 'title' => 'Newsletter', 'settings' => []]);
+    $submission = FormSubmission::create(['form' => 'contact', 'data' => ['name' => 'Jane Doe']]);
+
+    $this->get("/admin-panel/forms/newsletter/submissions/{$submission->id}")->assertNotFound();
+});
+
+test('a submission can be exported as txt', function () {
+    $this->actingAs(User::factory()->create());
+    makeContactBlueprint();
+    Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => ['blueprint' => 'contact']]);
+    $submission = FormSubmission::create(['form' => 'contact', 'data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com', 'message' => 'Hi there']]);
+
+    $this->get("/admin-panel/forms/contact/submissions/{$submission->id}/export/txt")
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+        ->assertSee('Name: Jane Doe', false)
+        ->assertSee('Email: jane@example.com', false);
+});
+
+test('a submission can be exported as json', function () {
+    $this->actingAs(User::factory()->create());
+    makeContactBlueprint();
+    Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => ['blueprint' => 'contact']]);
+    $submission = FormSubmission::create(['form' => 'contact', 'data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com']]);
+
+    $this->get("/admin-panel/forms/contact/submissions/{$submission->id}/export/json")
+        ->assertOk()
+        ->assertJson(['name' => 'Jane Doe', 'email' => 'jane@example.com']);
+});
+
 test('submitting the public form endpoint validates required fields and shows friendly labels', function () {
     makeContactBlueprint();
     Form::create(['handle' => 'contact', 'title' => 'Contact', 'settings' => ['blueprint' => 'contact']]);

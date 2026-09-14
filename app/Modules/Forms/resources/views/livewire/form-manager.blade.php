@@ -54,7 +54,7 @@
             </div>
 
             @unless ($createBlueprint)
-                <flux:select wire:model="blueprint" size="sm" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
+                <flux:select wire:model.live="blueprint" size="sm" :label="__('Blueprint')" placeholder="{{ __('No blueprint') }}">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
                         <flux:select.option value="{{ $availableBlueprint->handle }}"> {{ $availableBlueprint->namespace ? "{$availableBlueprint->namespace}.{$availableBlueprint->handle}" : $availableBlueprint->handle }} </flux:select.option>
                     @endforeach
@@ -62,6 +62,14 @@
 
                 @if ($this->availableBlueprints->isEmpty())
                     <flux:text class="text-zinc-500">{{ __('No blueprints yet — create one in the Blueprints module first.') }}</flux:text>
+                @endif
+
+                @if ($this->selectedBlueprintFields !== [])
+                    <flux:checkbox.group wire:model="previewFields" :label="__('Preview columns')" :description="__('Which fields show as columns in the submissions table. Leave all unchecked to show every field.')">
+                        @foreach ($this->selectedBlueprintFields as $field)
+                            <flux:checkbox value="{{ $field['handle'] }}" label="{{ $field['display'] ?: $field['handle'] }}" />
+                        @endforeach
+                    </flux:checkbox.group>
                 @endif
             @endunless
 

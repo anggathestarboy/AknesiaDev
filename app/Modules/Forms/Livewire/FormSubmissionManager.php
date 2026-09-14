@@ -21,16 +21,25 @@ class FormSubmissionManager extends Component
     }
 
     /**
-     * The blueprint's top-level fields, used as this table's columns —
+     * The blueprint's top-level fields shown as this table's columns —
      * mirrors how Statamic's submissions listing shows one column per
-     * field instead of a raw JSON dump.
+     * field instead of a raw JSON dump. Narrowed to the form's configured
+     * "preview columns" (see Form::previewFieldHandles()) when set;
+     * otherwise every field.
      *
      * @return array<int, array<string, mixed>>
      */
     #[Computed]
     public function fields(): array
     {
-        return $this->form->fields();
+        $fields = $this->form->fields();
+        $previewHandles = $this->form->previewFieldHandles();
+
+        if ($previewHandles === []) {
+            return $fields;
+        }
+
+        return collect($fields)->whereIn('handle', $previewHandles)->values()->all();
     }
 
     #[Computed]

@@ -21,7 +21,8 @@
                         <flux:table.cell>{{ is_array($value) ? implode(', ', $value) : $value }}</flux:table.cell>
                     @endforeach
                     <flux:table.cell>{{ $submission->created_at?->format('Y-m-d H:i') }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end">
+                    <flux:table.cell class="flex justify-end gap-2">
+                        <flux:button size="sm" :href="route('forms.submissions.show', ['form' => $form->handle, 'submission' => $submission->id])" wire:navigate>{{ __('View') }}</flux:button>
                         <flux:modal.trigger name="confirm-delete-submission">
                             <flux:button size="sm" variant="danger" type="button" x-on:click="deleteSubmissionId = '{{ $submission->id }}'">{{ __('Delete') }}</flux:button>
                         </flux:modal.trigger>

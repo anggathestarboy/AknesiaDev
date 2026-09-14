@@ -80,4 +80,16 @@ class Form extends Model
     {
         return $this->settings['redirect_url'] ?? null;
     }
+
+    /**
+     * Which field handles show as columns in the submissions table (see
+     * FormSubmissionManager). Empty means "every field" — the default
+     * before this was ever configured.
+     *
+     * @return array<int, string>
+     */
+    public function previewFieldHandles(): array
+    {
+        return $this->settings['preview_fields'] ?? [];
+    }
 }
