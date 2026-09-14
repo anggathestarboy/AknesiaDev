@@ -28,7 +28,7 @@
     $fieldTabSections = collect($tabs ?? [])->firstWhere("handle", $field["tab"])["sections"] ?? [];
 @endphp
 
-<div wire:key="field-{{ $field['_uid'] }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 p-1.5 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: false }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
+<div wire:key="field-{{ $field['_uid'] }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 px-1.5 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: false }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
     <div class="flex items-center justify-between bg-gray-100 rounded-lg w-full">
         <span wire:sort:handle class="flex h-full cursor-grab items-center px-1 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-300" title="{{ __('Drag to reorder') }}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
@@ -41,9 +41,9 @@
             </svg>
         </span>
 
-        <flux:text class="flex-1 self-center truncate px-2 text-sm font-medium hover:bg-gray-200/50 cursor-pointer" x-on:click="collapsed = !collapsed">
+        <flux:text class="flex-1 self-center text-sm font-medium hover:bg-black/5 rounded-md cursor-pointer py-1.5 px-3" x-on:click="collapsed = !collapsed">
             {{ $field["type"] === "fieldset" ? ($field["options"] ?: __("Untitled field")) : ($field["display"] ?: $field["handle"] ?: __("Untitled field")) }}
-            <span class="text-zinc-400">({{ $fieldtypes[$field["type"]] ?? $field["type"] }})</span>
+            <span class="text-zinc-400 text-xs">({{ $fieldtypes[$field["type"]] ?? $field["type"] }})</span>
         </flux:text>
 
         <div class="flex gap-1.5">
@@ -57,7 +57,7 @@
             </flux:modal.trigger>
 
             <div class="">
-                @if ($isTopLevelField && (count($tabs) > 1 || $fieldTabSections !== []))
+                {{-- @if ($isTopLevelField && (count($tabs) > 1 || $fieldTabSections !== []))
                     <div class="flex gap-2">
                         @if (count($tabs) > 1)
                             <flux:select wire:model.live="{{ $prefix }}.tab" size="xs">
@@ -68,14 +68,14 @@
                         @endif
 
                         @if ($fieldTabSections !== [])
-                            <flux:select wire:model="{{ $prefix }}.section" placeholder="{{ __('No section') }}" size="sm">
+                            <flux:select wire:model="{{ $prefix }}.section" placeholder="{{ __('No section') }}" size="xs">
                                 @foreach ($fieldTabSections as $sectionOption)
                                     <flux:select.option value="{{ $sectionOption['handle'] }}">{{ $sectionOption["display"] ?: $sectionOption["handle"] }}</flux:select.option>
                                 @endforeach
                             </flux:select>
                         @endif
                     </div>
-                @endif
+                @endif --}}
             </div>
         </div>
     </div>
