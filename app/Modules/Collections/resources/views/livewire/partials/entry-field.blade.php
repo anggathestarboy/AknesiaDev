@@ -428,7 +428,13 @@
     @endif
 @elseif ($field["type"] === "assets")
     @php
-        $selectedCount = count($assetIds ?? []);
+        // Deriving the count/limit check from the resolved, still-existing
+        // assets (not the raw stored id array) keeps it in sync with what's
+        // actually rendered below — an id whose asset was deleted from the
+        // Media Library would otherwise silently occupy a slot forever,
+        // hiding the "+" button even though nothing visible is selected.
+        $validAssetIds = $this->selectedAssets($assetIds ?? [])->pluck("id")->all();
+        $selectedCount = count($validAssetIds);
         $maxReached = ($field["max_items"] ?? null) !== null && $selectedCount >= $field["max_items"];
     @endphp
     <div>
@@ -461,7 +467,7 @@
             @endforeach
 
             @unless ($maxReached)
-                <button type="button" wire:click='$dispatch("open-asset-picker", { path: {{ json_encode($path) }}, container: {{ json_encode($field['options'] ?? '') }}, selected: {{ json_encode($assetIds ?? []) }} })' class="flex size-16 items-center justify-center rounded border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600">
+                <button type="button" wire:click='$dispatch("open-asset-picker", { path: {{ json_encode($path) }}, container: {{ json_encode($field['options'] ?? '') }}, selected: {{ json_encode($validAssetIds) }}, max: {{ json_encode($field['max_items'] ?? null) }} })' class="flex size-16 items-center justify-center rounded border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600">
                     <flux:icon.plus class="size-5" />
                 </button>
             @endunless

@@ -4,6 +4,25 @@
             <flux:heading size="lg">{{ __('Select assets') }}</flux:heading>
         </div>
 
+        @if ($this->selectedAssets->isNotEmpty())
+            <div class="space-y-1.5 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700">
+                <flux:text class="text-xs font-medium text-zinc-500">{{ __('Selected — counts toward the limit even from other folders') }}</flux:text>
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($this->selectedAssets as $asset)
+                        <button type="button" wire:click="toggle({{ $asset->id }})" wire:key="picked-{{ $asset->id }}" title="{{ $asset->basename }}" class="group flex w-16 shrink-0 flex-col gap-1">
+                            <div class="relative size-16 overflow-hidden rounded border-2 border-blue-500">
+                                <div class="flex h-full w-full items-center justify-center overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                                    @include('media::partials._thumbnail', ['asset' => $asset])
+                                </div>
+                                <span class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100">✕</span>
+                            </div>
+                            <span class="w-full truncate text-center text-[11px] text-zinc-500">{{ $asset->basename }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             @if ($search === '')
                 <flux:breadcrumbs>

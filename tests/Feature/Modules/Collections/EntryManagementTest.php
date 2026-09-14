@@ -516,6 +516,26 @@ test('assets field enforces its configured minimum item count', function () {
         ->assertHasErrors(['data.gallery']);
 });
 
+test('a deleted asset still referenced by the field no longer occupies a slot toward its max', function () {
+    $this->actingAs(User::factory()->create());
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $survivor = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'survivor.webp', 'filename' => 'survivor', 'extension' => 'webp', 'path' => 'survivor.webp', 'meta' => []]);
+    $deletedId = $survivor->id + 999;
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos', 'min_items' => null, 'max_items' => 2],
+    ]]]);
+    $collection = makeBlogCollection();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'gallery-entry', 'data' => ['title' => 'x', 'status' => 'draft', 'gallery' => [$deletedId, $survivor->id]]]);
+
+    // The stored gallery has 2 ids, but one no longer exists as a real
+    // asset — the "+" button must still be offered since only 1 asset is
+    // actually there, not silently hidden by the ghost id filling the slot.
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->assertSeeHtml('open-asset-picker');
+});
+
 test('assets field enforces its configured maximum item count', function () {
     $this->actingAs(User::factory()->create());
 

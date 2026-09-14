@@ -3,9 +3,11 @@
 namespace App\Modules\Media\Livewire;
 
 use App\Modules\Media\Exceptions\MediaException;
+use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Media\Services\MediaService;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -13,7 +15,7 @@ use Livewire\WithFileUploads;
 
 /**
  * Global, reusable asset picker modal: any component can open it by
- * dispatching "open-asset-picker" (path, container, selected) and listening
+ * dispatching "open-asset-picker" (path, container, selected, max) and listening
  * for "assets-selected" (path, ids) to receive the result. Renders once per
  * page (e.g. included in EntryForm's view) and serves every "assets" field
  * on that page, including ones nested inside replicators.
@@ -37,6 +39,14 @@ class AssetPicker extends Component
      */
     public array $selectedIds = [];
 
+    /**
+     * The "assets" field's own max_items, if configured — enforced here too
+     * (not just by the field's own "+" button being hidden once already at
+     * the limit) so a user can't select past it from inside an already
+     * -open picker.
+     */
+    public ?int $maxSelectable = null;
+
     public string $folder = '';
 
     public string $search = '';
@@ -48,11 +58,12 @@ class AssetPicker extends Component
      * @param  array<int, int>  $selected
      */
     #[On('open-asset-picker')]
-    public function open(array $path, string $container, array $selected = []): void
+    public function open(array $path, string $container, array $selected = [], ?int $max = null): void
     {
         $this->targetPath = $path;
         $this->container = $container;
         $this->selectedIds = array_map('intval', $selected);
+        $this->maxSelectable = $max;
         $this->folder = '';
         $this->search = '';
 
@@ -84,6 +95,28 @@ class AssetPicker extends Component
         return $listing;
     }
 
+    /**
+     * The currently selected assets, regardless of which folder is being
+     * browsed right now — shown as their own strip in the picker (see
+     * asset-picker.blade.php) so a selection made from a different folder
+     * (or already saved on the field before the picker was even opened)
+     * still visibly counts toward the limit instead of silently occupying
+     * a slot with nothing checked-looking on screen.
+     *
+     * @return Collection<int, AssetMeta>
+     */
+    #[Computed]
+    public function selectedAssets()
+    {
+        if ($this->selectedIds === []) {
+            return collect();
+        }
+
+        $assets = AssetMeta::whereIn('id', $this->selectedIds)->get()->keyBy('id');
+
+        return collect($this->selectedIds)->map(fn (int $id) => $assets->get($id))->filter()->values();
+    }
+
     #[Computed]
     public function breadcrumbs(): array
     {
@@ -111,9 +144,19 @@ class AssetPicker extends Component
 
     public function toggle(int $assetId): void
     {
-        $this->selectedIds = $this->isSelected($assetId)
-            ? array_values(array_diff($this->selectedIds, [$assetId]))
-            : [...$this->selectedIds, $assetId];
+        if ($this->isSelected($assetId)) {
+            $this->selectedIds = array_values(array_diff($this->selectedIds, [$assetId]));
+
+            return;
+        }
+
+        if ($this->maxSelectable !== null && count($this->selectedIds) >= $this->maxSelectable) {
+            Flux::toast(text: __('You can only select up to :max.', ['max' => $this->maxSelectable]), variant: 'warning');
+
+            return;
+        }
+
+        $this->selectedIds = [...$this->selectedIds, $assetId];
     }
 
     public function isSelected(int $assetId): bool

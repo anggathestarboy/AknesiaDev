@@ -159,7 +159,7 @@ class SiteSettingsManager extends Component
 
     public function pickLogo(int $blockIndex): void
     {
-        $this->dispatch('open-asset-picker', path: ['__site_settings_logo__', $blockIndex], container: $this->assetContainer, selected: []);
+        $this->dispatch('open-asset-picker', path: ['__site_settings_logo__', $blockIndex], container: $this->assetContainer, selected: [], max: 1);
     }
 
     public function removeLogo(int $blockIndex): void
