@@ -1,4 +1,4 @@
-<section class="w-full max-w-6xl space-y-6" x-data="{ deleteFieldPath: null }">
+<section class="w-full max-w-6xl space-y-6" x-data="{ deleteFieldPath: null }" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div>
         <flux:link :href="route('blueprints.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Blueprints") }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit blueprint") : __("New blueprint") }}</flux:heading>

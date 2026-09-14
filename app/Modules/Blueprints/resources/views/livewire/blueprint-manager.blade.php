@@ -20,6 +20,7 @@
                 "globals" => __("Globals"),
                 "taxonomies" => __("Taxonomies"),
                 "navigations" => __("Navigation"),
+                "forms" => __("Forms"),
                 "other" => __("Other"),
             ];
         @endphp

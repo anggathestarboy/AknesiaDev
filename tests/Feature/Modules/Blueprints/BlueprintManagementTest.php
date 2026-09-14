@@ -1111,6 +1111,32 @@ test('blueprint can be updated and fields round-trip through edit, including con
     expect($blueprint->data['fields'][1]['validate_sometimes'])->toBeTrue();
 });
 
+test('saving an already-existing blueprint stays on the form instead of redirecting to the listing', function () {
+    $this->actingAs(User::factory()->create());
+
+    $blueprint = Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => []]]);
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
+        ->set('fields.0.handle', 'headline')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertNoRedirect();
+});
+
+test('saving a brand-new blueprint redirects to its own edit page, not the listing', function () {
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields.0.handle', 'headline')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    $component->assertRedirect(route('blueprints.edit', $blueprint));
+});
+
 test('the fields-collapsed-by-default preference is saved and reloaded on edit', function () {
     $this->actingAs(User::factory()->create());
 

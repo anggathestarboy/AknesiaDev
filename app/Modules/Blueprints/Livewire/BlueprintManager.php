@@ -33,7 +33,7 @@ class BlueprintManager extends Component
         return $this->blueprints->groupBy(function (Blueprint $blueprint): string {
             $prefix = explode('.', (string) $blueprint->namespace, 2)[0];
 
-            return in_array($prefix, ['collections', 'globals', 'taxonomies', 'navigations'], true) ? $prefix : 'other';
+            return in_array($prefix, ['collections', 'globals', 'taxonomies', 'navigations', 'forms'], true) ? $prefix : 'other';
         });
     }
 

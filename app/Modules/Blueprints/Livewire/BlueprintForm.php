@@ -7,6 +7,7 @@ use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Blueprints\Support\HasFieldBuilder;
 use App\Modules\Collections\Models\Collection;
+use App\Modules\Forms\Models\Form;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Navigation\Models\Navigation;
@@ -153,7 +154,13 @@ class BlueprintForm extends Component
                 'label' => "{$navigation->title} (navigations.{$navigation->handle})",
             ]);
 
-        return $collectionNamespaces->concat($globalSetNamespaces)->concat($taxonomyNamespaces)->concat($navigationNamespaces)->values();
+        $formNamespaces = Form::orderBy('title')->get()
+            ->map(fn (Form $form): array => [
+                'value' => "forms.{$form->handle}",
+                'label' => "{$form->title} (forms.{$form->handle})",
+            ]);
+
+        return $collectionNamespaces->concat($globalSetNamespaces)->concat($taxonomyNamespaces)->concat($navigationNamespaces)->concat($formNamespaces)->values();
     }
 
     /**
@@ -409,15 +416,23 @@ class BlueprintForm extends Component
             'fields' => array_map(fn (array $field): array => $this->normalizeFieldForStorage($field), $this->fields),
         ];
 
-        Blueprint::updateOrCreate(['id' => $this->editingId], [
+        $wasCreating = $this->editingId === null;
+
+        $blueprint = Blueprint::updateOrCreate(['id' => $this->editingId], [
             'namespace' => $this->namespace ?: null,
             'handle' => $validated['handle'],
             'data' => $data,
         ]);
 
+        $this->editingId = $blueprint->id;
+
         Flux::toast(variant: 'success', text: __('Blueprint saved.'));
 
-        $this->redirectRoute('blueprints.index', navigate: true);
+        // Stay on this form after saving — only a brand-new blueprint needs
+        // a redirect at all, since its URL still points at /create.
+        if ($wasCreating) {
+            $this->redirectRoute('blueprints.edit', ['blueprint' => $blueprint], navigate: true);
+        }
     }
 
     public function render(): View
