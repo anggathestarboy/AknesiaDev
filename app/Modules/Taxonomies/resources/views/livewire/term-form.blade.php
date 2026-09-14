@@ -2,7 +2,7 @@
     <div class="">
         {{-- <flux:link :href="route('taxonomies.terms', $taxonomy->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :taxonomy terms", ["taxonomy" => $taxonomy->title]) }}</flux:link> --}}
         <div class="flex gap-3 items-center border border-gray-200 py-2 px-3.5 rounded-xl">
-            <div class="w-2.5 h-2.5 bg-sky-500 rounded-full"></div>
+            <div class="w-2.5 h-6 bg-sky-500 rounded-full"></div>
             <flux:heading size="xl">{{ $editingId ? __("Edit term") : __("New term") }}</flux:heading>
         </div>
     </div>

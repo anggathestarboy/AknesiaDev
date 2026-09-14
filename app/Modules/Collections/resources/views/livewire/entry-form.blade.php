@@ -7,11 +7,11 @@
         {{-- <flux:link :href="route('collections.entries', $collection->handle)" variant="subtle" wire:navigate class="text-sm">{{ __("← :collection entries", ["collection" => $collection->title]) }}</flux:link> --}}
         <div class="flex gap-3 items-center border border-gray-200 py-2 px-3.5 rounded-xl">
             @if ($status == "published")
-                <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                <div class="w-2.5 h-6 bg-emerald-500 rounded-full"></div>
             @elseif ($status == "need_review")
-                <div class="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>
+                <div class="w-2.5 h-6 bg-amber-500 rounded-full"></div>
             @elseif ($status == "draft")
-                <div class="w-2.5 h-2.5 bg-gray-500 rounded-full"></div>
+                <div class="w-2.5 h-6 bg-gray-500 rounded-full"></div>
             @endif
             <flux:heading size="xl">{{ $editingId ? $title : __("New Entry") }}</flux:heading>
         </div>
