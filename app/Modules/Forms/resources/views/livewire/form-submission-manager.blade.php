@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteSubmissionId: null }">
     <div>
         <flux:link :href="route('forms.index')" variant="subtle" wire:navigate class="text-sm">{{ __('← Forms') }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ __(':title submissions', ['title' => $form->title]) }}</flux:heading>
@@ -22,7 +22,9 @@
                     @endforeach
                     <flux:table.cell>{{ $submission->created_at?->format('Y-m-d H:i') }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end">
-                        <flux:button size="sm" variant="danger" wire:click="delete('{{ $submission->id }}')" wire:confirm="{{ __('Delete this submission?') }}">{{ __('Delete') }}</flux:button>
+                        <flux:modal.trigger name="confirm-delete-submission">
+                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteSubmissionId = '{{ $submission->id }}'">{{ __('Delete') }}</flux:button>
+                        </flux:modal.trigger>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -32,4 +34,19 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+
+    <flux:modal name="confirm-delete-submission" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('Delete this submission?') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('This cannot be undone.') }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteSubmissionId)">{{ __('Delete') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </section>

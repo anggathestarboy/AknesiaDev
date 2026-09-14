@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteNavigationId: null }">
     <div class="flex items-center justify-between">
         <div>
             <flux:heading size="lg">{{ __("Navigation") }}</flux:heading>
@@ -36,7 +36,9 @@
                         @if ($this->isProtected($navigation))
                             <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __("Delete") }}</flux:button>
                         @else
-                            <flux:button size="sm" variant="danger" wire:click="delete({{ $navigation->id }})" wire:confirm="{{ __('Delete this navigation?') }}">{{ __("Delete") }}</flux:button>
+                            <flux:modal.trigger name="confirm-delete-navigation">
+                                <flux:button size="sm" variant="danger" type="button" x-on:click="deleteNavigationId = {{ $navigation->id }}">{{ __("Delete") }}</flux:button>
+                            </flux:modal.trigger>
                         @endif
                     </flux:table.cell>
                 </flux:table.row>
@@ -90,5 +92,20 @@
                 <flux:button variant="primary" type="submit">{{ __("Save") }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <flux:modal name="confirm-delete-navigation" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this navigation?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteNavigationId)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
     </flux:modal>
 </section>

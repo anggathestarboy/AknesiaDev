@@ -65,7 +65,7 @@
             <button type="button" wire:click.stop="duplicateFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Duplicate") }}</button>
             <button type="button" wire:click.stop="cutFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Cut") }}</button>
             <button type="button" wire:click.stop="downloadFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Download") }}</button>
-            <button type="button" wire:click.stop="deleteFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+            <button type="button" wire:click.stop="askDeleteFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
         </div>
 
         <button type="button" x-on:click.stop="contextMenu = contextMenu === 'file-{{ $asset->id }}' ? null : 'file-{{ $asset->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10" class="absolute top-1 right-1 hidden rounded bg-white/80 p-1 hover:bg-zinc-200 group-hover:block dark:bg-zinc-900/80 dark:hover:bg-zinc-700">

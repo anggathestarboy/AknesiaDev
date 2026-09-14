@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteBlueprintId: null }">
     <div class="flex items-center justify-between">
         <div>
             <flux:heading size="lg">{{ __("Blueprints") }}</flux:heading>
@@ -47,7 +47,9 @@
                                     <flux:table.cell>{{ count($blueprint->data["fields"] ?? []) }}</flux:table.cell>
                                     <flux:table.cell class="flex justify-end gap-2">
                                         <flux:button size="sm" :href="route('blueprints.edit', $blueprint)" wire:navigate>{{ __("Edit") }}</flux:button>
-                                        <flux:button size="sm" variant="danger" wire:click="delete({{ $blueprint->id }})" wire:confirm="{{ __('Delete this blueprint?') }}">{{ __("Delete") }}</flux:button>
+                                        <flux:modal.trigger name="confirm-delete-blueprint">
+                                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteBlueprintId = {{ $blueprint->id }}">{{ __("Delete") }}</flux:button>
+                                        </flux:modal.trigger>
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach
@@ -57,4 +59,19 @@
             @endif
         @endforeach
     @endif
+
+    <flux:modal name="confirm-delete-blueprint" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this blueprint?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteBlueprintId)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </section>

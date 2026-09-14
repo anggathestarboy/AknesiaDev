@@ -190,6 +190,15 @@
         </div>
     </flux:modal>
 
+    <flux:modal name="delete-file" wire:model="showDeleteFile" class="space-y-6">
+        <flux:heading size="lg">{{ __("Delete File") }}</flux:heading>
+        <flux:text>{{ __("This file will be permanently deleted. This cannot be undone.") }}</flux:text>
+        <div class="flex justify-end gap-2">
+            <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showDeleteFile', false)">{{ __("Cancel") }}</flux:button>
+            <flux:button class="cursor-pointer" variant="danger" wire:click="confirmDeleteFile">{{ __("Delete") }}</flux:button>
+        </div>
+    </flux:modal>
+
     <flux:modal name="bulk-delete" wire:model="showBulkDelete" class="space-y-6">
         <flux:heading size="lg">{{ __("Delete Selected") }}</flux:heading>
         <flux:text>{{ __("This will permanently delete the selected items, including the contents of any selected folders. This cannot be undone.") }}</flux:text>

@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteFieldsetId: null }">
     <div class="flex items-center justify-between">
         <div>
             <flux:heading size="lg">{{ __('Fieldsets') }}</flux:heading>
@@ -22,7 +22,9 @@
                     <flux:table.cell>{{ count($fieldset->data['fields'] ?? []) }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-2">
                         <flux:button size="sm" :href="route('blueprints.fieldsets.edit', $fieldset)" wire:navigate>{{ __('Edit') }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $fieldset->id }})" wire:confirm="{{ __('Delete this fieldset?') }}">{{ __('Delete') }}</flux:button>
+                        <flux:modal.trigger name="confirm-delete-fieldset">
+                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteFieldsetId = {{ $fieldset->id }}">{{ __('Delete') }}</flux:button>
+                        </flux:modal.trigger>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -32,4 +34,19 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+
+    <flux:modal name="confirm-delete-fieldset" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('Delete this fieldset?') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('This cannot be undone.') }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteFieldsetId)">{{ __('Delete') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </section>

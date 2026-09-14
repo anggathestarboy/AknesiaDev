@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteTermId: null }">
     <div class="flex items-start justify-between">
         <div>
             <flux:link :href="route('taxonomies.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Taxonomies") }}</flux:link>
@@ -68,7 +68,9 @@
                     <flux:table.cell>{{ $term->updated_at?->diffForHumans() }}</flux:table.cell>
                     <flux:table.cell class="flex w-32 justify-end gap-2">
                         <flux:button size="sm" :href="route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $term->id }})" wire:confirm="{{ __('Delete this term?') }}">{{ __("Delete") }}</flux:button>
+                        <flux:modal.trigger name="confirm-delete-term">
+                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteTermId = {{ $term->id }}">{{ __("Delete") }}</flux:button>
+                        </flux:modal.trigger>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -78,4 +80,19 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+
+    <flux:modal name="confirm-delete-term" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this term?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteTermId)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </section>

@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteUserId: null }">
     <div class="flex items-start justify-between">
         <div>
             <flux:heading size="lg">{{ __("Users") }}</flux:heading>
@@ -46,7 +46,9 @@
                     </flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-2 w-32">
                         <flux:button size="sm" :href="route('users.edit', ['user' => $user->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete('{{ $user->id }}')" wire:confirm="{{ __('Delete this user?') }}">{{ __("Delete") }}</flux:button>
+                        <flux:modal.trigger name="confirm-delete-user">
+                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteUserId = '{{ $user->id }}'">{{ __("Delete") }}</flux:button>
+                        </flux:modal.trigger>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -56,4 +58,19 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+
+    <flux:modal name="confirm-delete-user" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this user?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteUserId)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </section>

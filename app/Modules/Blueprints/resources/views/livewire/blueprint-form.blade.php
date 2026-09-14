@@ -1,4 +1,4 @@
-<section class="w-full max-w-6xl space-y-6" x-data="{ deleteFieldPath: null }" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
+<section class="w-full max-w-6xl space-y-6" x-data="{ deleteFieldPath: null, deleteTabIndex: null, deleteSectionTabIndex: null, deleteSectionIndex: null }" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div>
         <flux:link :href="route('blueprints.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Blueprints") }}</flux:link>
         <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit blueprint") : __("New blueprint") }}</flux:heading>
@@ -92,7 +92,9 @@
                                             <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" />
                                             <flux:menu>
                                                 <flux:menu.item icon="pencil" wire:click="$set('editingTabIndex', {{ $tabIndex }})">{{ __("Edit") }}</flux:menu.item>
-                                                <flux:menu.item icon="trash" variant="danger" wire:click="removeTab({{ $tabIndex }})" wire:confirm="{{ __('Delete this tab? Its fields will move back to Main.') }}">{{ __("Delete") }}</flux:menu.item>
+                                                <flux:modal.trigger name="confirm-delete-tab">
+                                                    <flux:menu.item icon="trash" variant="danger" x-on:click="deleteTabIndex = {{ $tabIndex }}">{{ __("Delete") }}</flux:menu.item>
+                                                </flux:modal.trigger>
                                             </flux:menu>
                                         </flux:dropdown>
                                     @endif
@@ -194,7 +196,9 @@
                                                     <flux:button size="xs" variant="ghost" icon="ellipsis-vertical" />
                                                     <flux:menu>
                                                         <flux:menu.item icon="pencil" wire:click="$set('editingSection', [{{ $tabIndex }}, {{ $sectionIndex }}])">{{ __("Edit") }}</flux:menu.item>
-                                                        <flux:menu.item icon="trash" variant="danger" wire:click="removeSection({{ $tabIndex }}, {{ $sectionIndex }})" wire:confirm="{{ __('Delete this section? Its fields will be ungrouped.') }}">{{ __("Delete") }}</flux:menu.item>
+                                                        <flux:modal.trigger name="confirm-delete-section">
+                                                            <flux:menu.item icon="trash" variant="danger" x-on:click="deleteSectionTabIndex = {{ $tabIndex }}; deleteSectionIndex = {{ $sectionIndex }}">{{ __("Delete") }}</flux:menu.item>
+                                                        </flux:modal.trigger>
                                                     </flux:menu>
                                                 </flux:dropdown>
                                                 <flux:button size="xs" variant="primary" type="button" wire:click="addField('{{ $tab['handle'] }}', '{{ $section['handle'] }}')">{{ __("Add field") }}</flux:button>
@@ -248,6 +252,36 @@
                 </flux:modal.close>
                 <flux:modal.close>
                     <flux:button variant="danger" type="button" wire:click="removeField(deleteFieldPath)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="confirm-delete-tab" class="min-w-[22rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this tab?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("Its fields will move back to Main. This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" wire:click="removeTab(deleteTabIndex)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="confirm-delete-section" class="min-w-[22rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this section?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("Its fields will be ungrouped. This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" wire:click="removeSection(deleteSectionTabIndex, deleteSectionIndex)">{{ __("Delete") }}</flux:button>
                 </flux:modal.close>
             </div>
         </div>

@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteGroupId: null }">
     <div class="flex items-start justify-between">
         <div>
             <flux:heading size="lg">{{ __("User Groups") }}</flux:heading>
@@ -34,7 +34,9 @@
                     <flux:table.cell>{{ $group->users_count }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-2 w-32">
                         <flux:button size="sm" wire:click="edit({{ $group->id }})">{{ __("Edit") }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $group->id }})" wire:confirm="{{ __('Delete this group?') }}">{{ __("Delete") }}</flux:button>
+                        <flux:modal.trigger name="confirm-delete-group">
+                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteGroupId = {{ $group->id }}">{{ __("Delete") }}</flux:button>
+                        </flux:modal.trigger>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -74,5 +76,20 @@
                 <flux:button variant="primary" type="submit">{{ __("Save") }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <flux:modal name="confirm-delete-group" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete this group?") }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This cannot be undone.") }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteGroupId)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
     </flux:modal>
 </section>
