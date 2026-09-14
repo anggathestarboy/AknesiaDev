@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data="{ deleteFormId: null }">
     <div class="flex items-center justify-between">
         <div>
             <flux:heading size="lg">{{ __('Forms') }}</flux:heading>
@@ -27,7 +27,9 @@
                     <flux:table.cell class="flex justify-end gap-2">
                         <flux:button size="sm" :href="route('forms.submissions', $form->handle)" wire:navigate>{{ __('Submissions') }}</flux:button>
                         <flux:button size="sm" wire:click="edit({{ $form->id }})">{{ __('Settings') }}</flux:button>
-                        <flux:button size="sm" variant="danger" wire:click="delete({{ $form->id }})" wire:confirm="{{ __('Delete this form?') }}">{{ __('Delete') }}</flux:button>
+                        <flux:modal.trigger name="confirm-delete-form">
+                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteFormId = {{ $form->id }}">{{ __('Delete') }}</flux:button>
+                        </flux:modal.trigger>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -78,5 +80,20 @@
                 <flux:button variant="primary" type="submit">{{ __('Save') }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <flux:modal name="confirm-delete-form" class="min-w-[24rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __('Delete this form?') }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __('This cannot be undone.') }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteFormId)">{{ __('Delete') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
     </flux:modal>
 </section>
