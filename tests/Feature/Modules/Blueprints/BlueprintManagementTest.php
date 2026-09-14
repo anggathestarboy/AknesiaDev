@@ -62,7 +62,7 @@ test('namespace options also include existing global sets, and a globals-namespa
     Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
         ->assertSet('namespace', 'globals.site-settings')
         ->set('fields', [
-            ['handle' => 'site_name', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'site_name', 'display' => 'Site Name', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -82,7 +82,7 @@ test('namespace options also include existing navigations, and a navigations-nam
     Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
         ->assertSet('namespace', 'navigations.header')
         ->set('fields', [
-            ['handle' => 'icon', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'icon', 'display' => 'Icon', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -106,7 +106,7 @@ test('blueprint namespace must match an existing collection', function () {
         ->set('namespace', 'collections.does-not-exist')
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['namespace']);
@@ -118,7 +118,7 @@ test('blueprint handle rejects spaces and dashes', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'blog post')
         ->set('fields', [
-            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['handle']);
@@ -126,7 +126,7 @@ test('blueprint handle rejects spaces and dashes', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'blog-post')
         ->set('fields', [
-            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['handle']);
@@ -138,7 +138,7 @@ test('blueprint can be created with no namespace', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'seo')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -155,7 +155,7 @@ test('blueprint can be created with fields via the field builder', function () {
         ->set('handle', 'post')
         ->set('fields', [
             ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => true, 'options' => '', 'placeholder' => 'Enter a headline', 'default' => '', 'validation' => 'max:255', 'instructions' => 'Shown in listings.', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
-            ['handle' => 'status', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'draft, published, archived', 'placeholder' => '', 'default' => 'draft', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
+            ['handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false, 'options' => 'draft, published, archived', 'placeholder' => '', 'default' => 'draft', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -226,7 +226,7 @@ test('blueprint can be assigned a template selected from resources/views/pages',
             ->set('handle', 'home')
             ->set('template', 'pages.dynamic.blueprint_test_home')
             ->set('fields', [
-                ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+                ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
             ])
             ->call('save')
             ->assertHasNoErrors();
@@ -244,7 +244,7 @@ test('blueprint template must be an existing file under resources/views/pages', 
         ->set('handle', 'home')
         ->set('template', 'pages.dynamic.does_not_exist')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['template']);
@@ -256,8 +256,8 @@ test('blueprint field can show when another field matches a value', function () 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'type', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'article, video', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => true, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
-            ['handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'url', 'instructions' => '', 'sometimes' => true, 'condition_mode' => 'show', 'condition_field' => 'type', 'condition_operator' => 'equals', 'condition_value' => 'video'],
+            ['handle' => 'type', 'display' => 'Type', 'type' => 'select', 'required' => false, 'options' => 'article, video', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => true, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
+            ['handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'url', 'instructions' => '', 'sometimes' => true, 'condition_mode' => 'show', 'condition_field' => 'type', 'condition_operator' => 'equals', 'condition_value' => 'video'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -279,8 +279,8 @@ test('blueprint field can hide when another field matches a value', function () 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'status', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'draft, published', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
-            ['handle' => 'draft_note', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'hide', 'condition_field' => 'status', 'condition_operator' => 'equals', 'condition_value' => 'published'],
+            ['handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false, 'options' => 'draft, published', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
+            ['handle' => 'draft_note', 'display' => 'Draft Note', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'hide', 'condition_field' => 'status', 'condition_operator' => 'equals', 'condition_value' => 'published'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -298,7 +298,7 @@ test('blueprint condition requires a target field to be selected', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => 'x'],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => 'x'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.condition_field']);
@@ -310,7 +310,7 @@ test('blueprint condition cannot reference the field itself', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => 'headline', 'condition_operator' => 'equals', 'condition_value' => 'x'],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => 'headline', 'condition_operator' => 'equals', 'condition_value' => 'x'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.condition_field']);
@@ -322,8 +322,8 @@ test('blueprint condition requires a value to compare against', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
-            ['handle' => 'subtitle', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => 'headline', 'condition_operator' => 'equals', 'condition_value' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => ''],
+            ['handle' => 'subtitle', 'display' => 'Subtitle', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false, 'condition_mode' => 'show', 'condition_field' => 'headline', 'condition_operator' => 'equals', 'condition_value' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.1.condition_value']);
@@ -350,7 +350,7 @@ test('blueprint rejects an invalid Laravel validation rule string', function () 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'not_a_real_rule', 'instructions' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'not_a_real_rule', 'instructions' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.validation']);
@@ -362,7 +362,7 @@ test('blueprint rejects a validation rule string with disallowed characters', fu
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'max:255; DROP TABLE users;', 'instructions' => ''],
+            ['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '', 'validation' => 'max:255; DROP TABLE users;', 'instructions' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.validation']);
@@ -374,7 +374,7 @@ test('blueprint accepts a valid date default value', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'published_at', 'display' => '', 'type' => 'date', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '2026-01-15', 'validation' => '', 'instructions' => ''],
+            ['handle' => 'published_at', 'display' => 'Published At', 'type' => 'date', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => '2026-01-15', 'validation' => '', 'instructions' => ''],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -391,7 +391,7 @@ test('blueprint rejects a malformed date default value', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'published_at', 'display' => '', 'type' => 'date', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => 'not-a-date', 'validation' => '', 'instructions' => ''],
+            ['handle' => 'published_at', 'display' => 'Published At', 'type' => 'date', 'required' => false, 'options' => '', 'placeholder' => '', 'default' => 'not-a-date', 'validation' => '', 'instructions' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.default']);
@@ -415,7 +415,7 @@ test('blueprint handle must be unique within its namespace', function () {
     Livewire::test(BlueprintForm::class)
         ->set('namespace', 'collections.blog')
         ->set('handle', 'post')
-        ->set('fields', [['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '']])
+        ->set('fields', [['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false, 'options' => '']])
         ->call('save')
         ->assertHasErrors(['handle']);
 });
@@ -436,8 +436,8 @@ test('blueprint field handles must be unique within the blueprint', function () 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields']);
@@ -455,13 +455,41 @@ test('blueprint field handle must match the allowed format', function () {
         ->assertHasErrors(['fields.0.handle']);
 });
 
+test('blueprint field label and handle are both required', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.handle', 'fields.0.display']);
+});
+
+test('a fieldset field does not require a label or handle, since it has no such inputs of its own', function () {
+    $this->actingAs(User::factory()->create());
+
+    Fieldset::create(['handle' => 'seo', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
+    ]]]);
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => '', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => 'seo'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors(['fields.0.handle', 'fields.0.display']);
+});
+
 test('blueprint field handle cannot be "title" — it is a reserved default field', function () {
     $this->actingAs(User::factory()->create());
 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.handle']);
@@ -474,10 +502,10 @@ test('replicator field can be created with sub-fields', function () {
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
-                    ['handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => true],
-                    ['handle' => 'featured', 'display' => '', 'type' => 'toggle', 'required' => false],
+                    ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => true],
+                    ['handle' => 'featured', 'display' => 'Featured', 'type' => 'toggle', 'required' => false],
                 ],
             ],
         ])
@@ -498,7 +526,7 @@ test('replicator field requires at least one sub-field', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
+            ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.replicator_fields']);
@@ -511,9 +539,9 @@ test('replicator sub-field handle cannot be "title"', function () {
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
-                    ['handle' => 'title', 'display' => '', 'type' => 'text', 'required' => false],
+                    ['handle' => 'title', 'display' => 'Title', 'type' => 'text', 'required' => false],
                 ],
             ],
         ])
@@ -528,10 +556,10 @@ test('replicator sub-field default value, placeholder and instructions round-tri
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
                     [
-                        'handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => false,
+                        'handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false,
                         'placeholder' => 'Enter a caption', 'default' => 'Untitled', 'validation' => 'max:100', 'instructions' => 'Shown under the image',
                     ],
                 ],
@@ -557,9 +585,9 @@ test('replicator sub-field with an invalid validation rule string fails', functi
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
-                    ['handle' => 'caption', 'display' => '', 'type' => 'text', 'required' => false, 'validation' => 'not_a_real_rule'],
+                    ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'validation' => 'not_a_real_rule'],
                 ],
             ],
         ])
@@ -574,12 +602,12 @@ test('replicator field can contain another replicator, nested to any depth', fun
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'sections', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
                     [
-                        'handle' => 'items', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                        'handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false, 'options' => '',
                         'replicator_fields' => [
-                            ['handle' => 'label', 'display' => '', 'type' => 'text', 'required' => true],
+                            ['handle' => 'label', 'display' => 'Label', 'type' => 'text', 'required' => true],
                         ],
                     ],
                 ],
@@ -604,9 +632,9 @@ test('nested replicator requires at least one sub-field, with an error at the co
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'sections', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
-                    ['handle' => 'items', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => ''],
+                    ['handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false, 'options' => ''],
                 ],
             ],
         ])
@@ -621,10 +649,10 @@ test('replicator sub-field can be a select with options and sometimes', function
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
                     [
-                        'handle' => 'size', 'display' => '', 'type' => 'select', 'required' => false,
+                        'handle' => 'size', 'display' => 'Size', 'type' => 'select', 'required' => false,
                         'options' => 'small, medium, large', 'sometimes' => true,
                     ],
                 ],
@@ -646,11 +674,11 @@ test('replicator sub-field can have a show-when condition scoped to its own sibl
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
-                    ['handle' => 'kind', 'display' => '', 'type' => 'select', 'required' => false, 'options' => 'image, video'],
+                    ['handle' => 'kind', 'display' => 'Kind', 'type' => 'select', 'required' => false, 'options' => 'image, video'],
                     [
-                        'handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false,
+                        'handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false,
                         'condition_mode' => 'show', 'condition_field' => 'kind', 'condition_operator' => 'equals', 'condition_value' => 'video',
                     ],
                 ],
@@ -676,10 +704,10 @@ test('replicator sub-field condition cannot reference a field outside the replic
         ->set('handle', 'post')
         ->set('fields', [
             [
-                'handle' => 'gallery', 'display' => '', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
                 'replicator_fields' => [
                     [
-                        'handle' => 'video_url', 'display' => '', 'type' => 'text', 'required' => false,
+                        'handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false,
                         'condition_mode' => 'show', 'condition_field' => 'does_not_exist', 'condition_operator' => 'equals', 'condition_value' => 'video',
                     ],
                 ],
@@ -719,8 +747,8 @@ test('blueprint can add a tab and assign a field to it', function () {
             ['handle' => 'sidebar', 'display' => 'Sidebar'],
         ])
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main'],
-            ['handle' => 'seo_title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'sidebar'],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main'],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'sidebar'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -870,6 +898,7 @@ test('the "main" tab cannot be renamed or removed', function () {
         ->assertCount('tabs', 1)
         ->set('handle', 'post')
         ->set('fields.0.handle', 'headline')
+        ->set('fields.0.display', 'Headline')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -1022,8 +1051,8 @@ test('a section can be added to a tab and a field assigned to it', function () {
             ]],
         ])
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => ''],
-            ['handle' => 'seo_title', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'seo'],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => ''],
+            ['handle' => 'seo_title', 'display' => 'Seo Title', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'seo'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1082,7 +1111,7 @@ test('a field cannot be assigned to a section that does not exist in its tab', f
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'does_not_exist'],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'main', 'section' => 'does_not_exist'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.section']);
@@ -1094,7 +1123,7 @@ test('a section handle must be unique within its tab', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->set('tabs', [
             ['handle' => 'main', 'display' => 'Main', 'sections' => [
@@ -1112,7 +1141,7 @@ test('a new tab requires a unique, valid handle other than "main"', function () 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => ''],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => ''],
         ])
         ->set('tabs', [
             ['handle' => 'main', 'display' => 'Main'],
@@ -1128,7 +1157,7 @@ test('a field cannot be assigned to a tab that does not exist', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'headline', 'display' => '', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'does_not_exist'],
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'options' => '', 'tab' => 'does_not_exist'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.tab']);
@@ -1211,6 +1240,7 @@ test('saving an already-existing blueprint stays on the form instead of redirect
 
     Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
         ->set('fields.0.handle', 'headline')
+        ->set('fields.0.display', 'Headline')
         ->call('save')
         ->assertHasNoErrors()
         ->assertNoRedirect();
@@ -1222,6 +1252,7 @@ test('saving a brand-new blueprint redirects to its own edit page, not the listi
     $component = Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields.0.handle', 'headline')
+        ->set('fields.0.display', 'Headline')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -1236,6 +1267,7 @@ test('the fields-collapsed-by-default preference is saved and reloaded on edit',
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields.0.handle', 'headline')
+        ->set('fields.0.display', 'Headline')
         ->set('fieldsCollapsedByDefault', true)
         ->call('save')
         ->assertHasNoErrors();
@@ -1341,7 +1373,7 @@ test('assets field can be created scoped to an asset container', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos'],
+            ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'options' => 'photos'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1360,7 +1392,7 @@ test('taxonomy field can be created scoped to a taxonomy with min/max selections
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'categories', 'display' => '', 'type' => 'taxonomy', 'required' => false, 'options' => 'categories', 'min_items' => '1', 'max_items' => '3'],
+            ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'options' => 'categories', 'min_items' => '1', 'max_items' => '3'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1379,7 +1411,7 @@ test('taxonomy field requires a taxonomy to be selected', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'categories', 'display' => '', 'type' => 'taxonomy', 'required' => false, 'options' => ''],
+            ['handle' => 'categories', 'display' => 'Categories', 'type' => 'taxonomy', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.options']);
@@ -1424,7 +1456,7 @@ test('assets field requires an asset container to be selected', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => ''],
+            ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.options']);
@@ -1436,7 +1468,7 @@ test('assets field container must reference an existing asset container', functi
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'does-not-exist'],
+            ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'options' => 'does-not-exist'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.options']);
@@ -1450,7 +1482,7 @@ test('assets field can be given a min and max item count', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '1', 'max_items' => '3'],
+            ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '1', 'max_items' => '3'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1469,7 +1501,7 @@ test('assets field max items cannot be less than min items', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'gallery', 'display' => '', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '5', 'max_items' => '2'],
+            ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'options' => 'photos', 'min_items' => '5', 'max_items' => '2'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.max_items']);
@@ -1481,7 +1513,7 @@ test('radio field can be created with options and a default value', function () 
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'size', 'display' => '', 'type' => 'radio', 'required' => false, 'options' => 'small, medium, large', 'default' => 'medium'],
+            ['handle' => 'size', 'display' => 'Size', 'type' => 'radio', 'required' => false, 'options' => 'small, medium, large', 'default' => 'medium'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1499,7 +1531,7 @@ test('checkbox field stores its options and preset default values as arrays', fu
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'default' => 'cheese, olives'],
+            ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'default' => 'cheese, olives'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1517,7 +1549,7 @@ test('checkbox field can be given a min and max selection count', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'min_items' => '1', 'max_items' => '2'],
+            ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives, mushrooms', 'min_items' => '1', 'max_items' => '2'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1534,7 +1566,7 @@ test('checkbox field max selections cannot be less than min selections', functio
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'toppings', 'display' => '', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives', 'min_items' => '3', 'max_items' => '1'],
+            ['handle' => 'toppings', 'display' => 'Toppings', 'type' => 'checkbox', 'required' => false, 'options' => 'cheese, olives', 'min_items' => '3', 'max_items' => '1'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.max_items']);
@@ -1549,7 +1581,7 @@ test('link field can be scoped to allowed collections', function () {
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'pages, blog'],
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'options' => 'pages, blog'],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1567,7 +1599,7 @@ test('link field can be left unrestricted (any collection allowed)', function ()
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => ''],
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'options' => ''],
         ])
         ->call('save')
         ->assertHasNoErrors();
@@ -1581,7 +1613,7 @@ test('link field rejects an allowed-collection handle that does not exist', func
     Livewire::test(BlueprintForm::class)
         ->set('handle', 'post')
         ->set('fields', [
-            ['handle' => 'cta', 'display' => '', 'type' => 'link', 'required' => false, 'options' => 'does-not-exist'],
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'options' => 'does-not-exist'],
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.options']);

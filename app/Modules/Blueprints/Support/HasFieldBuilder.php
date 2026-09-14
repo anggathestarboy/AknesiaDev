@@ -516,7 +516,11 @@ trait HasFieldBuilder
             'handle' => $requireHandle
                 ? ['required', 'string', 'max:255', 'regex:/^[a-z][a-z0-9_]*$/', Rule::notIn(['title'])]
                 : ['nullable', 'string', 'max:255'],
-            'display' => ['nullable', 'string', 'max:255'],
+            // A "fieldset" field has no label/handle inputs of its own (see
+            // field-editor.blade.php) — it just imports another fieldset's
+            // fields — so $requireHandle (false only for that type) doubles
+            // as "does this field even have a label to require".
+            'display' => [$requireHandle ? 'required' : 'nullable', 'string', 'max:255'],
             'type' => ['required', Rule::in(array_keys(static::$fieldtypes))],
             'required' => ['boolean'],
             'localizable' => ['boolean'],

@@ -28,7 +28,7 @@
     $fieldTabSections = collect($tabs ?? [])->firstWhere("handle", $field["tab"])["sections"] ?? [];
 @endphp
 
-<div wire:key="field-{{ $field['_uid'] }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 px-1.5 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: @js($fieldsCollapsedByDefault ?? false) }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
+<div wire:key="field-{{ $field['_uid'] }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 px-1.5 py-1 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: @js($fieldsCollapsedByDefault ?? false) }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
     <div class="flex items-center justify-between bg-gray-100 rounded-lg w-full">
         <span wire:sort:handle class="flex h-full cursor-grab items-center px-1 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-300" title="{{ __('Drag to reorder') }}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
@@ -41,12 +41,20 @@
             </svg>
         </span>
 
-        <flux:text class="flex-1 self-center text-sm font-medium hover:bg-black/5 rounded-md cursor-pointer py-1.5 px-3" x-on:click="collapsed = !collapsed">
+        <flux:text class="flex-1 self-center flex items-center gap-1.5 text-sm font-medium hover:bg-black/5 rounded-md cursor-pointer py-1.5 px-3" x-on:click="collapsed = !collapsed">
             {{ $field["type"] === "fieldset" ? ($field["options"] ?: __("Untitled field")) : ($field["display"] ?: $field["handle"] ?: __("Untitled field")) }}
             <span class="text-zinc-400 text-xs">({{ $fieldtypes[$field["type"]] ?? $field["type"] }})</span>
         </flux:text>
 
         <div class="flex gap-1.5">
+            <div class="flex gap-2 items-center">
+                @if ($field["localizable"] ?? false)
+                    <flux:icon.language class="size-3.5 text-blue-700" title="{{ __('Localizable') }}" />
+                @endif
+                @if ($field["required"] ?? false)
+                    <flux:icon.exclamation-circle class="size-3.5 text-red-500" title="{{ __('Required') }}" />
+                @endif
+            </div>
             <div class="">
                 <flux:button size="xs" variant="ghost" icon="minus" type="button" class="cursor-pointer" x-show="!collapsed" x-on:click="collapsed = !collapsed" />
                 <flux:button size="xs" variant="ghost" icon="plus" type="button" class="cursor-pointer" x-show="collapsed" x-cloak x-on:click="collapsed = !collapsed" />
@@ -106,12 +114,15 @@
                 </div>
             @else
                 <div class="">
-                    <flux:input wire:model="{{ $prefix }}.display" :label="__('Label')" placeholder="Title" size="sm" x-ref="labelInput" />
+                    <flux:input wire:model="{{ $prefix }}.display" :label="__('Label')" placeholder="Title" size="sm" required x-ref="labelInput" />
+                    @error ("{$prefix}.display")
+                        <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                    @enderror
                 </div>
                 <div class="">
                     <div class="flex items-end gap-1">
                         <div class="flex-1">
-                            <flux:input wire:model="{{ $prefix }}.handle" :label="__('Handle')" placeholder="title" size="sm" x-ref="handleInput" />
+                            <flux:input wire:model="{{ $prefix }}.handle" :label="__('Handle')" placeholder="title" size="sm" required x-ref="handleInput" />
                         </div>
                         <flux:button
                             size="sm"
@@ -133,6 +144,9 @@
                             "
                         />
                     </div>
+                    @error ("{$prefix}.handle")
+                        <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                    @enderror
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 justify-start">
