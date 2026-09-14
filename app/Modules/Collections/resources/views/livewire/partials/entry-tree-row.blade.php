@@ -38,7 +38,7 @@
     </div>
 
     @if ($entry->children->isNotEmpty())
-        <ul @if ($orderable) wire:sort="reorderChildren" wire:sort:group-id="{{ $entry->id }}" @endif class="space-y-1.5 border-t border-zinc-200 bg-zinc-50 p-1.5 pl-4 dark:border-zinc-700 dark:bg-zinc-950">
+        <ul @if ($orderable) wire:sort="reorderChildren" wire:sort:group-id="{{ $entry->id }}" @endif class="space-y-1.5 border-t border-zinc-200 bg-gray-100 p-1.5 dark:border-zinc-700 dark:bg-zinc-950">
             @foreach ($entry->children as $child)
                 @include ("collections::livewire.partials.entry-tree-row", ["entry" => $child, "collection" => $collection, "statuses" => $statuses, "orderable" => $orderable])
             @endforeach
