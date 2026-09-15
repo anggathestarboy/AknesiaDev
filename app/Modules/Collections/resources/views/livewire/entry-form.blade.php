@@ -42,19 +42,18 @@
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
                     @foreach ($mainTabs as $tab)
                         <button type="button" wire:click="setActiveTab('{{ $tab['handle'] }}')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === $tab['handle'] ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ $tab["display"] }}</button>
-
                     @endforeach
-                    @if ($schemaEnabled)
-                        <button type="button" wire:click="setActiveTab('schema')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'schema' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ __("Schema") }}</button>
-                    @endif
                     @if ($seoEnabled)
                         <button type="button" wire:click="setActiveTab('seo')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'seo' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ __("SEO") }}</button>
+                    @endif
+                    @if ($schemaEnabled)
+                        <button type="button" wire:click="setActiveTab('schema')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'schema' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ __("Schema") }}</button>
                     @endif
                 </div>
             @endif
 
             @if ($schemaEnabled && $activeTab === "schema")
-                <flux:text class="text-sm text-zinc-500">{{ __('Schema.org JSON-LD blocks for this entry specifically — rendered alongside the site-wide blocks from Site Settings.') }}</flux:text>
+                <flux:text class="text-sm text-zinc-500">{{ __("Schema.org JSON-LD blocks for this entry specifically — rendered alongside the site-wide blocks from Site Settings.") }}</flux:text>
 
                 <div class="space-y-4">
                     @forelse ($schemaBlocks as $index => $block)
@@ -68,86 +67,86 @@
             @elseif ($seoEnabled && $activeTab === "seo")
                 @include ("collections::livewire.partials.seo-fields", ["seo" => $seo])
             @else
-            @php
-                $activeTabDef = collect($this->blueprintTabs)->firstWhere("handle", $activeTab);
-                $tabSections = $activeTabDef["sections"] ?? [];
-                $tabFields = collect($this->blueprintFields())->filter(fn($field) => ($field["tab"] ?? "main") === $activeTab);
-                $ungroupedFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === "");
-            @endphp
+                @php
+                    $activeTabDef = collect($this->blueprintTabs)->firstWhere("handle", $activeTab);
+                    $tabSections = $activeTabDef["sections"] ?? [];
+                    $tabFields = collect($this->blueprintFields())->filter(fn($field) => ($field["tab"] ?? "main") === $activeTab);
+                    $ungroupedFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === "");
+                @endphp
 
-            @forelse ($ungroupedFields as $field)
-                <div>
-                    @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
-                        <flux:field>
-                            <flux:label
-                                >{{ $field["display"] }}
-                                @if ($field["required"] ?? false)
-                                    <span class="text-red-500">*</span>
-                                @endif
-                            </flux:label>
-                            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
-                            <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
-                        </flux:field>
-                    @else
-                        @include ("collections::livewire.partials.entry-field",
-                            [
-                                "field" => $field,
-                                "path" => [$field["handle"]],
-                                "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
-                                "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
-                                "preview" => $this->collection->livePreview()
-                            ])
-                    @endif
-                </div>
-            @empty
-                @if ($tabFields->isEmpty())
-                    <flux:text class="text-zinc-500"> {{ count($this->blueprintFields()) === 0 ? __("This blueprint has no fields yet.") : __("No fields in this tab.") }} </flux:text>
-                @endif
-            @endforelse
-
-            @foreach ($tabSections as $section)
-                @php $sectionFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === $section["handle"]); @endphp
-                @if ($sectionFields->isNotEmpty())
-                    <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80">
-                        <div class="font-semibold text-black px-2">
-                            <flux:subheading>{{ $section["display"] }}</flux:subheading>
-                        </div>
-
-                        <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
-                            @foreach ($sectionFields as $field)
-                                <div>
-                                    @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
-                                        <flux:field>
-                                            <flux:label
-                                                >{{ $field["display"] }}
-                                                @if ($field["required"] ?? false)
-                                                    <span class="text-red-500">*</span>
-                                                @endif
-                                            </flux:label>
-                                            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
-                                            <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
-                                        </flux:field>
-                                    @else
-                                        @include ("collections::livewire.partials.entry-field",
-                                            [
-                                                "field" => $field,
-                                                "path" => [$field["handle"]],
-                                                "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
-                                                "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                                "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
-                                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
-                                            ])
+                @forelse ($ungroupedFields as $field)
+                    <div>
+                        @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
+                            <flux:field>
+                                <flux:label
+                                    >{{ $field["display"] }}
+                                    @if ($field["required"] ?? false)
+                                        <span class="text-red-500">*</span>
                                     @endif
-                                </div>
-                            @endforeach
-                        </div>
+                                </flux:label>
+                                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
+                                <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
+                            </flux:field>
+                        @else
+                            @include ("collections::livewire.partials.entry-field",
+                                [
+                                    "field" => $field,
+                                    "path" => [$field["handle"]],
+                                    "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
+                                    "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
+                                    "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                    "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
+                                    "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                    "preview" => $this->collection->livePreview()
+                                ])
+                        @endif
                     </div>
-                @endif
-            @endforeach
+                @empty
+                    @if ($tabFields->isEmpty())
+                        <flux:text class="text-zinc-500"> {{ count($this->blueprintFields()) === 0 ? __("This blueprint has no fields yet.") : __("No fields in this tab.") }} </flux:text>
+                    @endif
+                @endforelse
+
+                @foreach ($tabSections as $section)
+                    @php $sectionFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === $section["handle"]); @endphp
+                    @if ($sectionFields->isNotEmpty())
+                        <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80">
+                            <div class="font-semibold text-black px-2">
+                                <flux:subheading>{{ $section["display"] }}</flux:subheading>
+                            </div>
+
+                            <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
+                                @foreach ($sectionFields as $field)
+                                    <div>
+                                        @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
+                                            <flux:field>
+                                                <flux:label
+                                                    >{{ $field["display"] }}
+                                                    @if ($field["required"] ?? false)
+                                                        <span class="text-red-500">*</span>
+                                                    @endif
+                                                </flux:label>
+                                                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
+                                                <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
+                                            </flux:field>
+                                        @else
+                                            @include ("collections::livewire.partials.entry-field",
+                                                [
+                                                    "field" => $field,
+                                                    "path" => [$field["handle"]],
+                                                    "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
+                                                    "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
+                                                    "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                                    "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
+                                                    "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
+                                                ])
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
             @endif
         </div>
 

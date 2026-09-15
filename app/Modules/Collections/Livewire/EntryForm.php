@@ -21,6 +21,7 @@ use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -33,30 +34,30 @@ class EntryForm extends Component
 {
     use HasSchemaBlocks;
 
-    const DEFAULT_SITE = 'indonesia';
+    const DEFAULT_SITE = "indonesia";
 
     /**
      * @var array<string, string>
      */
     const STATUSES = [
-        'published' => 'Published',
-        'need_review' => 'Need Review',
-        'draft' => 'Draft',
+        "published" => "Published",
+        "need_review" => "Need Review",
+        "draft" => "Draft",
     ];
 
     const SEO_ROBOTS_OPTIONS = [
-        'index' => 'Index',
-        'follow' => 'Follow',
-        'noindex' => 'No Index',
-        'nofollow' => 'No Follow',
-        'noarchive' => 'No Archive',
-        'noimageindex' => 'No Image Index',
-        'nosnippet' => 'No Snippet',
+        "index" => "Index",
+        "follow" => "Follow",
+        "noindex" => "No Index",
+        "nofollow" => "No Follow",
+        "noarchive" => "No Archive",
+        "noimageindex" => "No Image Index",
+        "nosnippet" => "No Snippet",
     ];
 
-    const SEO_SITEMAP_PRIORITIES = ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0'];
+    const SEO_SITEMAP_PRIORITIES = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"];
 
-    const SEO_SITEMAP_CHANGEFREQS = ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'];
+    const SEO_SITEMAP_CHANGEFREQS = ["always", "hourly", "daily", "weekly", "monthly", "yearly", "never"];
 
     /**
      * Which "SEO" tab fields are editable per-locale vs. shared across every
@@ -66,14 +67,14 @@ class EntryForm extends Component
      * @var array<string, bool>
      */
     const SEO_LOCALIZABLE = [
-        'meta_title' => true,
-        'meta_description' => true,
-        'meta_canonical' => true,
-        'robots' => true,
-        'meta_featured_image' => false,
-        'meta_author' => false,
-        'sitemap_priority' => true,
-        'sitemap_changefreq' => true,
+        "meta_title" => true,
+        "meta_description" => true,
+        "meta_canonical" => true,
+        "robots" => true,
+        "meta_featured_image" => false,
+        "meta_author" => false,
+        "sitemap_priority" => true,
+        "sitemap_changefreq" => true,
     ];
 
     public Collection $collection;
@@ -82,23 +83,24 @@ class EntryForm extends Component
 
     public string $site = self::DEFAULT_SITE;
 
-    public string $title = '';
+    public string $title = "";
 
-    public string $slug = '';
+    public string $slug = "";
 
-    public string $status = 'draft';
+    public string $status = "draft";
 
-    public string $entryDate = '';
+    public string $entryDate = "";
 
     public ?string $order = null;
 
-    public string $blueprintHandle = '';
+    public string $blueprintHandle = "";
 
     /**
      * Which of the selected blueprint's tabs is currently shown — see
      * blueprintTabs().
      */
-    public string $activeTab = 'main';
+    #[Url("q")]
+    public string $activeTab = "main";
 
     /**
      * The entry this one is a localization of — self-referencing, so
@@ -139,7 +141,7 @@ class EntryForm extends Component
      * (see refreshPreviewCache()) — stable for the lifetime of this page
      * load, regenerated on the next full page load.
      */
-    public string $previewToken = '';
+    public string $previewToken = "";
 
     /**
      * Bumped every time the preview cache is refreshed, so binding it into
@@ -154,22 +156,22 @@ class EntryForm extends Component
 
         if ($entry) {
             if ($entry->collection !== $collection->handle) {
-                throw new NotFoundHttpException;
+                throw new NotFoundHttpException();
             }
 
             $this->editingId = $entry->id;
             $this->site = $entry->site;
-            $this->title = (string) ($entry->data['title'] ?? '');
+            $this->title = (string) ($entry->data["title"] ?? "");
             $this->slug = (string) $entry->slug;
-            $this->status = $entry->status ?: 'draft';
-            $this->entryDate = $entry->date ? str_replace(' ', 'T', $entry->date) : '';
-            $this->order = $entry->order !== null ? (string) $entry->order : '';
+            $this->status = $entry->status ?: "draft";
+            $this->entryDate = $entry->date ? str_replace(" ", "T", $entry->date) : "";
+            $this->order = $entry->order !== null ? (string) $entry->order : "";
             $this->blueprintHandle = $entry->blueprint ?? $this->defaultBlueprintHandle();
             $this->originId = $entry->origin_id;
         } else {
             $this->site = $site ?: self::DEFAULT_SITE;
-            $this->blueprintHandle = request()->string('blueprint')->toString() ?: $this->defaultBlueprintHandle();
-            $this->originId = request()->string('origin')->toString() ?: null;
+            $this->blueprintHandle = request()->string("blueprint")->toString() ?: $this->defaultBlueprintHandle();
+            $this->originId = request()->string("origin")->toString() ?: null;
         }
 
         if ($entry && $this->collection->structured()) {
@@ -179,17 +181,14 @@ class EntryForm extends Component
         $this->fillData($entry);
 
         if ($this->collection->schemaEnabled()) {
-            $this->schemaBlocks = array_map(
-                fn (array $block): array => array_merge($this->defaultSchemaBlock(), $block),
-                $entry?->schemaBlocks() ?? []
-            );
+            $this->schemaBlocks = array_map(fn(array $block): array => array_merge($this->defaultSchemaBlock(), $block), $entry?->schemaBlocks() ?? []);
         }
 
         if ($this->collection->seoEnabled()) {
             $this->seo = $entry?->seoFields() ?? Entry::defaultSeoFields();
         }
 
-        if (! $this->isOriginLocale()) {
+        if (!$this->isOriginLocale()) {
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
 
@@ -197,7 +196,7 @@ class EntryForm extends Component
                 $originSeo = $this->originEntry()?->seoFields() ?? Entry::defaultSeoFields();
 
                 foreach (self::SEO_LOCALIZABLE as $key => $localizable) {
-                    if (! $localizable) {
+                    if (!$localizable) {
                         $this->seo[$key] = $originSeo[$key];
                     }
                 }
@@ -213,7 +212,7 @@ class EntryForm extends Component
     #[Computed]
     public function previewUrl(): ?string
     {
-        return $this->previewToken !== '' ? route('collections.preview', ['token' => $this->previewToken]) : null;
+        return $this->previewToken !== "" ? route("collections.preview", ["token" => $this->previewToken]) : null;
     }
 
     /**
@@ -225,23 +224,27 @@ class EntryForm extends Component
      */
     protected function refreshPreviewCache(): void
     {
-        Cache::put("entry-preview:{$this->previewToken}", [
-            'collection' => $this->collection->handle,
-            'blueprint' => $this->blueprintHandle,
-            'site' => $this->site,
-            'attributes' => [
-                'id' => $this->editingId,
-                'site' => $this->site,
-                'origin_id' => $this->originId,
-                'status' => $this->status,
-                'slug' => $this->slug,
-                'date' => $this->entryDate ? str_replace('T', ' ', $this->entryDate) : null,
-                'order' => $this->order !== '' && $this->order !== null ? (int) $this->order : null,
-                'collection' => $this->collection->handle,
-                'blueprint' => $this->blueprintHandle,
-                'data' => array_merge($this->data, ['title' => $this->title]),
+        Cache::put(
+            "entry-preview:{$this->previewToken}",
+            [
+                "collection" => $this->collection->handle,
+                "blueprint" => $this->blueprintHandle,
+                "site" => $this->site,
+                "attributes" => [
+                    "id" => $this->editingId,
+                    "site" => $this->site,
+                    "origin_id" => $this->originId,
+                    "status" => $this->status,
+                    "slug" => $this->slug,
+                    "date" => $this->entryDate ? str_replace("T", " ", $this->entryDate) : null,
+                    "order" => $this->order !== "" && $this->order !== null ? (int) $this->order : null,
+                    "collection" => $this->collection->handle,
+                    "blueprint" => $this->blueprintHandle,
+                    "data" => array_merge($this->data, ["title" => $this->title]),
+                ],
             ],
-        ], now()->addHour());
+            now()->addHour(),
+        );
 
         $this->previewRefreshCount++;
     }
@@ -267,9 +270,9 @@ class EntryForm extends Component
     {
         $configuredSites = $this->configuredSites();
 
-        return Site::orderBy('order')
-            ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
-            ->value('handle');
+        return Site::orderBy("order")
+            ->when($configuredSites !== [], fn($query) => $query->whereIn("handle", $configuredSites))
+            ->value("handle");
     }
 
     public function isOriginLocale(): bool
@@ -301,12 +304,12 @@ class EntryForm extends Component
     protected function overlayNonLocalizableData(array $fields, array &$data, array $originData): void
     {
         foreach ($fields as $field) {
-            if ($field['type'] === 'replicator') {
+            if ($field["type"] === "replicator") {
                 continue;
             }
 
-            if (! ($field['localizable'] ?? false)) {
-                $data[$field['handle']] = $originData[$field['handle']] ?? $data[$field['handle']] ?? null;
+            if (!($field["localizable"] ?? false)) {
+                $data[$field["handle"]] = $originData[$field["handle"]] ?? ($data[$field["handle"]] ?? null);
             }
         }
     }
@@ -323,8 +326,8 @@ class EntryForm extends Component
     {
         $configuredSites = $this->configuredSites();
 
-        return Site::orderBy('order')
-            ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
+        return Site::orderBy("order")
+            ->when($configuredSites !== [], fn($query) => $query->whereIn("handle", $configuredSites))
             ->get()
             ->map(function (Site $availableSite): array {
                 $active = $availableSite->handle === $this->site;
@@ -332,24 +335,24 @@ class EntryForm extends Component
                 if ($active) {
                     $href = null;
                 } elseif ($sibling = $this->siblingEntryForSite($availableSite->handle)) {
-                    $href = route('collections.entries.edit', [
-                        'collection' => $this->collection->handle,
-                        'entry' => $sibling->id,
+                    $href = route("collections.entries.edit", [
+                        "collection" => $this->collection->handle,
+                        "entry" => $sibling->id,
                     ]);
                 } else {
-                    $href = route('collections.entries.create', [
-                        'collection' => $this->collection->handle,
-                        'site' => $availableSite->handle,
-                        'blueprint' => $this->blueprintHandle,
-                        'origin' => $this->originId ?? $this->editingId,
+                    $href = route("collections.entries.create", [
+                        "collection" => $this->collection->handle,
+                        "site" => $availableSite->handle,
+                        "blueprint" => $this->blueprintHandle,
+                        "origin" => $this->originId ?? $this->editingId,
                     ]);
                 }
 
                 return [
-                    'handle' => $availableSite->handle,
-                    'name' => $availableSite->name,
-                    'active' => $active,
-                    'href' => $href,
+                    "handle" => $availableSite->handle,
+                    "name" => $availableSite->name,
+                    "active" => $active,
+                    "href" => $href,
                 ];
             })
             ->all();
@@ -359,14 +362,11 @@ class EntryForm extends Component
     {
         $originId = $this->originId ?? $this->editingId;
 
-        if (! $originId) {
+        if (!$originId) {
             return null;
         }
 
-        return Entry::where('collection', $this->collection->handle)
-            ->where('site', $siteHandle)
-            ->where(fn ($query) => $query->where('id', $originId)->orWhere('origin_id', $originId))
-            ->first();
+        return Entry::where("collection", $this->collection->handle)->where("site", $siteHandle)->where(fn($query) => $query->where("id", $originId)->orWhere("origin_id", $originId))->first();
     }
 
     /**
@@ -376,8 +376,8 @@ class EntryForm extends Component
     #[Computed]
     public function availableBlueprints()
     {
-        return Blueprint::where('namespace', "collections.{$this->collection->handle}")
-            ->orderBy('handle')
+        return Blueprint::where("namespace", "collections.{$this->collection->handle}")
+            ->orderBy("handle")
             ->get();
     }
 
@@ -390,15 +390,11 @@ class EntryForm extends Component
     #[Computed]
     public function availableParentEntries()
     {
-        if (! $this->collection->structured()) {
+        if (!$this->collection->structured()) {
             return collect();
         }
 
-        return Entry::where('collection', $this->collection->handle)
-            ->where('site', $this->site)
-            ->when($this->editingId, fn ($query) => $query->where('id', '!=', $this->editingId))
-            ->orderBy('slug')
-            ->get();
+        return Entry::where("collection", $this->collection->handle)->where("site", $this->site)->when($this->editingId, fn($query) => $query->where("id", "!=", $this->editingId))->orderBy("slug")->get();
     }
 
     protected function treeService(): CollectionTreeService
@@ -415,7 +411,7 @@ class EntryForm extends Component
     #[Computed]
     public function resolvedUrl(): ?string
     {
-        if (! $this->editingId) {
+        if (!$this->editingId) {
             return null;
         }
 
@@ -427,13 +423,13 @@ class EntryForm extends Component
     #[Computed]
     public function selectedBlueprint(): ?Blueprint
     {
-        return $this->availableBlueprints->firstWhere('handle', $this->blueprintHandle);
+        return $this->availableBlueprints->firstWhere("handle", $this->blueprintHandle);
     }
 
     #[Computed]
     public function blueprintFields(): array
     {
-        return $this->expandFieldsetFields($this->selectedBlueprint?->data['fields'] ?? []);
+        return $this->expandFieldsetFields($this->selectedBlueprint?->data["fields"] ?? []);
     }
 
     /**
@@ -454,26 +450,26 @@ class EntryForm extends Component
         $expanded = [];
 
         foreach ($fields as $field) {
-            if ($field['type'] === 'fieldset') {
-                $handle = $field['options'] ?? null;
+            if ($field["type"] === "fieldset") {
+                $handle = $field["options"] ?? null;
 
-                if (! $handle || in_array($handle, $seenFieldsetHandles, true)) {
+                if (!$handle || in_array($handle, $seenFieldsetHandles, true)) {
                     continue;
                 }
 
-                $subFields = Fieldset::where('handle', $handle)->first()?->data['fields'] ?? [];
+                $subFields = Fieldset::where("handle", $handle)->first()?->data["fields"] ?? [];
 
                 foreach ($this->expandFieldsetFields($subFields, [...$seenFieldsetHandles, $handle]) as $subField) {
-                    $subField['tab'] = $field['tab'] ?? 'main';
-                    $subField['section'] = $field['section'] ?? '';
+                    $subField["tab"] = $field["tab"] ?? "main";
+                    $subField["section"] = $field["section"] ?? "";
                     $expanded[] = $subField;
                 }
 
                 continue;
             }
 
-            if ($field['type'] === 'replicator') {
-                $field['replicator_fields'] = $this->expandFieldsetFields($field['replicator_fields'] ?? [], $seenFieldsetHandles);
+            if ($field["type"] === "replicator") {
+                $field["replicator_fields"] = $this->expandFieldsetFields($field["replicator_fields"] ?? [], $seenFieldsetHandles);
             }
 
             $expanded[] = $field;
@@ -491,7 +487,7 @@ class EntryForm extends Component
     #[Computed]
     public function blueprintTabs(): array
     {
-        return $this->selectedBlueprint?->data['tabs'] ?? [['handle' => 'main', 'display' => 'Main']];
+        return $this->selectedBlueprint?->data["tabs"] ?? [["handle" => "main", "display" => "Main"]];
     }
 
     public function setActiveTab(string $handle): void
@@ -501,19 +497,19 @@ class EntryForm extends Component
 
     protected function schemaLogoSentinel(): string
     {
-        return '__entry_schema_logo__';
+        return "__entry_schema_logo__";
     }
 
     public function pickSeoImage(): void
     {
-        $this->dispatch('open-asset-picker', path: ['__entry_seo_image__'], container: $this->assetContainer, selected: $this->seo['meta_featured_image'] ?? [], max: 1);
+        $this->dispatch("open-asset-picker", path: ["__entry_seo_image__"], container: $this->assetContainer, selected: $this->seo["meta_featured_image"] ?? [], max: 1);
     }
 
     public function removeSeoImage(int $assetId): void
     {
-        $this->seo['meta_featured_image'] = collect($this->seo['meta_featured_image'] ?? [])
-            ->map(fn ($id): int => (int) $id)
-            ->reject(fn (int $id): bool => $id === $assetId)
+        $this->seo["meta_featured_image"] = collect($this->seo["meta_featured_image"] ?? [])
+            ->map(fn($id): int => (int) $id)
+            ->reject(fn(int $id): bool => $id === $assetId)
             ->values()
             ->all();
     }
@@ -525,8 +521,7 @@ class EntryForm extends Component
 
     protected function defaultBlueprintHandle(): string
     {
-        return $this->collection->effectiveBlueprint()?->handle
-            ?? (string) $this->availableBlueprints->first()?->handle;
+        return $this->collection->effectiveBlueprint()?->handle ?? (string) $this->availableBlueprints->first()?->handle;
     }
 
     protected function fillData(?Entry $entry): void
@@ -544,25 +539,20 @@ class EntryForm extends Component
         $data = [];
 
         foreach ($fields as $field) {
-            if ($field['type'] === 'replicator') {
-                $existingRows = $existingData[$field['handle']] ?? [];
-                $data[$field['handle']] = array_map(
-                    fn (array $row): array => $this->fillFieldsData($field['replicator_fields'] ?? [], $row),
-                    $existingRows
-                );
+            if ($field["type"] === "replicator") {
+                $existingRows = $existingData[$field["handle"]] ?? [];
+                $data[$field["handle"]] = array_map(fn(array $row): array => $this->fillFieldsData($field["replicator_fields"] ?? [], $row), $existingRows);
 
                 continue;
             }
 
-            if ($field['type'] === 'assets' || $field['type'] === 'taxonomy') {
-                $data[$field['handle']] = $existingData[$field['handle']] ?? [];
+            if ($field["type"] === "assets" || $field["type"] === "taxonomy") {
+                $data[$field["handle"]] = $existingData[$field["handle"]] ?? [];
 
                 continue;
             }
 
-            $data[$field['handle']] = $existingData[$field['handle']]
-                ?? $field['default']
-                ?? ($field['type'] === 'toggle' ? false : '');
+            $data[$field["handle"]] = $existingData[$field["handle"]] ?? ($field["default"] ?? ($field["type"] === "toggle" ? false : ""));
         }
 
         return $data;
@@ -578,12 +568,12 @@ class EntryForm extends Component
     {
         $field = $this->replicatorFieldAt($path);
 
-        if (! $field) {
+        if (!$field) {
             return;
         }
 
         $rows = &$this->dataAt($path);
-        $rows[] = $this->fillFieldsData($field['replicator_fields'] ?? [], null);
+        $rows[] = $this->fillFieldsData($field["replicator_fields"] ?? [], null);
     }
 
     public function removeReplicatorRow(array $path, int $rowIndex): void
@@ -600,7 +590,11 @@ class EntryForm extends Component
     public function removeAsset(array $path, int $assetId): void
     {
         $ids = &$this->dataAt($path);
-        $ids = collect($ids ?? [])->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => $id === $assetId)->values()->all();
+        $ids = collect($ids ?? [])
+            ->map(fn($id): int => (int) $id)
+            ->reject(fn(int $id): bool => $id === $assetId)
+            ->values()
+            ->all();
     }
 
     /**
@@ -611,15 +605,15 @@ class EntryForm extends Component
      * @param  array<int, string|int>  $path
      * @param  array<int, int>  $ids
      */
-    #[On('assets-selected')]
+    #[On("assets-selected")]
     public function assetsSelected(array $path, array $ids): void
     {
         // A "bard" field's image button opens the same shared picker with a
         // sentinel path (see entry-field.blade.php's bardEditor) since it
         // has no "assets" data property to write into — resolve URLs and
         // hand them back to the editor instead of touching $this->data.
-        if (($path[0] ?? null) === '__bard__') {
-            $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', urls: AssetMeta::whereIn('id', $ids)->get()->pluck('url')->all());
+        if (($path[0] ?? null) === "__bard__") {
+            $this->dispatch("bard-image-selected", prefix: $path[1], mode: $path[2] ?? "insert", urls: AssetMeta::whereIn("id", $ids)->get()->pluck("url")->all());
 
             return;
         }
@@ -628,8 +622,8 @@ class EntryForm extends Component
             return;
         }
 
-        if (($path[0] ?? null) === '__entry_seo_image__') {
-            $this->seo['meta_featured_image'] = array_values($ids);
+        if (($path[0] ?? null) === "__entry_seo_image__") {
+            $this->seo["meta_featured_image"] = array_values($ids);
 
             return;
         }
@@ -647,10 +641,10 @@ class EntryForm extends Component
      */
     public function linkableEntries(array $allowedCollectionHandles)
     {
-        return Entry::where('site', $this->site)
-            ->when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
-            ->orderBy('collection')
-            ->orderBy('slug')
+        return Entry::where("site", $this->site)
+            ->when($allowedCollectionHandles !== [], fn($query) => $query->whereIn("collection", $allowedCollectionHandles))
+            ->orderBy("collection")
+            ->orderBy("slug")
             ->get();
     }
 
@@ -661,7 +655,7 @@ class EntryForm extends Component
      */
     public function availableAuthors()
     {
-        return User::orderBy('name')->get();
+        return User::orderBy("name")->get();
     }
 
     /**
@@ -673,14 +667,11 @@ class EntryForm extends Component
      */
     public function taxonomyTerms(?string $taxonomyHandle)
     {
-        if (! $taxonomyHandle) {
+        if (!$taxonomyHandle) {
             return collect();
         }
 
-        return TaxonomyTerm::where('taxonomy', $taxonomyHandle)
-            ->where('site', $this->site)
-            ->orderBy('slug')
-            ->get();
+        return TaxonomyTerm::where("taxonomy", $taxonomyHandle)->where("site", $this->site)->orderBy("slug")->get();
     }
 
     /**
@@ -692,9 +683,9 @@ class EntryForm extends Component
             return collect();
         }
 
-        $assets = AssetMeta::whereIn('id', $ids)->get()->keyBy('id');
+        $assets = AssetMeta::whereIn("id", $ids)->get()->keyBy("id");
 
-        return collect($ids)->map(fn ($id) => $assets->get((int) $id))->filter()->values();
+        return collect($ids)->map(fn($id) => $assets->get((int) $id))->filter()->values();
     }
 
     /**
@@ -712,13 +703,13 @@ class EntryForm extends Component
                 continue;
             }
 
-            $field = collect($fields)->firstWhere('handle', $segment);
+            $field = collect($fields)->firstWhere("handle", $segment);
 
-            if (! $field) {
+            if (!$field) {
                 return null;
             }
 
-            $fields = $field['replicator_fields'] ?? [];
+            $fields = $field["replicator_fields"] ?? [];
         }
 
         return $field;
@@ -742,12 +733,12 @@ class EntryForm extends Component
      */
     public function updated(string $name): void
     {
-        if ($name === 'blueprintHandle') {
+        if ($name === "blueprintHandle") {
             $this->fillData(null);
-            $this->activeTab = 'main';
+            $this->activeTab = "main";
         }
 
-        if ($this->collection->livePreview() && $name !== 'previewOpen') {
+        if ($this->collection->livePreview() && $name !== "previewOpen") {
             $this->refreshPreviewCache();
         }
     }
@@ -761,7 +752,7 @@ class EntryForm extends Component
      */
     protected function fieldRules(): array
     {
-        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+        return $this->fieldRulesFor($this->blueprintFields(), "data");
     }
 
     /**
@@ -770,16 +761,16 @@ class EntryForm extends Component
     protected function seoValidationRules(): array
     {
         return [
-            'seo.meta_title' => ['required', 'string', 'max:255'],
-            'seo.meta_description' => ['required', 'string', 'max:500'],
-            'seo.meta_canonical' => ['nullable', 'string', 'max:2048'],
-            'seo.robots' => ['required', 'array', 'min:1'],
-            'seo.robots.*' => [Rule::in(array_keys(self::SEO_ROBOTS_OPTIONS))],
-            'seo.meta_featured_image' => ['required', 'array', 'min:1', 'max:1'],
-            'seo.meta_featured_image.*' => ['integer', Rule::exists('assets_meta', 'id')],
-            'seo.meta_author' => ['required', Rule::exists('users', 'id')],
-            'seo.sitemap_priority' => ['required', Rule::in(self::SEO_SITEMAP_PRIORITIES)],
-            'seo.sitemap_changefreq' => ['required', Rule::in(self::SEO_SITEMAP_CHANGEFREQS)],
+            "seo.meta_title" => ["required", "string", "max:255"],
+            "seo.meta_description" => ["required", "string", "max:500"],
+            "seo.meta_canonical" => ["nullable", "string", "max:2048"],
+            "seo.robots" => ["required", "array", "min:1"],
+            "seo.robots.*" => [Rule::in(array_keys(self::SEO_ROBOTS_OPTIONS))],
+            "seo.meta_featured_image" => ["required", "array", "min:1", "max:1"],
+            "seo.meta_featured_image.*" => ["integer", Rule::exists("assets_meta", "id")],
+            "seo.meta_author" => ["required", Rule::exists("users", "id")],
+            "seo.sitemap_priority" => ["required", Rule::in(self::SEO_SITEMAP_PRIORITIES)],
+            "seo.sitemap_changefreq" => ["required", Rule::in(self::SEO_SITEMAP_CHANGEFREQS)],
         ];
     }
 
@@ -792,7 +783,7 @@ class EntryForm extends Component
      */
     public function validationAttributes(): array
     {
-        return $this->fieldAttributesFor($this->blueprintFields(), 'data');
+        return $this->fieldAttributesFor($this->blueprintFields(), "data");
     }
 
     protected function fieldAttributesFor(array $fields, string $prefix): array
@@ -800,11 +791,11 @@ class EntryForm extends Component
         $attributes = [];
 
         foreach ($fields as $field) {
-            $key = "{$prefix}.{$field['handle']}";
-            $attributes[$key] = $field['display'] ?? $field['handle'];
+            $key = "{$prefix}.{$field["handle"]}";
+            $attributes[$key] = $field["display"] ?? $field["handle"];
 
-            if ($field['type'] === 'replicator') {
-                $attributes = array_merge($attributes, $this->fieldAttributesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+            if ($field["type"] === "replicator") {
+                $attributes = array_merge($attributes, $this->fieldAttributesFor($field["replicator_fields"] ?? [], "{$key}.*"));
             }
         }
 
@@ -816,11 +807,11 @@ class EntryForm extends Component
         $rules = [];
 
         foreach ($fields as $field) {
-            $key = "{$prefix}.{$field['handle']}";
+            $key = "{$prefix}.{$field["handle"]}";
 
-            if ($field['type'] === 'replicator') {
-                $rules[$key] = ['array'];
-                $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+            if ($field["type"] === "replicator") {
+                $rules[$key] = ["array"];
+                $rules = array_merge($rules, $this->fieldRulesFor($field["replicator_fields"] ?? [], "{$key}.*"));
 
                 continue;
             }
@@ -831,116 +822,118 @@ class EntryForm extends Component
             // right after validation. Enforcing the field's own rules (e.g.
             // "required") here would block saving this translation over a
             // value the user can't even see or change from this page.
-            if (! ($field['localizable'] ?? false) && ! $this->isOriginLocale()) {
-                $rules[$key] = ['nullable'];
+            if (!($field["localizable"] ?? false) && !$this->isOriginLocale()) {
+                $rules[$key] = ["nullable"];
 
                 continue;
             }
 
-            if ($field['type'] === 'assets') {
+            if ($field["type"] === "assets") {
                 $arrayRules = [];
 
-                if ($field['validate_sometimes'] ?? false) {
-                    $arrayRules[] = 'sometimes';
+                if ($field["validate_sometimes"] ?? false) {
+                    $arrayRules[] = "sometimes";
                 }
 
-                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
-                $arrayRules[] = 'array';
+                $arrayRules[] = $field["required"] ?? false ? "required" : "nullable";
+                $arrayRules[] = "array";
 
-                if (($field['min_items'] ?? null) !== null) {
-                    $arrayRules[] = "min:{$field['min_items']}";
+                if (($field["min_items"] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field["min_items"]}";
                 }
 
-                if (($field['max_items'] ?? null) !== null) {
-                    $arrayRules[] = "max:{$field['max_items']}";
+                if (($field["max_items"] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field["max_items"]}";
                 }
 
                 $rules[$key] = $arrayRules;
-                $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
+                $rules["{$key}.*"] = ["integer", Rule::exists("assets_meta", "id")->where("container", $field["options"] ?? null)];
 
                 continue;
             }
 
-            if ($field['type'] === 'taxonomy') {
+            if ($field["type"] === "taxonomy") {
                 $arrayRules = [];
 
-                if ($field['validate_sometimes'] ?? false) {
-                    $arrayRules[] = 'sometimes';
+                if ($field["validate_sometimes"] ?? false) {
+                    $arrayRules[] = "sometimes";
                 }
 
-                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
-                $arrayRules[] = 'array';
+                $arrayRules[] = $field["required"] ?? false ? "required" : "nullable";
+                $arrayRules[] = "array";
 
-                if (($field['min_items'] ?? null) !== null) {
-                    $arrayRules[] = "min:{$field['min_items']}";
+                if (($field["min_items"] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field["min_items"]}";
                 }
 
-                if (($field['max_items'] ?? null) !== null) {
-                    $arrayRules[] = "max:{$field['max_items']}";
+                if (($field["max_items"] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field["max_items"]}";
                 }
 
                 $rules[$key] = $arrayRules;
                 $rules["{$key}.*"] = [
-                    'integer',
-                    Rule::exists('taxonomy_terms', 'id')->where('taxonomy', $field['options'] ?? null)->where('site', $this->site),
+                    "integer",
+                    Rule::exists("taxonomy_terms", "id")
+                        ->where("taxonomy", $field["options"] ?? null)
+                        ->where("site", $this->site),
                 ];
 
                 continue;
             }
 
-            if ($field['type'] === 'checkbox') {
+            if ($field["type"] === "checkbox") {
                 $arrayRules = [];
 
-                if ($field['validate_sometimes'] ?? false) {
-                    $arrayRules[] = 'sometimes';
+                if ($field["validate_sometimes"] ?? false) {
+                    $arrayRules[] = "sometimes";
                 }
 
-                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
-                $arrayRules[] = 'array';
+                $arrayRules[] = $field["required"] ?? false ? "required" : "nullable";
+                $arrayRules[] = "array";
 
-                if (($field['min_items'] ?? null) !== null) {
-                    $arrayRules[] = "min:{$field['min_items']}";
+                if (($field["min_items"] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field["min_items"]}";
                 }
 
-                if (($field['max_items'] ?? null) !== null) {
-                    $arrayRules[] = "max:{$field['max_items']}";
+                if (($field["max_items"] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field["max_items"]}";
                 }
 
                 $rules[$key] = $arrayRules;
-                $rules["{$key}.*"] = [Rule::in($field['options'] ?? [])];
+                $rules["{$key}.*"] = [Rule::in($field["options"] ?? [])];
 
                 continue;
             }
 
-            if ($field['type'] === 'link') {
+            if ($field["type"] === "link") {
                 $linkRules = [];
 
-                if ($field['validate_sometimes'] ?? false) {
-                    $linkRules[] = 'sometimes';
+                if ($field["validate_sometimes"] ?? false) {
+                    $linkRules[] = "sometimes";
                 }
 
-                $linkRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
-                $linkRules[] = 'string';
-                $linkRules[] = 'max:2048';
+                $linkRules[] = $field["required"] ?? false ? "required" : "nullable";
+                $linkRules[] = "string";
+                $linkRules[] = "max:2048";
 
-                $allowedCollections = $field['options'] ?? [];
+                $allowedCollections = $field["options"] ?? [];
 
                 $linkRules[] = function (string $attribute, mixed $value, \Closure $fail) use ($allowedCollections): void {
-                    if (! is_string($value) || ! str_starts_with($value, 'entry::')) {
+                    if (!is_string($value) || !str_starts_with($value, "entry::")) {
                         return;
                     }
 
                     $linkedEntry = Entry::find(substr($value, 7));
 
-                    if (! $linkedEntry) {
-                        $fail(__('The linked entry no longer exists.'));
-                    } elseif (! empty($allowedCollections) && ! in_array($linkedEntry->collection, $allowedCollections, true)) {
-                        $fail(__('The linked entry is not in an allowed collection.'));
+                    if (!$linkedEntry) {
+                        $fail(__("The linked entry no longer exists."));
+                    } elseif (!empty($allowedCollections) && !in_array($linkedEntry->collection, $allowedCollections, true)) {
+                        $fail(__("The linked entry is not in an allowed collection."));
                     }
                 };
 
-                if (! empty($field['validation'])) {
-                    $linkRules[] = $field['validation'];
+                if (!empty($field["validation"])) {
+                    $linkRules[] = $field["validation"];
                 }
 
                 $rules[$key] = $linkRules;
@@ -950,23 +943,23 @@ class EntryForm extends Component
 
             $fieldRules = [];
 
-            if ($field['validate_sometimes'] ?? false) {
-                $fieldRules[] = 'sometimes';
+            if ($field["validate_sometimes"] ?? false) {
+                $fieldRules[] = "sometimes";
             }
 
-            $fieldRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+            $fieldRules[] = $field["required"] ?? false ? "required" : "nullable";
 
-            $fieldRules[] = match ($field['type']) {
-                'number' => 'numeric',
-                'toggle' => 'boolean',
-                'date' => 'date',
-                'select', 'radio' => Rule::in($field['options'] ?? []),
-                'author' => Rule::exists('users', 'id'),
-                default => 'string',
+            $fieldRules[] = match ($field["type"]) {
+                "number" => "numeric",
+                "toggle" => "boolean",
+                "date" => "date",
+                "select", "radio" => Rule::in($field["options"] ?? []),
+                "author" => Rule::exists("users", "id"),
+                default => "string",
             };
 
-            if (! empty($field['validation'])) {
-                $fieldRules[] = $field['validation'];
+            if (!empty($field["validation"])) {
+                $fieldRules[] = $field["validation"];
             }
 
             $rules[$key] = $fieldRules;
@@ -977,22 +970,25 @@ class EntryForm extends Component
 
     public function save(): void
     {
-        if ($this->order === '') {
+        if ($this->order === "") {
             $this->order = null;
         }
 
-        if ($this->parentId === '') {
+        if ($this->parentId === "") {
             $this->parentId = null;
         }
 
-        $rules = array_merge([
-            'title' => ['required', 'string', 'max:300'],
-            'slug' => ['required', 'string', 'max:255'],
-            'status' => ['required', Rule::in(array_keys(self::STATUSES))],
-            'entryDate' => ['required', 'date'],
-            'order' => ['nullable', 'integer'],
-            'blueprintHandle' => ['required', Rule::in($this->availableBlueprints->pluck('handle')->all())],
-        ], $this->fieldRules());
+        $rules = array_merge(
+            [
+                "title" => ["required", "string", "max:300"],
+                "slug" => ["required", "string", "max:255"],
+                "status" => ["required", Rule::in(array_keys(self::STATUSES))],
+                "entryDate" => ["required", "date"],
+                "order" => ["nullable", "integer"],
+                "blueprintHandle" => ["required", Rule::in($this->availableBlueprints->pluck("handle")->all())],
+            ],
+            $this->fieldRules(),
+        );
 
         if ($this->collection->schemaEnabled()) {
             $rules = array_merge($rules, $this->schemaBlockValidationRules());
@@ -1004,10 +1000,10 @@ class EntryForm extends Component
 
         $validated = $this->validate($rules);
 
-        $data = $validated['data'] ?? [];
-        $data['title'] = $validated['title'];
+        $data = $validated["data"] ?? [];
+        $data["title"] = $validated["title"];
 
-        if (! $this->isOriginLocale()) {
+        if (!$this->isOriginLocale()) {
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $data, $originData);
 
@@ -1015,68 +1011,76 @@ class EntryForm extends Component
                 $originSeo = $this->originEntry()?->seoFields() ?? Entry::defaultSeoFields();
 
                 foreach (self::SEO_LOCALIZABLE as $key => $localizable) {
-                    if (! $localizable) {
-                        $validated['seo'][$key] = $originSeo[$key];
+                    if (!$localizable) {
+                        $validated["seo"][$key] = $originSeo[$key];
                     }
                 }
             }
         }
 
         $attributes = [
-            'site' => $this->site,
-            'origin_id' => $this->originId,
-            'collection' => $this->collection->handle,
-            'blueprint' => $validated['blueprintHandle'],
-            'slug' => $validated['slug'],
-            'status' => $validated['status'],
-            'published' => $validated['status'] === 'published',
-            'date' => str_replace('T', ' ', $validated['entryDate']),
-            'order' => $validated['order'] !== null ? (int) $validated['order'] : null,
-            'data' => $data,
+            "site" => $this->site,
+            "origin_id" => $this->originId,
+            "collection" => $this->collection->handle,
+            "blueprint" => $validated["blueprintHandle"],
+            "slug" => $validated["slug"],
+            "status" => $validated["status"],
+            "published" => $validated["status"] === "published",
+            "date" => str_replace("T", " ", $validated["entryDate"]),
+            "order" => $validated["order"] !== null ? (int) $validated["order"] : null,
+            "data" => $data,
         ];
 
         if ($this->collection->schemaEnabled()) {
-            $attributes['schema'] = $this->cleanedSchemaBlocks($validated['schemaBlocks'] ?? []);
+            $attributes["schema"] = $this->cleanedSchemaBlocks($validated["schemaBlocks"] ?? []);
         }
 
         if ($this->collection->seoEnabled()) {
-            $attributes['seo'] = $validated['seo'] ?? [];
+            $attributes["seo"] = $validated["seo"] ?? [];
         }
 
-        $entry = Entry::updateOrCreate(['id' => $this->editingId], $attributes);
+        $entry = Entry::updateOrCreate(["id" => $this->editingId], $attributes);
 
         if ($this->collection->structured()) {
             try {
                 $this->treeService()->setParent($this->collection->handle, $this->site, $entry->id, $this->parentId, $this->collection->maxDepth());
             } catch (InvalidArgumentException $e) {
-                $this->addError('parentId', $e->getMessage());
+                $this->addError("parentId", $e->getMessage());
 
                 return;
             }
         }
 
-        $entry->update(['uri' => app(EntryUrlResolver::class)->path($this->collection, $entry)]);
+        $entry->update(["uri" => app(EntryUrlResolver::class)->path($this->collection, $entry)]);
 
-        Flux::toast(variant: 'success', text: __('Entry saved.'));
+        Flux::toast(variant: "success", text: __("Entry saved."));
 
         match ($this->collection->saveAction()) {
-            'editing' => $this->redirectRoute('collections.entries.edit', [
-                'collection' => $this->collection->handle,
-                'entry' => $entry->id,
-            ], navigate: true),
-            'create_another' => $this->redirectRoute('collections.entries.create', [
-                'collection' => $this->collection->handle,
-                'site' => $this->site,
-                'blueprint' => $this->blueprintHandle,
-            ], navigate: true),
-            default => $this->redirectRoute('collections.entries', ['collection' => $this->collection->handle], navigate: true),
+            "editing" => $this->redirectRoute(
+                "collections.entries.edit",
+                [
+                    "collection" => $this->collection->handle,
+                    "entry" => $entry->id,
+                ],
+                navigate: true,
+            ),
+            "create_another" => $this->redirectRoute(
+                "collections.entries.create",
+                [
+                    "collection" => $this->collection->handle,
+                    "site" => $this->site,
+                    "blueprint" => $this->blueprintHandle,
+                ],
+                navigate: true,
+            ),
+            default => $this->redirectRoute("collections.entries", ["collection" => $this->collection->handle], navigate: true),
         };
     }
 
     public function render(): View
     {
-        return view('collections::livewire.entry-form', [
-            'statuses' => self::STATUSES,
-        ])->title($this->editingId ? __('Edit entry') : __('New entry'));
+        return view("collections::livewire.entry-form", [
+            "statuses" => self::STATUSES,
+        ])->title($this->editingId ? __("Edit entry") : __("New entry"));
     }
 }
