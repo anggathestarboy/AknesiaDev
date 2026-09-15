@@ -194,6 +194,12 @@ class NavigationTreeService
             'target' => $attributes['target'] ?? '_self',
             'url' => $attributes['type'] !== 'page' ? ($attributes['url'] ?? null) : null,
             'page_id' => $attributes['type'] === 'page' ? ($attributes['page_id'] ?? null) : null,
+            // Only meaningful for the protected "sidebar-admin" navigation
+            // (see sidebar.blade.php) — the role handles (see
+            // App\Modules\Users\Models\Role) allowed to see this link.
+            // Empty means nobody except a Super Admin sees it. Ignored by
+            // every other navigation.
+            'roles' => $attributes['roles'] ?? [],
             'data' => $attributes['data'] ?? [],
         ];
     }

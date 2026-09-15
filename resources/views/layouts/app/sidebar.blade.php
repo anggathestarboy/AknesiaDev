@@ -3,6 +3,36 @@
     $sidebarNavigation = \App\Modules\Navigation\Models\Navigation::where("handle", "sidebar-admin")->first();
     $sidebarItems = $sidebarNavigation ? $sidebarTreeService->load($sidebarNavigation) : [];
 
+    // Whitelist-only: an item only shows to a user whose role is checked in
+    // its own "Visible to" list (see the sidebar-admin tree editor) — a
+    // Super Admin sees everything regardless (see User::isSuper()). A group
+    // left with no visible children is dropped too, since it never links
+    // anywhere on its own, only toggles a now-empty submenu.
+    $sidebarUserRoleHandles = auth()->user()?->isSuper() ? null : auth()->user()?->roles->pluck("handle")->all() ?? [];
+
+    $sidebarFilterByRole = function (array $items) use (&$sidebarFilterByRole, $sidebarUserRoleHandles): array {
+        $visible = [];
+
+        foreach ($items as $item) {
+            if ($sidebarUserRoleHandles !== null && array_intersect($sidebarUserRoleHandles, $item["roles"] ?? []) === []) {
+                continue;
+            }
+
+            $hadChildren = ($item["children"] ?? []) !== [];
+            $item["children"] = $sidebarFilterByRole($item["children"] ?? []);
+
+            if ($hadChildren && $item["children"] === []) {
+                continue;
+            }
+
+            $visible[] = $item;
+        }
+
+        return $visible;
+    };
+
+    $sidebarItems = $sidebarFilterByRole($sidebarItems);
+
     $sidebarIsCurrent = function (?string $url): bool {
         if (!$url) {
             return false;

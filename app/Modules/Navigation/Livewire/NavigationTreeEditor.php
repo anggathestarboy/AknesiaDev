@@ -7,6 +7,7 @@ use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Navigation\Services\NavigationTreeService;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Users\Models\Role;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
@@ -719,7 +720,23 @@ class NavigationTreeEditor extends Component
      */
     protected function blankAttributes(): array
     {
-        return ['type' => 'internal', 'title' => '', 'url' => null, 'target' => '_self'];
+        return ['type' => 'internal', 'title' => '', 'url' => null, 'target' => '_self', 'roles' => []];
+    }
+
+    /**
+     * Every role a sidebar item can be shown to (see sidebar.blade.php) —
+     * only relevant for the "sidebar-admin" navigation, whose item edit
+     * form (navigation-tree-editor.blade.php) offers this as a "Visible to"
+     * checkbox list. A Super Admin role is left out — it already sees every
+     * item regardless (see sidebar.blade.php's isSuper() bypass), so
+     * checking it here would do nothing but suggest otherwise.
+     *
+     * @return Collection<int, Role>
+     */
+    #[Computed]
+    public function availableRoles(): Collection
+    {
+        return Role::orderBy('title')->get()->reject(fn (Role $role): bool => in_array('super', $role->permissions, true))->values();
     }
 
     /* ---------- Shared ---------- */

@@ -77,6 +77,18 @@
                                 <flux:select.option value="_self">{{ __('Same tab') }}</flux:select.option>
                                 <flux:select.option value="_blank">{{ __('New tab') }}</flux:select.option>
                             </flux:select>
+
+                            @if ($navigation->handle === "sidebar-admin")
+                                <flux:field>
+                                    <flux:label>{{ __("Visible to") }}</flux:label>
+                                    <flux:description>{{ __("Which roles see this link in their sidebar. A Super Admin always sees everything.") }}</flux:description>
+                                    <flux:checkbox.group wire:model="tree.{{ $i }}.roles">
+                                        @foreach ($this->availableRoles as $role)
+                                            <flux:checkbox value="{{ $role->handle }}" label="{{ $role->title }}" />
+                                        @endforeach
+                                    </flux:checkbox.group>
+                                </flux:field>
+                            @endif
                         </div>
 
                         @if ($item['children'] !== [])
@@ -138,6 +150,18 @@
                                                     <flux:select.option value="_self">{{ __('Same tab') }}</flux:select.option>
                                                     <flux:select.option value="_blank">{{ __('New tab') }}</flux:select.option>
                                                 </flux:select>
+
+                                                @if ($navigation->handle === "sidebar-admin")
+                                                    <flux:field>
+                                                        <flux:label>{{ __("Visible to") }}</flux:label>
+                                                        <flux:description>{{ __("Which roles see this link in their sidebar. A Super Admin always sees everything.") }}</flux:description>
+                                                        <flux:checkbox.group wire:model="tree.{{ $i }}.children.{{ $j }}.roles">
+                                                            @foreach ($this->availableRoles as $role)
+                                                                <flux:checkbox value="{{ $role->handle }}" label="{{ $role->title }}" />
+                                                            @endforeach
+                                                        </flux:checkbox.group>
+                                                    </flux:field>
+                                                @endif
                                             </div>
                                         @endif
                                     </li>
