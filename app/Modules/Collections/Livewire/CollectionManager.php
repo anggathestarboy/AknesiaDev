@@ -116,6 +116,8 @@ class CollectionManager extends Component
 
     public function create(): void
     {
+        auth()->user()->authorizePermission('configure collections');
+
         $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'livePreview', 'schemaEnabled', 'seoEnabled', 'maxDepth', 'expectsRoot', 'saveAction']);
         $this->routeMode = 'single';
         $this->sites = $this->availableSites->pluck('handle')->all();
@@ -124,6 +126,8 @@ class CollectionManager extends Component
 
     public function edit(int $id): void
     {
+        auth()->user()->authorizePermission('configure collections');
+
         $collection = Collection::findOrFail($id);
 
         $this->editingId = $collection->id;
@@ -174,6 +178,8 @@ class CollectionManager extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure collections');
+
         $siteHandles = $this->availableSites->pluck('handle')->all();
 
         $validated = $this->validate([
@@ -241,6 +247,8 @@ class CollectionManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure collections');
+
         $collection = Collection::findOrFail($id);
 
         $entryCount = Entry::where('collection', $collection->handle)->count();

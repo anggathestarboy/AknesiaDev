@@ -60,6 +60,8 @@ class TermForm extends Component
 
     public function mount(Taxonomy $taxonomy, ?TaxonomyTerm $term = null, ?string $site = null): void
     {
+        auth()->user()->authorizePermission($term ? "edit {$taxonomy->handle} terms" : "create {$taxonomy->handle} terms");
+
         $this->taxonomy = $taxonomy;
 
         if ($term) {

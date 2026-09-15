@@ -36,6 +36,8 @@ class UserForm extends Component
 
     public function mount(?User $user = null): void
     {
+        auth()->user()->authorizePermission($user ? 'edit users' : 'create users');
+
         if (! $user) {
             return;
         }
@@ -61,6 +63,8 @@ class UserForm extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission($this->editingId ? 'edit users' : 'create users');
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->editingId)],
@@ -70,6 +74,27 @@ class UserForm extends Component
             'groupHandles' => ['array'],
             'groupHandles.*' => ['string', Rule::exists('user_groups', 'handle')],
         ]);
+
+        // Editing an existing user's password/roles/groups is more sensitive
+        // than editing their name/email, so those are gated by their own,
+        // more specific permissions on top of the base "edit users". A brand
+        // new user's initial password/roles/groups are part of "create
+        // users" itself — no extra check needed there.
+        if ($this->editingId) {
+            $existing = User::findOrFail($this->editingId);
+
+            if ($validated['password'] !== '' && $validated['password'] !== null) {
+                auth()->user()->authorizePermission('change passwords');
+            }
+
+            if (collect($validated['roleHandles'])->sort()->values()->all() !== $existing->roles->pluck('handle')->sort()->values()->all()) {
+                auth()->user()->authorizePermission('assign user roles');
+            }
+
+            if (collect($validated['groupHandles'])->sort()->values()->all() !== $existing->userGroups->pluck('handle')->sort()->values()->all()) {
+                auth()->user()->authorizePermission('assign user groups');
+            }
+        }
 
         $attributes = [
             'name' => $validated['name'],

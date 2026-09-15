@@ -24,7 +24,7 @@ class RedirectsServiceProvider extends ServiceProvider
 
         $this->app['router']->pushMiddlewareToGroup('web', ApplyRedirects::class);
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('redirects.')
             ->group(__DIR__.'/routes.php');

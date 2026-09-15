@@ -26,8 +26,18 @@ class RoleForm extends Component
      */
     public array $permissions = [];
 
+    /**
+     * Full access, bypassing every other permission check (see
+     * User::isSuper()) — stored as the 'super' permission, but shown as its
+     * own toggle rather than a tree checkbox since checking it makes every
+     * other permission moot.
+     */
+    public bool $superAdmin = false;
+
     public function mount(?Role $role = null): void
     {
+        auth()->user()->authorizePermission('edit roles');
+
         if (! $role) {
             return;
         }
@@ -35,7 +45,20 @@ class RoleForm extends Component
         $this->editingId = $role->id;
         $this->title = $role->title;
         $this->handle = $role->handle;
-        $this->permissions = $role->permissions;
+        $this->superAdmin = in_array('super', $role->permissions, true);
+        $this->permissions = array_values(array_diff($role->permissions, ['super']));
+    }
+
+    /**
+     * Turning on Super Admin makes every other permission redundant — clear
+     * them so the tree (hidden while this is on) doesn't silently keep
+     * stale checks that never actually get evaluated.
+     */
+    public function updatedSuperAdmin(bool $value): void
+    {
+        if ($value) {
+            $this->permissions = [];
+        }
     }
 
     #[Computed]
@@ -67,12 +90,16 @@ class RoleForm extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('edit roles');
+
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'handle' => ['required', 'string', 'max:255', Rule::unique('roles', 'handle')->ignore($this->editingId)],
             'permissions' => ['array'],
             'permissions.*' => ['string', Rule::in(app(PermissionRegistry::class)->values())],
         ]);
+
+        $validated['permissions'] = $this->superAdmin ? ['super'] : $validated['permissions'];
 
         Role::updateOrCreate(['id' => $this->editingId], $validated);
 

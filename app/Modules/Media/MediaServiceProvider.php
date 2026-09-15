@@ -31,7 +31,7 @@ class MediaServiceProvider extends ServiceProvider
             RemoveMediaCommand::class,
         ]);
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('media.')
             ->group(__DIR__.'/routes.php');

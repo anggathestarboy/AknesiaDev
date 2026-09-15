@@ -39,6 +39,8 @@ class BlueprintManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure fields');
+
         Blueprint::findOrFail($id)->delete();
 
         Flux::toast(variant: 'success', text: __('Blueprint deleted.'));

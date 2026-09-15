@@ -21,7 +21,7 @@ class FormsServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/resources/views', 'forms');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('forms.')
             ->group(__DIR__.'/routes.php');

@@ -80,7 +80,6 @@ class PermissionRegistry
         return [
             'group' => 'Control Panel',
             'permissions' => [
-                $this->permission('super', 'Super Admin', 'Full access, bypasses every other permission check.'),
                 $this->permission('access cp', 'Access the Control Panel', "Allows access into the control panel, but doesn't guarantee anything can be done once inside."),
                 $this->permission('configure sites', 'Configure Sites', 'Ability to configure sites when multi-site is enabled.'),
                 $this->permission('configure fields', 'Configure Fields', 'Ability to edit blueprints, fieldsets, and their fields.'),

@@ -70,6 +70,8 @@ class FieldsetForm extends Component
 
     public function mount(?Fieldset $fieldset = null): void
     {
+        auth()->user()->authorizePermission('configure fields');
+
         if (! $fieldset) {
             $this->addField();
 
@@ -90,6 +92,8 @@ class FieldsetForm extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure fields');
+
         $this->fields = $this->normalizeFieldsTree($this->fields);
 
         $validated = $this->validate([

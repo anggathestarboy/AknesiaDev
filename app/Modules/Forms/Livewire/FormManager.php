@@ -74,6 +74,8 @@ class FormManager extends Component
 
     public function create(): void
     {
+        auth()->user()->authorizePermission('configure forms');
+
         $this->reset(['editingId', 'handle', 'title', 'blueprint', 'redirectUrl', 'previewFields']);
         $this->createBlueprint = true;
         $this->storeSubmissions = true;
@@ -82,6 +84,8 @@ class FormManager extends Component
 
     public function edit(int $id): void
     {
+        auth()->user()->authorizePermission('configure forms');
+
         $form = Form::findOrFail($id);
 
         $this->editingId = $form->id;
@@ -103,6 +107,8 @@ class FormManager extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure forms');
+
         $validated = $this->validate([
             'handle' => ['required', 'string', 'max:255', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique('forms', 'handle')->ignore($this->editingId)],
             'title' => ['required', 'string', 'max:255'],
@@ -149,6 +155,8 @@ class FormManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure forms');
+
         $form = Form::findOrFail($id);
         $submissionCount = $form->submissions()->count();
 

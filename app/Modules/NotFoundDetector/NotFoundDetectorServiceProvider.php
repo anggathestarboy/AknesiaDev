@@ -20,7 +20,7 @@ class NotFoundDetectorServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'not-found-detector');
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('not-found-detector.')
             ->group(__DIR__.'/routes.php');

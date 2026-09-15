@@ -8,6 +8,7 @@ use App\Modules\Sites\Models\Site;
 use App\Modules\Taxonomies\Livewire\TaxonomyManager;
 use App\Modules\Taxonomies\Livewire\TermForm;
 use App\Modules\Taxonomies\Livewire\TermManager;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 function makeTaxonomySites(): void
@@ -217,4 +218,203 @@ test('a blueprint tab with handle "sidebar" renders its fields in the term form\
     Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
         ->assertSee('Color')
         ->assertSee('Seo Title');
+});
+
+test('creating a taxonomy requires the configure taxonomies permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)->call('create')->assertStatus(403);
+});
+
+test('a user with configure taxonomies permission can create a taxonomy', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure taxonomies']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)
+        ->call('create')
+        ->set('title', 'News Categories')
+        ->set('handle', 'news_categories')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Taxonomy::where('handle', 'news_categories')->exists())->toBeTrue();
+});
+
+test('editing a taxonomy requires the configure taxonomies permission', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => [], 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)->call('edit', $taxonomy->id)->assertStatus(403);
+});
+
+test('a user with configure taxonomies permission can edit a taxonomy', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => [], 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure taxonomies']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)
+        ->call('edit', $taxonomy->id)
+        ->assertSet('handle', 'news_categories');
+});
+
+test('saving a taxonomy requires the configure taxonomies permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)
+        ->set('title', 'News Categories')
+        ->set('handle', 'news_categories')
+        ->call('save')->assertStatus(403);
+});
+
+test('deleting a taxonomy requires the configure taxonomies permission', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => [], 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)->call('delete', $taxonomy->id)->assertStatus(403);
+});
+
+test('a user with configure taxonomies permission can delete a taxonomy', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => [], 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure taxonomies']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TaxonomyManager::class)->call('delete', $taxonomy->id);
+
+    expect(Taxonomy::find($taxonomy->id))->toBeNull();
+});
+
+test('viewing the term manager requires the view terms permission', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => [], 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermManager::class, ['taxonomy' => $taxonomy])->assertStatus(403);
+});
+
+test('a user with view terms permission can see the term manager', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => [], 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view news_categories terms']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermManager::class, ['taxonomy' => $taxonomy])
+        ->assertOk();
+});
+
+test('deleting a term requires the delete terms permission', function () {
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia'], 'settings' => ['blueprint' => 'news_categories']]);
+    $term = TaxonomyTerm::create(['taxonomy' => 'news_categories', 'site' => 'indonesia', 'blueprint' => 'news_categories', 'slug' => 'politics', 'data' => ['title' => 'Politics']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view news_categories terms']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermManager::class, ['taxonomy' => $taxonomy])->call('delete', $term->id)->assertStatus(403);
+});
+
+test('a user with delete terms permission can delete a term', function () {
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia'], 'settings' => ['blueprint' => 'news_categories']]);
+    $term = TaxonomyTerm::create(['taxonomy' => 'news_categories', 'site' => 'indonesia', 'blueprint' => 'news_categories', 'slug' => 'politics', 'data' => ['title' => 'Politics']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view news_categories terms', 'delete news_categories terms']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermManager::class, ['taxonomy' => $taxonomy])->call('delete', $term->id);
+
+    expect(TaxonomyTerm::find($term->id))->toBeNull();
+});
+
+test('creating a term requires the create terms permission', function () {
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])->assertStatus(403);
+});
+
+test('a user with create terms permission can create a term', function () {
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'create news_categories terms']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->set('title', 'Politics')
+        ->set('slug', 'politics')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(TaxonomyTerm::where('taxonomy', 'news_categories')->exists())->toBeTrue();
+});
+
+test('editing a term requires the edit terms permission', function () {
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia'], 'settings' => ['blueprint' => 'news_categories']]);
+    $term = TaxonomyTerm::create(['taxonomy' => 'news_categories', 'site' => 'indonesia', 'blueprint' => 'news_categories', 'slug' => 'politics', 'data' => ['title' => 'Politics']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'term' => $term])->assertStatus(403);
+});
+
+test('a user with edit terms permission can edit a term', function () {
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia'], 'settings' => ['blueprint' => 'news_categories']]);
+    $term = TaxonomyTerm::create(['taxonomy' => 'news_categories', 'site' => 'indonesia', 'blueprint' => 'news_categories', 'slug' => 'politics', 'data' => ['title' => 'Politics']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'edit news_categories terms']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'term' => $term])
+        ->assertSet('slug', 'politics');
 });

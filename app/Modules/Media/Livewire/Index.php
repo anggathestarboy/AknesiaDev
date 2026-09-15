@@ -80,10 +80,18 @@ class Index extends Component
         if ($this->container === '' || ! AssetContainer::where('handle', $this->container)->exists()) {
             $this->container = AssetContainer::orderBy('title')->value('handle') ?? '';
         }
+
+        if ($this->container !== '') {
+            auth()->user()->authorizePermission("view {$this->container} assets");
+        }
     }
 
     public function updatedContainer(): void
     {
+        if ($this->container !== '') {
+            auth()->user()->authorizePermission("view {$this->container} assets");
+        }
+
         $this->path = '';
         $this->search = '';
         $this->selected = [];
@@ -188,6 +196,8 @@ class Index extends Component
 
     public function createFolder(): void
     {
+        auth()->user()->authorizePermission("edit folders {$this->container} assets");
+
         $this->validate(['newFolderName' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
 
         try {
@@ -209,6 +219,8 @@ class Index extends Component
 
     public function renameFolder(): void
     {
+        auth()->user()->authorizePermission("edit folders {$this->container} assets");
+
         $this->validate(['renameFolderValue' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
 
         $parent = trim(dirname($this->renameFolderPath), '.');
@@ -235,6 +247,8 @@ class Index extends Component
 
     public function confirmDeleteFolder(): void
     {
+        auth()->user()->authorizePermission("edit folders {$this->container} assets");
+
         app(MediaService::class)->deleteFolder($this->container, $this->deleteFolderPath);
         $this->showDeleteFolder = false;
         unset($this->listing);
@@ -284,6 +298,8 @@ class Index extends Component
 
     public function renameFile(): void
     {
+        auth()->user()->authorizePermission("rename {$this->container} assets");
+
         $this->validate(['renameFileValue' => ['required', 'string', 'max:255', 'regex:/^[^\/\\\\]+$/']]);
 
         $asset = AssetMeta::where('container', $this->container)->findOrFail($this->renameFileId);
@@ -302,6 +318,8 @@ class Index extends Component
 
     public function dropOnFolder(string $draggedType, string $draggedKey, string $targetPath): void
     {
+        auth()->user()->authorizePermission("move {$this->container} assets");
+
         if ($draggedType === 'folder' && ($draggedKey === $targetPath || str_starts_with($targetPath, $draggedKey.'/'))) {
             return;
         }
@@ -389,6 +407,12 @@ class Index extends Component
         $service = app(MediaService::class);
         $mode = $this->clipboard['mode'];
 
+        if ($mode === 'cut') {
+            auth()->user()->authorizePermission("move {$this->container} assets");
+        } else {
+            $this->authorizeItemTypes($this->clipboard['items'], "edit {$this->container} assets", "edit folders {$this->container} assets");
+        }
+
         try {
             foreach ($this->clipboard['items'] as $item) {
                 if ($item['type'] === 'folder') {
@@ -427,6 +451,8 @@ class Index extends Component
             return;
         }
 
+        auth()->user()->authorizePermission("upload {$this->container} assets");
+
         $this->validate(['uploads.*' => ['required', 'file', 'max:51200']]);
 
         $service = app(MediaService::class);
@@ -463,6 +489,8 @@ class Index extends Component
 
     public function savePreviewMeta(): void
     {
+        auth()->user()->authorizePermission("edit {$this->container} assets");
+
         $this->validate([
             'previewTitle' => ['nullable', 'string', 'max:255'],
             'previewAlt' => ['nullable', 'string', 'max:255'],
@@ -495,6 +523,27 @@ class Index extends Component
         return app(MediaService::class)->downloadFolder($this->container, $path);
     }
 
+    /**
+     * Selections and clipboard pastes can mix files and folders in one
+     * batch, so authorize whichever permission each type present actually
+     * needs before touching storage — checked up front so a partially
+     * unauthorized batch aborts before anything is mutated.
+     *
+     * @param  array<int, array{type: string, key: int|string}>  $items
+     */
+    protected function authorizeItemTypes(array $items, string $filePermission, string $folderPermission): void
+    {
+        $types = array_unique(array_column($items, 'type'));
+
+        if (in_array('file', $types, true)) {
+            auth()->user()->authorizePermission($filePermission);
+        }
+
+        if (in_array('folder', $types, true)) {
+            auth()->user()->authorizePermission($folderPermission);
+        }
+    }
+
     protected function selectedItems(): array
     {
         return collect($this->selected)
@@ -522,6 +571,8 @@ class Index extends Component
 
     protected function duplicateItems(array $items): void
     {
+        $this->authorizeItemTypes($items, "edit {$this->container} assets", "edit folders {$this->container} assets");
+
         $service = app(MediaService::class);
 
         foreach ($items as $item) {
@@ -542,6 +593,8 @@ class Index extends Component
 
     protected function deleteItems(array $items): void
     {
+        $this->authorizeItemTypes($items, "delete {$this->container} assets", "edit folders {$this->container} assets");
+
         $service = app(MediaService::class);
 
         foreach ($items as $item) {

@@ -6,6 +6,7 @@ use App\Modules\Collections\Livewire\CollectionManager;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 test('collections page is displayed', function () {
@@ -338,6 +339,92 @@ test('the action after save can be configured and round-trips through edit', fun
     Livewire::test(CollectionManager::class)
         ->call('edit', $collection->id)
         ->assertSet('saveAction', 'create_another');
+});
+
+test('creating a collection requires the configure collections permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)->call('create')->assertForbidden();
+});
+
+test('a user with configure collections permission can create a collection', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure collections']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)
+        ->call('create')
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Collection::sole()->handle)->toBe('blog');
+});
+
+test('editing a collection requires the configure collections permission', function () {
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)->call('edit', $collection->id)->assertForbidden();
+});
+
+test('a user with configure collections permission can edit a collection', function () {
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure collections']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)
+        ->call('edit', $collection->id)
+        ->assertSet('handle', 'blog');
+});
+
+test('saving a collection requires the configure collections permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->call('save')
+        ->assertForbidden();
+});
+
+test('deleting a collection requires the configure collections permission', function () {
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)->call('delete', $collection->id)->assertForbidden();
+});
+
+test('a user with configure collections permission can delete a collection', function () {
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure collections']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(CollectionManager::class)->call('delete', $collection->id);
+
+    expect(Collection::find($collection->id))->toBeNull();
 });
 
 test('the action after save must be a known option', function () {

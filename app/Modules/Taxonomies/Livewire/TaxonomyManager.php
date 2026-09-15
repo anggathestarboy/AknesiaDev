@@ -79,6 +79,8 @@ class TaxonomyManager extends Component
 
     public function create(): void
     {
+        auth()->user()->authorizePermission('configure taxonomies');
+
         $this->reset(['editingId', 'handle', 'title', 'blueprint']);
         $this->createBlueprint = true;
         $this->saveAction = 'listing';
@@ -88,6 +90,8 @@ class TaxonomyManager extends Component
 
     public function edit(int $id): void
     {
+        auth()->user()->authorizePermission('configure taxonomies');
+
         $taxonomy = Taxonomy::findOrFail($id);
 
         $this->editingId = $taxonomy->id;
@@ -111,6 +115,8 @@ class TaxonomyManager extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure taxonomies');
+
         $siteOrder = $this->availableSites->pluck('handle')->all();
         $this->sites = collect(array_unique(array_merge($this->sites, array_filter([$this->defaultSiteHandle]))))
             ->sortBy(fn (string $handle): int => array_search($handle, $siteOrder, true))
@@ -158,6 +164,8 @@ class TaxonomyManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure taxonomies');
+
         $taxonomy = Taxonomy::findOrFail($id);
 
         $termCount = TaxonomyTerm::where('taxonomy', $taxonomy->handle)->count();

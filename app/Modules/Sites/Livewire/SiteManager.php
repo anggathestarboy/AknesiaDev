@@ -55,12 +55,16 @@ class SiteManager extends Component
 
     public function create(): void
     {
+        auth()->user()->authorizePermission('configure sites');
+
         $this->reset(['editingId', 'name', 'handle', 'url', 'locale', 'lang', 'customAttributes']);
         Flux::modal('site-form')->show();
     }
 
     public function edit(int $id): void
     {
+        auth()->user()->authorizePermission('configure sites');
+
         $site = Site::findOrFail($id);
 
         $this->editingId = $site->id;
@@ -95,6 +99,8 @@ class SiteManager extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure sites');
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'handle' => ['required', 'string', 'max:255', Rule::unique('sites', 'handle')->ignore($this->editingId)],
@@ -128,6 +134,8 @@ class SiteManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure sites');
+
         Site::findOrFail($id)->delete();
 
         Flux::toast(variant: 'success', text: __('Site deleted.'));
@@ -147,6 +155,8 @@ class SiteManager extends Component
 
     protected function swapOrder(int $id, int $direction): void
     {
+        auth()->user()->authorizePermission('configure sites');
+
         $site = Site::findOrFail($id);
 
         $neighbor = Site::where('order', $direction < 0 ? '<' : '>', $site->order)

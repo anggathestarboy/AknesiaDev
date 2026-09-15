@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Navigation\Livewire\NavigationManager;
 use App\Modules\Navigation\Models\Navigation;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 test('navigations page is displayed', function () {
@@ -178,4 +179,90 @@ test('edit tree stays enabled for a protected navigation even with no blueprint'
 
     Livewire::test(NavigationManager::class)
         ->assertSeeHtml(route('navigation.edit', $navigation->handle));
+});
+
+test('creating a navigation requires the configure navigation permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)->call('create')->assertStatus(403);
+});
+
+test('a user with configure navigation permission can create a navigation', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)
+        ->call('create')
+        ->set('title', 'Main menu')
+        ->set('handle', 'main')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Navigation::where('handle', 'main')->exists())->toBeTrue();
+});
+
+test('editing a navigation requires the configure navigation permission', function () {
+    $navigation = Navigation::create(['title' => 'Main menu', 'handle' => 'main']);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)->call('edit', $navigation->id)->assertStatus(403);
+});
+
+test('a user with configure navigation permission can edit a navigation', function () {
+    $navigation = Navigation::create(['title' => 'Main menu', 'handle' => 'main']);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)
+        ->call('edit', $navigation->id)
+        ->assertSet('handle', 'main');
+});
+
+test('saving a navigation requires the configure navigation permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)
+        ->set('title', 'Main menu')
+        ->set('handle', 'main')
+        ->call('save')
+        ->assertStatus(403);
+});
+
+test('deleting a navigation requires the configure navigation permission', function () {
+    $navigation = Navigation::create(['title' => 'Main menu', 'handle' => 'main']);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)->call('delete', $navigation->id)->assertStatus(403);
+});
+
+test('a user with configure navigation permission can delete a navigation', function () {
+    $navigation = Navigation::create(['title' => 'Main menu', 'handle' => 'main']);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationManager::class)->call('delete', $navigation->id);
+
+    expect(Navigation::find($navigation->id))->toBeNull();
 });

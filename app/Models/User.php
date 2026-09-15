@@ -93,6 +93,17 @@ class User extends Authenticatable implements PasskeyUser
         return $this->isSuper() || in_array($permission, $this->permissions(), true);
     }
 
+    /**
+     * Aborts the request with a 403 unless this user has the given
+     * permission — the standard guard call for Livewire component actions
+     * (mount/create/edit/save/delete), since those aren't reachable through
+     * route middleware.
+     */
+    public function authorizePermission(string $permission): void
+    {
+        abort_unless($this->hasPermission($permission), 403);
+    }
+
     public function isSuper(): bool
     {
         return in_array('super', $this->permissions(), true);

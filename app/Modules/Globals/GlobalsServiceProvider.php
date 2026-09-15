@@ -21,7 +21,7 @@ class GlobalsServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/resources/views', 'globals');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('globals.')
             ->group(__DIR__.'/routes.php');
