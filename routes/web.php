@@ -24,8 +24,13 @@ require __DIR__.'/settings.php';
 Route::get('/robots.txt', [SiteSettingsController::class, 'robots'])->name('robots');
 Route::get('/llms.txt', [SiteSettingsController::class, 'llms'])->name('llms');
 
-// Public sitemap.xml — see SitemapController and SitemapSyncer.
+// Public sitemap — split per collection (sitemap index pattern), see
+// SitemapController and SitemapSyncer. The per-collection route is
+// registered first since "sitemap.xml" would otherwise also match its
+// "{collection}.xml" segment.
+Route::get('/sitemap-{collection}.xml', [SitemapController::class, 'collection'])->name('sitemap.collection');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap.xsl', [SitemapController::class, 'stylesheet'])->name('sitemap.xsl');
 
 // Public form submission endpoint — the form's own markup is hand-built by
 // the site's templates (see App\Modules\Forms\Models\Form::fields()), this

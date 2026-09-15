@@ -57,9 +57,26 @@ class EntryUrlResolver
             return null;
         }
 
-        $base = rtrim($site->url, '/');
+        $base = $this->baseUrl($site);
 
         return $path === '' ? ($base ?: '/') : "{$base}/{$path}";
+    }
+
+    /**
+     * A site's own "url" is either a full domain (e.g. "https://en.example.com",
+     * for genuinely separate sites) or just a path prefix (e.g. "/en", for
+     * several sites sharing one domain — see PageController::resolveSite()).
+     * A path-only value has no scheme/host of its own, so it's resolved
+     * against config('app.url') to get an absolute URL a sitemap (or
+     * anything outside the browser) can actually use.
+     */
+    protected function baseUrl(Site $site): string
+    {
+        if (preg_match('#^https?://#i', $site->url)) {
+            return rtrim($site->url, '/');
+        }
+
+        return rtrim(config('app.url'), '/').rtrim($site->url, '/');
     }
 
     /**

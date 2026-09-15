@@ -171,8 +171,8 @@ test('an entry with order 1 is the homepage and its url has no slug', function (
             'slug' => 'halo-slug', 'data' => ['title' => 'Homepage EN'],
         ]);
 
-        expect(app(EntryUrlResolver::class)->url($collection, $idHome))->toBe('/');
-        expect(app(EntryUrlResolver::class)->url($collection, $enHome))->toBe('/en');
+        expect(app(EntryUrlResolver::class)->url($collection, $idHome))->toBe(rtrim(config('app.url'), '/'));
+        expect(app(EntryUrlResolver::class)->url($collection, $enHome))->toBe(rtrim(config('app.url'), '/').'/en');
 
         $this->get('/')->assertOk()->assertSee('Homepage ID');
         $this->get('/en')->assertOk()->assertSee('Homepage EN');
@@ -204,7 +204,7 @@ test('the visit url for a path-prefixed site matches what the public page contro
     $url = Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => Entry::sole()])
         ->instance()->resolvedUrl;
 
-    expect($url)->toBe('/en/halo-slug');
+    expect($url)->toBe(rtrim(config('app.url'), '/').'/en/halo-slug');
 });
 
 test('a template can read entry data with arrow access, including nested replicator rows', function () {

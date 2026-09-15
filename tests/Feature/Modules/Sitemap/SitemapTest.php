@@ -115,17 +115,51 @@ test('an entry with noindex in its SEO robots is excluded from the sitemap', fun
     expect(Sitemap::count())->toBe(1);
 });
 
-test('sitemap.xml lists only active urls', function () {
+test('sitemap.xml is an index listing one sitemap per collection', function () {
     makeSitemapSite();
     makeRoutableBlogCollection();
+    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
 
     Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'slug' => 'hello', 'status' => 'published', 'data' => ['title' => 'Hello']]);
-    Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'slug' => 'draft-one', 'status' => 'draft', 'data' => ['title' => 'Draft']]);
+    Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'slug' => 'about', 'status' => 'published', 'data' => ['title' => 'About']]);
 
     $this->get('/sitemap.xml')
         ->assertOk()
+        ->assertSee(route('sitemap.collection', ['collection' => 'blog']), false)
+        ->assertSee(route('sitemap.collection', ['collection' => 'pages']), false)
+        ->assertSee('<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>', false);
+});
+
+test('the sitemap xsl stylesheet is served with the right content type', function () {
+    $this->get('/sitemap.xsl')
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/xsl; charset=UTF-8')
+        ->assertSee('<xsl:stylesheet', false);
+});
+
+test('a collection sitemap lists only that collection\'s active urls', function () {
+    makeSitemapSite();
+    makeRoutableBlogCollection();
+    Collection::create(['title' => 'Pages', 'handle' => 'pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+
+    Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'slug' => 'hello', 'status' => 'published', 'data' => ['title' => 'Hello']]);
+    Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'slug' => 'draft-one', 'status' => 'draft', 'data' => ['title' => 'Draft']]);
+    Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'slug' => 'about', 'status' => 'published', 'data' => ['title' => 'About']]);
+
+    $this->get('/sitemap-blog.xml')
+        ->assertOk()
         ->assertSee('https://example.id/blog/hello', false)
-        ->assertDontSee('draft-one');
+        ->assertDontSee('draft-one')
+        ->assertDontSee('about')
+        ->assertSee('<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>', false)
+        ->assertSee('<!-- collection: blog -->', false);
+});
+
+test('a collection sitemap 404s once it has no active urls', function () {
+    makeSitemapSite();
+    makeRoutableBlogCollection();
+
+    $this->get('/sitemap-blog.xml')->assertNotFound();
 });
 
 test('the sitemap admin listing can toggle a row inactive and delete it', function () {
