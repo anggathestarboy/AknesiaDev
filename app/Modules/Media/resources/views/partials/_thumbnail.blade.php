@@ -1,5 +1,16 @@
 @if (str_starts_with((string) $asset->mime_type, 'image/'))
     <img src="{{ $asset->url }}" alt="{{ $asset->alt }}" loading="{{ $asset->loading }}" draggable="false" class="h-full w-full {{ $fit ?? 'object-cover' }}" />
+@elseif (str_starts_with((string) $asset->mime_type, 'video/'))
+    @if ($interactive ?? false)
+        <video src="{{ $asset->url }}" controls preload="metadata" class="h-full w-full {{ $fit ?? 'object-cover' }}"></video>
+    @else
+        <div class="relative h-full w-full">
+            <video src="{{ $asset->url }}" preload="metadata" muted playsinline draggable="false" class="h-full w-full {{ $fit ?? 'object-cover' }}"></video>
+            <span class="absolute inset-0 flex items-center justify-center">
+                <flux:icon.play-circle class="size-1/3 text-white drop-shadow" />
+            </span>
+        </div>
+    @endif
 @elseif ($asset->extension === 'pdf')
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 43 56" class="asset-thumbnail h-1/2 w-1/2 rounded-sm">
         <path fill="#e4e4e7" fill-rule="evenodd" d="M30.48 0H1.46C.66 0 0 .65 0 1.93V55c0 .35.65 1 1.46 1h40.07c.81 0 1.46-.65 1.46-1V12.98c0-.7-.09-.92-.26-1.09L31.11.26a.87.87 0 0 0-.62-.26"></path>

@@ -26,3 +26,32 @@ test('deleting a single file requires opening the confirm modal before it is act
 
     expect(AssetMeta::find($asset->id))->toBeNull();
 });
+
+test('a video asset renders as a muted, non-interactive video thumbnail in the grid', function () {
+    $this->actingAs(User::factory()->create());
+    Storage::fake('public');
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'clip.mp4', 'filename' => 'clip', 'extension' => 'mp4', 'path' => 'clip.mp4', 'meta' => ['mime_type' => 'video/mp4']]);
+
+    $html = Livewire::test(Index::class, ['container' => 'photos'])->html();
+
+    expect($html)->toContain('<video');
+    expect($html)->not->toContain('controls');
+});
+
+test('a video asset gets a playable, controlled video element in the preview modal', function () {
+    $this->actingAs(User::factory()->create());
+    Storage::fake('public');
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'clip.mp4', 'filename' => 'clip', 'extension' => 'mp4', 'path' => 'clip.mp4', 'meta' => ['mime_type' => 'video/mp4']]);
+
+    $html = Livewire::test(Index::class, ['container' => 'photos'])
+        ->call('openPreview', $asset->id)
+        ->html();
+
+    expect($html)->toContain('<video');
+    expect($html)->toContain('controls');
+    expect($html)->toContain($asset->url);
+});

@@ -208,18 +208,18 @@
         </div>
     </flux:modal>
 
-    <flux:modal name="preview" wire:model="showPreview" class="">
+    <flux:modal name="preview" wire:model="showPreview" class="w-[60%] xl:w-[40%]">
         @if ($this->previewAsset)
-            <div class="mt-7 grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div class="flex aspect-square items-center justify-center rounded-lg bg-zinc-100 p-4 dark:bg-zinc-800">
-                    @include ("media::partials._thumbnail", ["asset" => $this->previewAsset, "fit" => "object-contain"])
+            <div class="mt-7 grid grid-cols-1 gap-6">
+                <div class="flex aspect-square items-center justify-center rounded-lg bg-zinc-100 p-3 w-full dark:bg-zinc-800 h-[300px]">
+                    @include ("media::partials._thumbnail", ["asset" => $this->previewAsset, "fit" => "object-contain ", "interactive" => true])
                 </div>
 
                 <div class="min-w-0 space-y-4">
                     <flux:heading size="lg" class="pr-8 break-words">{{ $this->previewAsset->basename }}</flux:heading>
 
-                    @if ($this->previewAsset->extension === "pdf")
-                        <flux:button class="cursor-pointer" size="sm" icon="arrow-top-right-on-square" href="{{ $this->previewAsset->url }}" target="_blank">{{ __("Preview") }}</flux:button>
+                    @if ($this->previewAsset->extension === "pdf" || str_starts_with((string) $this->previewAsset->mime_type, "video/"))
+                        <flux:button class="cursor-pointer" size="sm" icon="arrow-top-right-on-square" href="{{ $this->previewAsset->url }}" target="_blank">{{ __("Open in new tab") }}</flux:button>
                     @endif
 
                     <flux:input wire:model="previewTitle" wire:keydown.enter="savePreviewMeta" :label="__('Title')" />
