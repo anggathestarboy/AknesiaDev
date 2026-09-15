@@ -79,6 +79,10 @@
 
                 <flux:checkbox wire:model="livePreview" :label="__('Live Preview')" :description="__('Let editors preview an entry on the live site as they edit it, even before it\'s published.')" />
 
+                <flux:checkbox wire:model="schemaEnabled" :label="__('Schema')" :description="__('Add a Schema tab to this collection\'s entries for attaching schema.org JSON-LD blocks (Article, Organization, etc.) to individual entries.')" />
+
+                <flux:checkbox wire:model="seoEnabled" :label="__('SEO')" :description="__('Add an SEO tab to this collection\'s entries for meta title/description, robots, sitemap hints, etc.')" />
+
                 @if ($structured)
                     <flux:input type="number" min="1" wire:model="maxDepth" :label="__('Max depth')" placeholder="{{ __('No limit') }}" />
 

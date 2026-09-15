@@ -12,6 +12,7 @@ use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
+use App\Modules\SiteSettings\Support\HasSchemaBlocks;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Cache;
@@ -30,6 +31,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class EntryForm extends Component
 {
+    use HasSchemaBlocks;
+
     const DEFAULT_SITE = 'indonesia';
 
     /**
@@ -39,6 +42,38 @@ class EntryForm extends Component
         'published' => 'Published',
         'need_review' => 'Need Review',
         'draft' => 'Draft',
+    ];
+
+    const SEO_ROBOTS_OPTIONS = [
+        'index' => 'Index',
+        'follow' => 'Follow',
+        'noindex' => 'No Index',
+        'nofollow' => 'No Follow',
+        'noarchive' => 'No Archive',
+        'noimageindex' => 'No Image Index',
+        'nosnippet' => 'No Snippet',
+    ];
+
+    const SEO_SITEMAP_PRIORITIES = ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0'];
+
+    const SEO_SITEMAP_CHANGEFREQS = ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'];
+
+    /**
+     * Which "SEO" tab fields are editable per-locale vs. shared across every
+     * locale (edited only from the origin site) — mirrors a blueprint
+     * field's own "localizable" flag (see overlayNonLocalizableData()).
+     *
+     * @var array<string, bool>
+     */
+    const SEO_LOCALIZABLE = [
+        'meta_title' => true,
+        'meta_description' => true,
+        'meta_canonical' => true,
+        'robots' => true,
+        'meta_featured_image' => false,
+        'meta_author' => false,
+        'sitemap_priority' => true,
+        'sitemap_changefreq' => true,
     ];
 
     public Collection $collection;
@@ -83,6 +118,15 @@ class EntryForm extends Component
      * @var array<string, mixed>
      */
     public array $data = [];
+
+    /**
+     * This entry's "SEO" tab fields — see Collection::seoEnabled() and
+     * Entry::seoFields(). Only meaningful (and only saved) when the
+     * collection has the tab enabled.
+     *
+     * @var array<string, mixed>
+     */
+    public array $seo = [];
 
     /**
      * Whether the live preview pane is currently shown — see
@@ -134,9 +178,30 @@ class EntryForm extends Component
 
         $this->fillData($entry);
 
+        if ($this->collection->schemaEnabled()) {
+            $this->schemaBlocks = array_map(
+                fn (array $block): array => array_merge($this->defaultSchemaBlock(), $block),
+                $entry?->schemaBlocks() ?? []
+            );
+        }
+
+        if ($this->collection->seoEnabled()) {
+            $this->seo = $entry?->seoFields() ?? Entry::defaultSeoFields();
+        }
+
         if (! $this->isOriginLocale()) {
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
+
+            if ($this->collection->seoEnabled()) {
+                $originSeo = $this->originEntry()?->seoFields() ?? Entry::defaultSeoFields();
+
+                foreach (self::SEO_LOCALIZABLE as $key => $localizable) {
+                    if (! $localizable) {
+                        $this->seo[$key] = $originSeo[$key];
+                    }
+                }
+            }
         }
 
         if ($this->collection->livePreview()) {
@@ -434,6 +499,25 @@ class EntryForm extends Component
         $this->activeTab = $handle;
     }
 
+    protected function schemaLogoSentinel(): string
+    {
+        return '__entry_schema_logo__';
+    }
+
+    public function pickSeoImage(): void
+    {
+        $this->dispatch('open-asset-picker', path: ['__entry_seo_image__'], container: $this->assetContainer, selected: $this->seo['meta_featured_image'] ?? [], max: 1);
+    }
+
+    public function removeSeoImage(int $assetId): void
+    {
+        $this->seo['meta_featured_image'] = collect($this->seo['meta_featured_image'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->reject(fn (int $id): bool => $id === $assetId)
+            ->values()
+            ->all();
+    }
+
     public function regenerateSlug(): void
     {
         $this->slug = Str::slug($this->title);
@@ -536,6 +620,16 @@ class EntryForm extends Component
         // hand them back to the editor instead of touching $this->data.
         if (($path[0] ?? null) === '__bard__') {
             $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', urls: AssetMeta::whereIn('id', $ids)->get()->pluck('url')->all());
+
+            return;
+        }
+
+        if ($this->schemaAssetsSelected($path, $ids)) {
+            return;
+        }
+
+        if (($path[0] ?? null) === '__entry_seo_image__') {
+            $this->seo['meta_featured_image'] = array_values($ids);
 
             return;
         }
@@ -668,6 +762,25 @@ class EntryForm extends Component
     protected function fieldRules(): array
     {
         return $this->fieldRulesFor($this->blueprintFields(), 'data');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function seoValidationRules(): array
+    {
+        return [
+            'seo.meta_title' => ['required', 'string', 'max:255'],
+            'seo.meta_description' => ['required', 'string', 'max:500'],
+            'seo.meta_canonical' => ['nullable', 'string', 'max:2048'],
+            'seo.robots' => ['required', 'array', 'min:1'],
+            'seo.robots.*' => [Rule::in(array_keys(self::SEO_ROBOTS_OPTIONS))],
+            'seo.meta_featured_image' => ['required', 'array', 'min:1', 'max:1'],
+            'seo.meta_featured_image.*' => ['integer', Rule::exists('assets_meta', 'id')],
+            'seo.meta_author' => ['required', Rule::exists('users', 'id')],
+            'seo.sitemap_priority' => ['required', Rule::in(self::SEO_SITEMAP_PRIORITIES)],
+            'seo.sitemap_changefreq' => ['required', Rule::in(self::SEO_SITEMAP_CHANGEFREQS)],
+        ];
     }
 
     /**
@@ -872,14 +985,24 @@ class EntryForm extends Component
             $this->parentId = null;
         }
 
-        $validated = $this->validate(array_merge([
+        $rules = array_merge([
             'title' => ['required', 'string', 'max:300'],
             'slug' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(array_keys(self::STATUSES))],
             'entryDate' => ['required', 'date'],
             'order' => ['nullable', 'integer'],
             'blueprintHandle' => ['required', Rule::in($this->availableBlueprints->pluck('handle')->all())],
-        ], $this->fieldRules()));
+        ], $this->fieldRules());
+
+        if ($this->collection->schemaEnabled()) {
+            $rules = array_merge($rules, $this->schemaBlockValidationRules());
+        }
+
+        if ($this->collection->seoEnabled()) {
+            $rules = array_merge($rules, $this->seoValidationRules());
+        }
+
+        $validated = $this->validate($rules);
 
         $data = $validated['data'] ?? [];
         $data['title'] = $validated['title'];
@@ -887,9 +1010,19 @@ class EntryForm extends Component
         if (! $this->isOriginLocale()) {
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $data, $originData);
+
+            if ($this->collection->seoEnabled()) {
+                $originSeo = $this->originEntry()?->seoFields() ?? Entry::defaultSeoFields();
+
+                foreach (self::SEO_LOCALIZABLE as $key => $localizable) {
+                    if (! $localizable) {
+                        $validated['seo'][$key] = $originSeo[$key];
+                    }
+                }
+            }
         }
 
-        $entry = Entry::updateOrCreate(['id' => $this->editingId], [
+        $attributes = [
             'site' => $this->site,
             'origin_id' => $this->originId,
             'collection' => $this->collection->handle,
@@ -900,7 +1033,17 @@ class EntryForm extends Component
             'date' => str_replace('T', ' ', $validated['entryDate']),
             'order' => $validated['order'] !== null ? (int) $validated['order'] : null,
             'data' => $data,
-        ]);
+        ];
+
+        if ($this->collection->schemaEnabled()) {
+            $attributes['schema'] = $this->cleanedSchemaBlocks($validated['schemaBlocks'] ?? []);
+        }
+
+        if ($this->collection->seoEnabled()) {
+            $attributes['seo'] = $validated['seo'] ?? [];
+        }
+
+        $entry = Entry::updateOrCreate(['id' => $this->editingId], $attributes);
 
         if ($this->collection->structured()) {
             try {

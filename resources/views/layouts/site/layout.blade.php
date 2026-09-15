@@ -1,6 +1,7 @@
 @props ([
     "title" => null,
     "site" => null,
+    "entry" => null,
 ])
 
 <!DOCTYPE html>
@@ -31,6 +32,12 @@
     @foreach ($siteSettings->structuredDataBlocks() as $structuredData)
         <script type="application/ld+json">{!! json_encode($structuredData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
     @endforeach
+
+    @if ($entry)
+        @foreach ($entry->structuredDataBlocks() as $structuredData)
+            <script type="application/ld+json">{!! json_encode($structuredData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+        @endforeach
+    @endif
 </head>
 <body class="">
     <x-layouts::site.header :site="$site" />

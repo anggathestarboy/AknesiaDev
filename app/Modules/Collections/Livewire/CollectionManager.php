@@ -68,6 +68,18 @@ class CollectionManager extends Component
     public bool $livePreview = false;
 
     /**
+     * Whether entries in this collection get a "Schema" tab for attaching
+     * schema.org JSON-LD blocks. See Collection::schemaEnabled().
+     */
+    public bool $schemaEnabled = false;
+
+    /**
+     * Whether entries in this collection get an "SEO" tab. See
+     * Collection::seoEnabled().
+     */
+    public bool $seoEnabled = false;
+
+    /**
      * Maximum nesting depth for the tree, as a string for the number input.
      * Blank means unlimited.
      */
@@ -104,7 +116,7 @@ class CollectionManager extends Component
 
     public function create(): void
     {
-        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'livePreview', 'maxDepth', 'expectsRoot', 'saveAction']);
+        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'livePreview', 'schemaEnabled', 'seoEnabled', 'maxDepth', 'expectsRoot', 'saveAction']);
         $this->routeMode = 'single';
         $this->sites = $this->availableSites->pluck('handle')->all();
         Flux::modal('collection-form')->show();
@@ -124,6 +136,8 @@ class CollectionManager extends Component
         $this->structured = $collection->structured();
         $this->orderable = $collection->orderable();
         $this->livePreview = $collection->livePreview();
+        $this->schemaEnabled = $collection->schemaEnabled();
+        $this->seoEnabled = $collection->seoEnabled();
         $this->maxDepth = (string) ($collection->maxDepth() ?? '');
         $this->expectsRoot = $collection->expectsRoot();
         $this->saveAction = $collection->saveAction();
@@ -174,6 +188,8 @@ class CollectionManager extends Component
             'structured' => ['boolean'],
             'orderable' => ['boolean'],
             'livePreview' => ['boolean'],
+            'schemaEnabled' => ['boolean'],
+            'seoEnabled' => ['boolean'],
             'maxDepth' => ['nullable', 'integer', 'min:1'],
             'expectsRoot' => ['boolean'],
             'saveAction' => ['required', Rule::in(['listing', 'editing', 'create_another'])],
@@ -209,6 +225,8 @@ class CollectionManager extends Component
                 'structured' => $validated['structured'],
                 'orderable' => $validated['orderable'],
                 'live_preview' => $validated['livePreview'],
+                'schema_enabled' => $validated['schemaEnabled'],
+                'seo_enabled' => $validated['seoEnabled'],
                 'max_depth' => $validated['structured'] && $validated['maxDepth'] !== '' ? (int) $validated['maxDepth'] : null,
                 'expects_root' => $validated['structured'] && $validated['expectsRoot'],
                 'save_action' => $validated['saveAction'],

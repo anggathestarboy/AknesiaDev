@@ -181,6 +181,40 @@ class BlueprintForm extends Component
     }
 
     /**
+     * Whether this blueprint's namespace is a collection with its "Schema"
+     * tab enabled (see Collection::schemaEnabled()) — used to show a
+     * non-editable "Schema" tab indicator alongside the real, storable
+     * tabs, since that tab's fields are fixed in code, not configured here.
+     */
+    #[Computed]
+    public function schemaTabVisible(): bool
+    {
+        if (! str_starts_with($this->namespace, 'collections.')) {
+            return false;
+        }
+
+        $handle = substr($this->namespace, strlen('collections.'));
+
+        return (bool) Collection::where('handle', $handle)->first()?->schemaEnabled();
+    }
+
+    /**
+     * Same as schemaTabVisible(), but for the "SEO" tab (see
+     * Collection::seoEnabled()).
+     */
+    #[Computed]
+    public function seoTabVisible(): bool
+    {
+        if (! str_starts_with($this->namespace, 'collections.')) {
+            return false;
+        }
+
+        $handle = substr($this->namespace, strlen('collections.'));
+
+        return (bool) Collection::where('handle', $handle)->first()?->seoEnabled();
+    }
+
+    /**
      * Asset containers an "assets" field can be scoped to (see the Media
      * module's asset_containers table).
      */

@@ -6,6 +6,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Services\EntryUrlResolver;
+use App\Modules\SiteSettings\Services\SchemaMarkupBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Fluent;
@@ -31,13 +32,69 @@ class Entry extends Model
     protected $table = 'entries';
 
     protected $fillable = [
-        'site', 'origin_id', 'published', 'status', 'slug', 'uri', 'date', 'order', 'collection', 'blueprint', 'data',
+        'site', 'origin_id', 'published', 'status', 'slug', 'uri', 'date', 'order', 'collection', 'blueprint', 'data', 'schema', 'seo',
     ];
 
     protected $casts = [
         'published' => 'boolean',
         'data' => 'array',
+        'schema' => 'array',
+        'seo' => 'array',
     ];
+
+    /**
+     * Every "SEO" tab field key with its default value — a freshly-enabled
+     * entry (or one predating the tab) still returns every key. Robots
+     * defaults to noindex+nofollow, mirroring the "if left blank" default
+     * an editor would otherwise have to set by hand on every entry.
+     *
+     * @return array<string, mixed>
+     */
+    public static function defaultSeoFields(): array
+    {
+        return [
+            'meta_title' => '',
+            'meta_description' => '',
+            'meta_canonical' => '',
+            'robots' => ['noindex', 'nofollow'],
+            'meta_featured_image' => [],
+            'meta_author' => '',
+            'sitemap_priority' => '0.8',
+            'sitemap_changefreq' => 'weekly',
+        ];
+    }
+
+    /**
+     * This entry's own SEO fields (see the collection's "SEO" tab toggle),
+     * merged over the defaults so a partially-filled or pre-toggle entry
+     * still returns every key.
+     *
+     * @return array<string, mixed>
+     */
+    public function seoFields(): array
+    {
+        return array_merge(static::defaultSeoFields(), $this->seo ?? []);
+    }
+
+    /**
+     * This entry's own schema.org JSON-LD blocks (see the collection's
+     * "Schema" tab toggle) — rendered alongside, not instead of, the
+     * site-wide blocks from SiteSetting.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function structuredDataBlocks(): array
+    {
+        return app(SchemaMarkupBuilder::class)->buildAll($this->schemaBlocks());
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function schemaBlocks(): array
+    {
+        return $this->schema ?? [];
+    }
 
     /**
      * This entry's field data for public templates — every associative

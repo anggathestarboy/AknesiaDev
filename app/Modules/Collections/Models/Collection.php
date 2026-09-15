@@ -128,6 +128,29 @@ class Collection extends Model
     }
 
     /**
+     * Whether entries in this collection get a "Schema" tab on their edit
+     * form, letting an editor attach schema.org JSON-LD blocks (Article,
+     * Organization, etc.) to that specific entry. Unlike a blueprint tab,
+     * this one isn't field-builder-driven — its inputs are fixed in code
+     * (see entry-field's schema partial) — so it's just a toggle here
+     * rather than something configured through Blueprints.
+     */
+    public function schemaEnabled(): bool
+    {
+        return (bool) ($this->settings['schema_enabled'] ?? false);
+    }
+
+    /**
+     * Whether entries in this collection get an "SEO" tab on their edit
+     * form (meta title/description, robots, sitemap hints, etc.) — same
+     * code-managed-tab convention as schemaEnabled().
+     */
+    public function seoEnabled(): bool
+    {
+        return (bool) ($this->settings['seo_enabled'] ?? false);
+    }
+
+    /**
      * Where the entry form sends you after saving one of this collection's
      * entries: 'listing' (back to the entry list — the default), 'editing'
      * (stay on the entry, useful for iterating), or 'create_another' (a

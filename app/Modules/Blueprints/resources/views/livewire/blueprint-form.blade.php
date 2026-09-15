@@ -234,6 +234,34 @@
                     </div>
                 </div>
             @endforeach
+
+            @if ($this->schemaTabVisible)
+                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200">
+                    <div class="bg-white p-3 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] bg-indigo-300 py-0.5 px-2 rounded-2xl inline-flex items-center gap-0.5"><flux:icon.code-bracket class="size-3" /> {{ __("Code-managed") }}</span>
+                                <flux:text class="font-medium">{{ __("Schema") }}</flux:text>
+                            </div>
+                        </div>
+                        <flux:text class="text-sm text-zinc-500">{{ __("Entries in this collection get a \"Schema\" tab for attaching schema.org JSON-LD blocks. Its fields are fixed in code, not editable here — see EntryForm.") }}</flux:text>
+                    </div>
+                </div>
+            @endif
+
+            @if ($this->seoTabVisible)
+                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200">
+                    <div class="bg-white p-3 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] bg-indigo-300 py-0.5 px-2 rounded-2xl inline-flex items-center gap-0.5"><flux:icon.code-bracket class="size-3" /> {{ __("Code-managed") }}</span>
+                                <flux:text class="font-medium">{{ __("SEO") }}</flux:text>
+                            </div>
+                        </div>
+                        <flux:text class="text-sm text-zinc-500">{{ __("Entries in this collection get an \"SEO\" tab for meta title/description, robots, sitemap hints, etc. Its fields are fixed in code, not editable here — see EntryForm.") }}</flux:text>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <div class="flex justify-end gap-2">

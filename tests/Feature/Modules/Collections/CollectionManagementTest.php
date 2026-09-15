@@ -35,6 +35,8 @@ test('collection can be created', function () {
         'structured' => false,
         'orderable' => false,
         'live_preview' => false,
+        'schema_enabled' => false,
+        'seo_enabled' => false,
         'max_depth' => null,
         'expects_root' => false,
         'save_action' => 'listing',
@@ -279,6 +281,44 @@ test('collection cannot be deleted while it still has entries', function () {
     Livewire::test(CollectionManager::class)->call('delete', $collection->id);
 
     expect(Collection::find($collection->id))->not->toBeNull();
+});
+
+test('schema tab can be enabled and round-trips through edit', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('schemaEnabled', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->schemaEnabled())->toBeTrue();
+
+    Livewire::test(CollectionManager::class)
+        ->call('edit', $collection->id)
+        ->assertSet('schemaEnabled', true);
+});
+
+test('seo tab can be enabled and round-trips through edit', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('seoEnabled', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $collection = Collection::sole();
+
+    expect($collection->seoEnabled())->toBeTrue();
+
+    Livewire::test(CollectionManager::class)
+        ->call('edit', $collection->id)
+        ->assertSet('seoEnabled', true);
 });
 
 test('the action after save can be configured and round-trips through edit', function () {

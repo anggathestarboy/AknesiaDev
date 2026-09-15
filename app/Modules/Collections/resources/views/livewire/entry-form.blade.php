@@ -32,19 +32,42 @@
         $sidebarTab = collect($this->blueprintTabs)->firstWhere("handle", "sidebar");
         $sidebarFields = collect($this->blueprintFields())->where("tab", "sidebar");
         $sidebarSections = $sidebarTab["sections"] ?? [];
+        $schemaEnabled = $this->collection->schemaEnabled();
+        $seoEnabled = $this->collection->seoEnabled();
     @endphp
 
     <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7">
         <div class="w-full lg:w-[60%] xl:w-[70%] space-y-6">
-            @if ($mainTabs->count() > 1)
+            @if ($mainTabs->count() > 1 || $schemaEnabled || $seoEnabled)
                 <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
                     @foreach ($mainTabs as $tab)
                         <button type="button" wire:click="setActiveTab('{{ $tab['handle'] }}')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === $tab['handle'] ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ $tab["display"] }}</button>
 
                     @endforeach
+                    @if ($schemaEnabled)
+                        <button type="button" wire:click="setActiveTab('schema')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'schema' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ __("Schema") }}</button>
+                    @endif
+                    @if ($seoEnabled)
+                        <button type="button" wire:click="setActiveTab('seo')" class="border-b-2 px-3 py-2 text-sm {{ $activeTab === 'seo' ? 'border-zinc-800 font-medium text-zinc-900 dark:border-zinc-100 dark:text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer' }}">{{ __("SEO") }}</button>
+                    @endif
                 </div>
             @endif
 
+            @if ($schemaEnabled && $activeTab === "schema")
+                <flux:text class="text-sm text-zinc-500">{{ __('Schema.org JSON-LD blocks for this entry specifically — rendered alongside the site-wide blocks from Site Settings.') }}</flux:text>
+
+                <div class="space-y-4">
+                    @forelse ($schemaBlocks as $index => $block)
+                        @include ("site-settings::livewire.partials.schema-block", ["index" => $index, "block" => $block])
+                    @empty
+                        <flux:text class="text-zinc-500">{{ __("No schema blocks yet.") }}</flux:text>
+                    @endforelse
+                </div>
+
+                <flux:button size="sm" type="button" wire:click="addSchemaBlock">{{ __("Add schema") }}</flux:button>
+            @elseif ($seoEnabled && $activeTab === "seo")
+                @include ("collections::livewire.partials.seo-fields", ["seo" => $seo])
+            @else
             @php
                 $activeTabDef = collect($this->blueprintTabs)->firstWhere("handle", $activeTab);
                 $tabSections = $activeTabDef["sections"] ?? [];
@@ -125,6 +148,7 @@
                     </div>
                 @endif
             @endforeach
+            @endif
         </div>
 
         <div class="w-full lg:w-[40%] xl:w-[30%] col-span-1 space-y-5 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">

@@ -104,7 +104,7 @@ test('picking a logo resolves its url via the shared asset picker', function () 
 
     Livewire::test(SiteSettingsManager::class)
         ->call('addSchemaBlock')
-        ->call('assetsSelected', ['__site_settings_logo__', 0], [$asset->id])
+        ->call('schemaAssetsSelected', ['__site_settings_logo__', 0], [$asset->id])
         ->assertSet('schemaBlocks.0.logo', $asset->url);
 });
 

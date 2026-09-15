@@ -52,6 +52,37 @@ test('namespace options are derived from existing collections', function () {
         ->assertSee('collections.pages');
 });
 
+test('a non-editable schema tab indicator is shown for a collection with the schema tab enabled', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => ['schema_enabled' => true]]);
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => Blueprint::sole()])
+        ->assertSet('namespace', 'collections.blog')
+        ->assertSee(__('Schema'))
+        ->assertSee(__('Code-managed'));
+});
+
+test('the schema tab indicator is hidden when the collection has not enabled it', function () {
+    $this->actingAs(User::factory()->create());
+    Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => []]);
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => Blueprint::sole()])
+        ->assertDontSee(__('Code-managed'));
+});
+
+test('a non-editable seo tab indicator is shown for a collection with the seo tab enabled', function () {
+    $this->actingAs(User::factory()->create());
+    Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => ['seo_enabled' => true]]);
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => []]]);
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => Blueprint::sole()])
+        ->assertSet('namespace', 'collections.blog')
+        ->assertSee(__('SEO'))
+        ->assertSee(__('Code-managed'));
+});
+
 test('namespace options also include existing global sets, and a globals-namespaced blueprint can be edited', function () {
     $this->actingAs(User::factory()->create());
     GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site-settings', 'settings' => []]);

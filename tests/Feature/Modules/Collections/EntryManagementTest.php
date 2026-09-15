@@ -2005,6 +2005,121 @@ test('an author field can be picked from existing users and saved', function () 
     expect(Entry::sole()->data['author'])->toBe((string) $author->id);
 });
 
+test('an entry can save its own schema.org blocks when the collection has the schema tab enabled', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['schema_enabled' => true])]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('addSchemaBlock')
+        ->set('schemaBlocks.0.type', 'Organization')
+        ->set('schemaBlocks.0.name', 'Acme Inc.')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->schemaBlocks())->toHaveCount(1);
+    expect($entry->schemaBlocks()[0]['type'])->toBe('Organization');
+    expect($entry->schemaBlocks()[0]['name'])->toBe('Acme Inc.');
+    expect($entry->structuredDataBlocks())->toHaveCount(1);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry, 'site' => 'indonesia'])
+        ->assertSet('schemaBlocks.0.name', 'Acme Inc.');
+});
+
+test('an entry in a schema-disabled collection never persists schema blocks', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->schemaBlocks())->toBe([]);
+});
+
+test('an entry can save its own SEO fields when the collection has the SEO tab enabled', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['seo_enabled' => true])]);
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'og.webp', 'filename' => 'og', 'extension' => 'webp', 'path' => 'og.webp', 'meta' => ['mime_type' => 'image/webp']]);
+    $author = User::factory()->create();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('seo.meta_title', 'Hello World | Blog')
+        ->set('seo.meta_description', 'A great post about hello world.')
+        ->set('seo.robots', ['index', 'follow'])
+        ->set('seo.meta_author', (string) $author->id)
+        ->dispatch('assets-selected', path: ['__entry_seo_image__'], ids: [$asset->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->seoFields()['meta_title'])->toBe('Hello World | Blog');
+    expect($entry->seoFields()['robots'])->toBe(['index', 'follow']);
+    expect($entry->seoFields()['meta_featured_image'])->toBe([$asset->id]);
+    expect($entry->seoFields()['meta_author'])->toBe((string) $author->id);
+    expect($entry->seoFields()['sitemap_priority'])->toBe('0.8');
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry, 'site' => 'indonesia'])
+        ->assertSet('seo.meta_title', 'Hello World | Blog');
+});
+
+test('an entry in an SEO-disabled collection never persists SEO fields', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->seo)->toBeNull();
+});
+
+test('a required SEO field blocks saving when the SEO tab is enabled', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['seo_enabled' => true])]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasErrors(['seo.meta_title', 'seo.meta_description', 'seo.meta_featured_image', 'seo.meta_author']);
+});
+
 test('an author field rejects a user id that does not exist', function () {
     $this->actingAs(User::factory()->create());
     makeSites();
