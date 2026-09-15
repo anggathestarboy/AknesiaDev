@@ -12,8 +12,10 @@ use App\Modules\Collections\Models\Entry;
 use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Media\Models\AssetMeta;
+use App\Modules\Sitemap\Models\Sitemap;
 use App\Modules\Sites\Models\Site;
 use App\Modules\Users\Models\Role;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 function makeSites(): void
@@ -2373,4 +2375,182 @@ test('a user with "reorder X entries" permission can reorder entries', function 
 
     expect($second->fresh()->order)->toBe(1);
     expect($first->fresh()->order)->toBe(2);
+});
+
+test('bulk actions are only available for a flat (non-structured, non-orderable) collection', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    $collection = makeBlogCollection(null);
+
+    expect(Livewire::test(EntryManager::class, ['collection' => $collection])->instance()->bulkActionsAvailable())->toBeTrue();
+
+    $collection->update(['settings' => ['orderable' => true]]);
+    $collection->refresh();
+    expect(Livewire::test(EntryManager::class, ['collection' => $collection])->instance()->bulkActionsAvailable())->toBeFalse();
+
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+    expect(Livewire::test(EntryManager::class, ['collection' => $collection])->instance()->bulkActionsAvailable())->toBeFalse();
+});
+
+test('bulk delete requires the "delete X entries" permission', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Hello']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id])
+        ->call('bulkDelete')
+        ->assertForbidden();
+});
+
+test('a user with "delete X entries" permission can bulk delete selected entries and their locale siblings', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Hello']]);
+    $translation = Entry::create(['site' => 'english', 'collection' => 'blog', 'origin_id' => $origin->id, 'data' => ['title' => 'Hello EN']]);
+    $untouched = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Untouched']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'delete blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$origin->id])
+        ->call('bulkDelete')
+        ->assertSet('selected', []);
+
+    expect(Entry::find($origin->id))->toBeNull();
+    expect(Entry::find($translation->id))->toBeNull();
+    expect(Entry::find($untouched->id))->not->toBeNull();
+});
+
+test('bulk delete silently skips an already-deleted id instead of failing', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Hello']]);
+    $missingId = (string) Str::uuid();
+
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id, $missingId])
+        ->call('bulkDelete')
+        ->assertHasNoErrors();
+
+    expect(Entry::find($entry->id))->toBeNull();
+});
+
+test('bulk status change requires the "edit X entries" permission', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'status' => 'draft', 'data' => ['title' => 'Hello']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id])
+        ->call('bulkUpdateStatus', 'need_review')
+        ->assertForbidden();
+});
+
+test('bulk status change to "published" additionally requires the "publish X entries" permission', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'status' => 'draft', 'data' => ['title' => 'Hello']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id])
+        ->call('bulkUpdateStatus', 'published')
+        ->assertForbidden();
+
+    expect($entry->fresh()->status)->toBe('draft');
+});
+
+test('a user with "edit X entries" permission can bulk change status between draft and need review', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $first = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'status' => 'draft', 'data' => ['title' => 'First']]);
+    $second = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'status' => 'draft', 'data' => ['title' => 'Second']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$first->id, $second->id])
+        ->call('bulkUpdateStatus', 'need_review')
+        ->assertSet('selected', []);
+
+    expect($first->fresh()->status)->toBe('need_review');
+    expect($second->fresh()->status)->toBe('need_review');
+});
+
+test('bulk publishing keeps the sitemap in sync, unlike a raw mass update which would bypass Entry\'s save event', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $collection->update(['settings' => ['route_mode' => 'single', 'route' => 'blog/{slug}']]);
+    $collection->refresh();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'slug' => 'hello', 'status' => 'draft', 'data' => ['title' => 'Hello']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'publish blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id])
+        ->call('bulkUpdateStatus', 'published');
+
+    expect($entry->fresh()->status)->toBe('published');
+    expect(Sitemap::where('collection', 'blog')->where('origin_id', $entry->id)->exists())->toBeTrue();
+});
+
+test('toggleSelectAll selects every listed entry, then clears the selection when called again', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $first = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'First']]);
+    $second = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Second']]);
+
+    $this->actingAs(User::factory()->create());
+
+    $component = Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->call('toggleSelectAll');
+
+    expect($component->get('selected'))->toEqualCanonicalizing([$first->id, $second->id]);
+
+    $component->call('toggleSelectAll')->assertSet('selected', []);
+});
+
+test('changing the search or site filter clears the current bulk selection', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Hello']]);
+
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id])
+        ->set('search', 'hel')
+        ->assertSet('selected', []);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$entry->id])
+        ->set('siteFilter', 'english')
+        ->assertSet('selected', []);
 });

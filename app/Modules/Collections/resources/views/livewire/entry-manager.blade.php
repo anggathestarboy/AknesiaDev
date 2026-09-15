@@ -46,6 +46,26 @@
         <flux:text class="text-sm text-zinc-500">{{ __("Drag the handle to reorder. The top entry becomes the site's homepage.") }}</flux:text>
     @endif
 
+    @if ($this->bulkActionsAvailable() && count($selected) > 0)
+        <div class="flex items-end gap-2">
+            <flux:text class="text-sm text-zinc-500">{{ __(':count selected', ['count' => count($selected)]) }}</flux:text>
+
+            @if (auth()->user()->hasPermission("edit {$collection->handle} entries"))
+                <flux:select size="sm" class="w-40" placeholder="{{ __('Set status…') }}" x-on:change="$wire.bulkUpdateStatus($event.target.value); $event.target.value = ''">
+                    @foreach ($statuses as $value => $label)
+                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
+
+            @if (auth()->user()->hasPermission("delete {$collection->handle} entries"))
+                <flux:modal.trigger name="confirm-bulk-delete-entries">
+                    <flux:button size="sm" variant="danger" type="button">{{ __("Delete") }}</flux:button>
+                </flux:modal.trigger>
+            @endif
+        </div>
+    @endif
+
     @if ($collection->structured())
         <ul @if ($orderable) wire:sort="reorderRoot" @endif class="space-y-2">
             @forelse ($this->entryTree as $entry)
@@ -57,7 +77,11 @@
     @else
         <flux:table>
             <flux:table.columns>
-                <flux:table.column class="w-8"></flux:table.column>
+                <flux:table.column class="w-8">
+                    @if ($this->bulkActionsAvailable() && $this->entries->isNotEmpty())
+                        <input type="checkbox" wire:click="toggleSelectAll" :checked="count(array_intersect($selected, $this->entries->pluck('id')->all())) === $this->entries->count()" />
+                    @endif
+                </flux:table.column>
                 <flux:table.column class="w-25">{{ __("Site") }}</flux:table.column>
                 <flux:table.column>{{ __("Title") }}</flux:table.column>
                 <flux:table.column>{{ __("Slug") }}</flux:table.column>
@@ -73,6 +97,8 @@
                         <flux:table.cell>
                             @if ($orderable)
                                 <flux:icon.bars-3 wire:sort:handle class="size-4 shrink-0 cursor-grab text-zinc-400" />
+                            @elseif ($this->bulkActionsAvailable())
+                                <input type="checkbox" wire:model.live="selected" value="{{ $entry->id }}" />
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
@@ -156,6 +182,22 @@
                 </flux:modal.close>
                 <flux:modal.close>
                     <flux:button variant="danger" type="button" x-on:click="$wire.delete(deleteEntryId, deleteAllLocales)">{{ __("Delete") }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal name="confirm-bulk-delete-entries" class="min-w-[26rem]">
+        <div class="space-y-4">
+            <flux:heading size="lg">{{ __("Delete :count selected entries?", ["count" => count($selected)]) }}</flux:heading>
+            <flux:text class="text-zinc-500">{{ __("This also deletes their other language versions. This cannot be undone.") }}</flux:text>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled">{{ __("Cancel") }}</flux:button>
+                </flux:modal.close>
+                <flux:modal.close>
+                    <flux:button variant="danger" type="button" x-on:click="$wire.bulkDelete()">{{ __("Delete") }}</flux:button>
                 </flux:modal.close>
             </div>
         </div>

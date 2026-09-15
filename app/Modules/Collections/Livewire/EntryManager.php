@@ -22,6 +22,17 @@ class EntryManager extends Component
 
     public string $siteFilter = '';
 
+    /**
+     * Ids checked in the bulk-select column — only offered for a flat
+     * collection (neither Structured nor Orderable, see
+     * EntryManager::bulkActionsAvailable()), since drag-and-drop reordering
+     * and a structured tree both need that same first column for their own
+     * controls. See bulkDelete()/bulkUpdateStatus().
+     *
+     * @var array<int, string>
+     */
+    public array $selected = [];
+
     public function mount(Collection $collection): void
     {
         $this->collection = $collection;
@@ -29,6 +40,34 @@ class EntryManager extends Component
         auth()->user()->authorizePermission("view {$this->collection->handle} entries");
 
         $this->siteFilter = Site::orderBy('order')->value('handle') ?? '';
+    }
+
+    public function bulkActionsAvailable(): bool
+    {
+        return ! $this->collection->structured() && ! $this->collection->orderable();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->selected = [];
+    }
+
+    public function updatedSiteFilter(): void
+    {
+        $this->selected = [];
+    }
+
+    /**
+     * Checks/unchecks every currently-listed (search/site-filtered) entry
+     * at once.
+     */
+    public function toggleSelectAll(): void
+    {
+        $ids = $this->entries->pluck('id')->all();
+
+        $this->selected = $ids !== [] && count(array_intersect($this->selected, $ids)) === count($ids)
+            ? []
+            : $ids;
     }
 
     /**
@@ -274,6 +313,77 @@ class EntryManager extends Component
         Flux::toast(variant: 'success', text: __('Entry deleted.'));
 
         unset($this->entries, $this->entryTree);
+    }
+
+    /**
+     * Deletes every checked entry (and, same as the single-entry delete,
+     * its other-language versions) — only offered for a flat collection,
+     * see bulkActionsAvailable().
+     */
+    public function bulkDelete(): void
+    {
+        auth()->user()->authorizePermission("delete {$this->collection->handle} entries");
+
+        if (! $this->bulkActionsAvailable()) {
+            return;
+        }
+
+        foreach ($this->selected as $id) {
+            $entry = Entry::where('collection', $this->collection->handle)->find($id);
+
+            if (! $entry) {
+                continue;
+            }
+
+            foreach ($this->localeSiblings($entry) as $sibling) {
+                $sibling->delete();
+            }
+
+            $entry->delete();
+        }
+
+        $count = count($this->selected);
+        $this->selected = [];
+        unset($this->entries);
+
+        Flux::toast(variant: 'success', text: trans_choice(':count entry deleted.|:count entries deleted.', $count, ['count' => $count]));
+    }
+
+    /**
+     * Sets every checked entry's status at once — only offered for a flat
+     * collection, see bulkActionsAvailable(). Moving TO "published"
+     * additionally needs the collection's own publish permission, mirroring
+     * EntryForm::save(); moving away from it (or between draft/need_review)
+     * only needs the base edit permission already required to reach this
+     * page's bulk actions at all.
+     */
+    public function bulkUpdateStatus(string $status): void
+    {
+        auth()->user()->authorizePermission("edit {$this->collection->handle} entries");
+
+        if (! array_key_exists($status, EntryForm::STATUSES) || ! $this->bulkActionsAvailable()) {
+            return;
+        }
+
+        if ($status === 'published') {
+            auth()->user()->authorizePermission("publish {$this->collection->handle} entries");
+        }
+
+        // Updated one model at a time (not a single mass ->update() query)
+        // so Entry::booted()'s "saved" hook fires for each — a mass update
+        // bypasses Eloquent model events entirely, which would leave
+        // sitemap.xml out of sync with entries that just left/entered
+        // "published" (see SitemapSyncer).
+        Entry::where('collection', $this->collection->handle)
+            ->whereIn('id', $this->selected)
+            ->get()
+            ->each(fn (Entry $entry) => $entry->update(['status' => $status, 'published' => $status === 'published']));
+
+        $count = count($this->selected);
+        $this->selected = [];
+        unset($this->entries);
+
+        Flux::toast(variant: 'success', text: trans_choice(':count entry updated.|:count entries updated.', $count, ['count' => $count]));
     }
 
     public function render(): View
