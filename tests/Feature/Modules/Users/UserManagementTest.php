@@ -124,6 +124,42 @@ test('deleting a role removes it', function () {
     expect(Role::find($role->id))->toBeNull();
 });
 
+test('a role still assigned to a user cannot be deleted', function () {
+    $this->actingAs(User::factory()->create());
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => []]);
+    User::factory()->create()->roles()->attach($role);
+
+    Livewire::test(RoleManager::class)->call('delete', $role->id);
+
+    expect(Role::find($role->id))->not->toBeNull();
+});
+
+test('a role still assigned to a user group cannot be deleted', function () {
+    $this->actingAs(User::factory()->create());
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => []]);
+    $group = UserGroup::create(['handle' => 'staff', 'title' => 'Staff']);
+    $group->roles()->attach($role);
+
+    Livewire::test(RoleManager::class)->call('delete', $role->id);
+
+    expect(Role::find($role->id))->not->toBeNull();
+});
+
+test('a role can be deleted once it is unassigned from every user and group', function () {
+    $this->actingAs(User::factory()->create());
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => []]);
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+
+    Livewire::test(RoleManager::class)->call('delete', $role->id);
+    expect(Role::find($role->id))->not->toBeNull();
+
+    $user->roles()->detach($role);
+
+    Livewire::test(RoleManager::class)->call('delete', $role->id);
+    expect(Role::find($role->id))->toBeNull();
+});
+
 test('creating a user group assigns roles to it', function () {
     $this->actingAs(User::factory()->create());
     $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp']]);

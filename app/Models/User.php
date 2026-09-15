@@ -24,6 +24,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $name
  * @property string $email
  * @property Carbon|null $email_verified_at
+ * @property Carbon|null $banned_at
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -48,8 +49,29 @@ class User extends Authenticatable implements PasskeyUser
     {
         return [
             'email_verified_at' => 'datetime',
+            'banned_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
+    }
+
+    /**
+     * Not mass-assignable (see #[Fillable] above) — banning/unbanning is a
+     * privileged action gated by its own permission, not something any
+     * caller with a plain update() should be able to trigger.
+     */
+    public function ban(): void
+    {
+        $this->forceFill(['banned_at' => now()])->save();
+    }
+
+    public function unban(): void
+    {
+        $this->forceFill(['banned_at' => null])->save();
     }
 
     /**

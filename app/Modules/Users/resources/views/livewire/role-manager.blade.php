@@ -14,6 +14,7 @@
             <flux:table.column>{{ __("Handle") }}</flux:table.column>
             <flux:table.column>{{ __("Permissions") }}</flux:table.column>
             <flux:table.column>{{ __("Users") }}</flux:table.column>
+            <flux:table.column>{{ __("Groups") }}</flux:table.column>
             <flux:table.column class="w-32"></flux:table.column>
         </flux:table.columns>
 
@@ -30,6 +31,7 @@
                         @endif
                     </flux:table.cell>
                     <flux:table.cell>{{ $role->users_count }}</flux:table.cell>
+                    <flux:table.cell>{{ $role->user_groups_count }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-2 w-32">
                         <flux:button size="sm" :href="route('users.roles.edit', ['role' => $role->handle])" wire:navigate>{{ __("Edit") }}</flux:button>
                         <flux:modal.trigger name="confirm-delete-role">
@@ -39,7 +41,7 @@
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="5">{{ __("No roles yet.") }}</flux:table.cell>
+                    <flux:table.cell colspan="6">{{ __("No roles yet.") }}</flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>

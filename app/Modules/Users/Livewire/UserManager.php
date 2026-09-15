@@ -14,6 +14,14 @@ class UserManager extends Component
 {
     public string $search = '';
 
+    /**
+     * Ids checked in the bulk-select column — see bulkDelete()/bulkBan()/
+     * bulkUnban().
+     *
+     * @var array<int, string>
+     */
+    public array $selected = [];
+
     public function mount(): void
     {
         auth()->user()->authorizePermission('view users');
@@ -33,6 +41,23 @@ class UserManager extends Component
             ->get();
     }
 
+    public function updatedSearch(): void
+    {
+        $this->selected = [];
+    }
+
+    /**
+     * Checks/unchecks every currently-listed (search-filtered) user at once.
+     */
+    public function toggleSelectAll(): void
+    {
+        $ids = $this->users->pluck('id')->all();
+
+        $this->selected = $ids !== [] && count(array_intersect($this->selected, $ids)) === count($ids)
+            ? []
+            : $ids;
+    }
+
     public function delete(string $id): void
     {
         auth()->user()->authorizePermission('delete users');
@@ -48,6 +73,97 @@ class UserManager extends Component
         Flux::toast(variant: 'success', text: __('User deleted.'));
 
         unset($this->users);
+    }
+
+    public function ban(string $id): void
+    {
+        auth()->user()->authorizePermission('ban users');
+
+        if ($id === auth()->id()) {
+            Flux::toast(variant: 'danger', text: __("You can't ban your own account."));
+
+            return;
+        }
+
+        User::findOrFail($id)->ban();
+
+        Flux::toast(variant: 'success', text: __('User banned.'));
+
+        unset($this->users);
+    }
+
+    public function unban(string $id): void
+    {
+        auth()->user()->authorizePermission('ban users');
+
+        if ($id === auth()->id()) {
+            Flux::toast(variant: 'danger', text: __("You can't unban your own account."));
+
+            return;
+        }
+
+        User::findOrFail($id)->unban();
+
+        Flux::toast(variant: 'success', text: __('User unbanned.'));
+
+        unset($this->users);
+    }
+
+    public function bulkDelete(): void
+    {
+        auth()->user()->authorizePermission('delete users');
+
+        $ids = $this->selectedExcludingSelf();
+        $count = count($ids);
+
+        User::whereIn('id', $ids)->delete();
+
+        $this->selected = [];
+        unset($this->users);
+
+        Flux::toast(variant: 'success', text: trans_choice(':count user deleted.|:count users deleted.', $count, ['count' => $count]));
+    }
+
+    public function bulkBan(): void
+    {
+        auth()->user()->authorizePermission('ban users');
+
+        $ids = $this->selectedExcludingSelf();
+        $count = count($ids);
+
+        User::whereIn('id', $ids)->get()->each->ban();
+
+        $this->selected = [];
+        unset($this->users);
+
+        Flux::toast(variant: 'success', text: trans_choice(':count user banned.|:count users banned.', $count, ['count' => $count]));
+    }
+
+    public function bulkUnban(): void
+    {
+        auth()->user()->authorizePermission('ban users');
+
+        $ids = $this->selectedExcludingSelf();
+        $count = count($ids);
+
+        User::whereIn('id', $ids)->get()->each->unban();
+
+        $this->selected = [];
+        unset($this->users);
+
+        Flux::toast(variant: 'success', text: trans_choice(':count user unbanned.|:count users unbanned.', $count, ['count' => $count]));
+    }
+
+    /**
+     * The checked ids, minus the acting user's own — bulk-deleting or
+     * -banning yourself would lock you out (or worse, delete the account
+     * you're using right now) with no easy way back in.
+     *
+     * @return array<int, string>
+     */
+    protected function selectedExcludingSelf(): array
+    {
+        return array_values(array_diff($this->selected, [auth()->id()]));
     }
 
     public function render(): View
