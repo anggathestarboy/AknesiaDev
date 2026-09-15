@@ -2,6 +2,7 @@
 
 namespace App\Modules\Sites;
 
+use App\Modules\Sites\Console\Commands\CreateDefaultSiteCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +21,10 @@ class SitesServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'sites');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        $this->commands([
+            CreateDefaultSiteCommand::class,
+        ]);
 
         Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))

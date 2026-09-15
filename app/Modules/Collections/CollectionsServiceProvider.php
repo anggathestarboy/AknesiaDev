@@ -2,6 +2,8 @@
 
 namespace App\Modules\Collections;
 
+use App\Modules\Collections\Console\Commands\CreateDefaultPagesCollectionCommand;
+use App\Modules\Collections\Console\Commands\CreateHomepageEntryCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +22,11 @@ class CollectionsServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'collections');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        $this->commands([
+            CreateDefaultPagesCollectionCommand::class,
+            CreateHomepageEntryCommand::class,
+        ]);
 
         Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))

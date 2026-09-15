@@ -2,6 +2,7 @@
 
 namespace App\Modules\Blueprints;
 
+use App\Modules\Blueprints\Console\Commands\CreateHomepageBlueprintCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +21,10 @@ class BlueprintsServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'blueprints');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        $this->commands([
+            CreateHomepageBlueprintCommand::class,
+        ]);
 
         Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))

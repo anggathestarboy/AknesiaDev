@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users;
 
+use App\Modules\Users\Console\Commands\CreateSuperAdminCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +21,10 @@ class UsersServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'users');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        $this->commands([
+            CreateSuperAdminCommand::class,
+        ]);
 
         Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
