@@ -785,7 +785,16 @@ class EntryForm extends Component
      */
     public function validationAttributes(): array
     {
-        return $this->fieldAttributesFor($this->blueprintFields(), 'data');
+        return array_merge($this->fieldAttributesFor($this->blueprintFields(), 'data'), [
+            'seo.meta_title' => __('Meta Title'),
+            'seo.meta_description' => __('Meta Description'),
+            'seo.meta_canonical' => __('Meta Canonical'),
+            'seo.robots' => __('Robots'),
+            'seo.meta_featured_image' => __('Meta Featured Image'),
+            'seo.meta_author' => __('Meta Author'),
+            'seo.sitemap_priority' => __('Sitemap Priority'),
+            'seo.sitemap_changefreq' => __('Sitemap Changefreq'),
+        ]);
     }
 
     protected function fieldAttributesFor(array $fields, string $prefix): array

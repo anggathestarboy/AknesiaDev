@@ -2121,6 +2121,24 @@ test('a required SEO field blocks saving when the SEO tab is enabled', function 
         ->assertHasErrors(['seo.meta_title', 'seo.meta_description', 'seo.meta_featured_image', 'seo.meta_author']);
 });
 
+test('SEO field validation errors read with friendly names, not the seo.* attribute path', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['seo_enabled' => true])]);
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save');
+
+    expect($component->errors()->first('seo.meta_title'))->toBe('The Meta Title field is required.');
+    expect($component->errors()->first('seo.meta_description'))->toBe('The Meta Description field is required.');
+});
+
 test('an author field rejects a user id that does not exist', function () {
     $this->actingAs(User::factory()->create());
     makeSites();
