@@ -6,6 +6,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Services\EntryUrlResolver;
+use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sitemap\Services\SitemapSyncer;
 use App\Modules\SiteSettings\Services\SchemaMarkupBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -124,13 +125,18 @@ class Entry extends Model
      * <a href> instead of the raw "entry::..." marker. An "author" field's
      * stored user id is resolved to that user's name/email (never the
      * password hash or other sensitive columns), so a template can use
-     * $data->fieldHandle->name directly.
+     * $data->fieldHandle->name directly. An "assets" field's stored asset
+     * ids are resolved to the actual AssetMeta model(s) — one directly for
+     * a single-file field (max_items = 1), a list for anything else — so a
+     * template can use $data->fieldHandle->url directly instead of looking
+     * the asset up itself.
      */
     public function fluentData(): Fluent
     {
         $data = $this->resolveTaxonomyFields($this->data);
         $data = $this->resolveAuthorFields($data);
         $data = $this->resolveLinkFields($data, $this->blueprintFields());
+        $data = $this->resolveAssetFields($data, $this->blueprintFields());
 
         return static::wrapFluent($data);
     }
@@ -204,6 +210,45 @@ class Entry extends Model
             $collection = $linkedEntry ? Collection::where('handle', $linkedEntry->collection)->first() : null;
 
             $data[$handle] = ($linkedEntry && $collection) ? $resolver->url($collection, $linkedEntry) : null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Recursively resolves every "assets" field in $fields against $data,
+     * walking into a "replicator" field's own rows to any depth — mirrors
+     * resolveLinkFields(). A stale id (its asset deleted from the Media
+     * Library) is silently dropped rather than left as a dead reference.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
+    protected function resolveAssetFields(array $data, array $fields): array
+    {
+        foreach ($fields as $field) {
+            $handle = $field['handle'];
+
+            if ($field['type'] === 'replicator') {
+                $data[$handle] = collect($data[$handle] ?? [])
+                    ->map(fn (array $row): array => $this->resolveAssetFields($row, $field['replicator_fields'] ?? []))
+                    ->all();
+
+                continue;
+            }
+
+            if ($field['type'] !== 'assets') {
+                continue;
+            }
+
+            $ids = $data[$handle] ?? [];
+            $ids = is_array($ids) ? $ids : [];
+
+            $assets = AssetMeta::whereIn('id', $ids)->get()->sortBy(fn (AssetMeta $asset): int => array_search($asset->id, $ids, true))->values();
+            $allowsMultiple = ($field['max_items'] ?? null) === null || $field['max_items'] > 1;
+
+            $data[$handle] = $allowsMultiple ? $assets->all() : $assets->first();
         }
 
         return $data;
