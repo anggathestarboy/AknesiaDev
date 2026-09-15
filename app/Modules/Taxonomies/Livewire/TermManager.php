@@ -23,6 +23,8 @@ class TermManager extends Component
 
     public function mount(Taxonomy $taxonomy): void
     {
+        auth()->user()->authorizePermission("view {$taxonomy->handle} terms");
+
         $this->taxonomy = $taxonomy;
         $this->siteFilter = $this->defaultSiteHandle() ?? '';
     }
@@ -86,6 +88,8 @@ class TermManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission("delete {$this->taxonomy->handle} terms");
+
         TaxonomyTerm::where('taxonomy', $this->taxonomy->handle)->findOrFail($id)->delete();
 
         Flux::toast(variant: 'success', text: __('Term deleted.'));

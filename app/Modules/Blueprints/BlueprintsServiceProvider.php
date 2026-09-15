@@ -21,7 +21,7 @@ class BlueprintsServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/resources/views', 'blueprints');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('blueprints.')
             ->group(__DIR__.'/routes.php');

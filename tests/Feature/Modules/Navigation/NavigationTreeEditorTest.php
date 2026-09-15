@@ -8,6 +8,7 @@ use App\Modules\Navigation\Livewire\NavigationTreeEditor;
 use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Navigation\Services\NavigationTreeService;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 function makeNavigation(): Navigation
@@ -580,4 +581,67 @@ test('page-type items resolve their URL dynamically from the entry slug', functi
     $entry->update(['slug' => 'about']);
 
     expect($service->resolveUrl($tree[0]))->toBe('/about');
+});
+
+test('viewing the tree editor requires the view navigation permission', function () {
+    $navigation = makeNavigation();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])->assertStatus(403);
+});
+
+test('a user with view navigation permission can see the tree editor', function () {
+    $navigation = makeNavigation();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view main navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])->assertOk();
+});
+
+test('adding a root item requires the edit navigation permission', function () {
+    $navigation = makeNavigation();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view main navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])->call('addRoot')->assertStatus(403);
+});
+
+test('saving the tree requires the edit navigation permission', function () {
+    $navigation = makeNavigation();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view main navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])->call('save')->assertStatus(403);
+});
+
+test('a user with edit navigation permission can add items and save the tree', function () {
+    $navigation = makeNavigation();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view main navigation', 'edit main navigation']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->call('addRoot')
+        ->set('tree.0.title', 'Home')
+        ->set('tree.0.url', '/')
+        ->call('save');
+
+    $tree = app(NavigationTreeService::class)->load($navigation->fresh());
+    expect($tree)->toHaveCount(1);
+    expect($tree[0]['title'])->toBe('Home');
 });

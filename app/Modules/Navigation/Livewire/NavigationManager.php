@@ -45,6 +45,8 @@ class NavigationManager extends Component
 
     public function create(): void
     {
+        auth()->user()->authorizePermission('configure navigation');
+
         $this->reset(['editingId', 'handle', 'title', 'blueprint']);
         $this->createBlueprint = true;
         Flux::modal('navigation-form')->show();
@@ -52,6 +54,8 @@ class NavigationManager extends Component
 
     public function edit(int $id): void
     {
+        auth()->user()->authorizePermission('configure navigation');
+
         $navigation = Navigation::findOrFail($id);
 
         if ($this->isProtected($navigation)) {
@@ -76,6 +80,8 @@ class NavigationManager extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure navigation');
+
         $validated = $this->validate([
             'handle' => ['required', 'string', 'max:255', Rule::unique('navigations', 'handle')->ignore($this->editingId)],
             'title' => ['required', 'string', 'max:255'],
@@ -113,6 +119,8 @@ class NavigationManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure navigation');
+
         $navigation = Navigation::findOrFail($id);
 
         if ($this->isProtected($navigation)) {

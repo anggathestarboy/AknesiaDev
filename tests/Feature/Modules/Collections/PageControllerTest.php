@@ -187,6 +187,8 @@ test('an entry with order 1 is the homepage and its url has no slug', function (
 });
 
 test('the visit url for a path-prefixed site matches what the public page controller resolves', function () {
+    $this->actingAs(User::factory()->create());
+
     Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => '/', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
     Site::create(['handle' => 'english', 'name' => 'English', 'url' => '/en', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
     Blueprint::create(['namespace' => 'collections.pages', 'handle' => 'page', 'data' => ['fields' => []]]);

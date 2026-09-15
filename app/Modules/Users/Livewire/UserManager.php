@@ -14,6 +14,11 @@ class UserManager extends Component
 {
     public string $search = '';
 
+    public function mount(): void
+    {
+        auth()->user()->authorizePermission('view users');
+    }
+
     #[Computed]
     public function users()
     {
@@ -30,6 +35,8 @@ class UserManager extends Component
 
     public function delete(string $id): void
     {
+        auth()->user()->authorizePermission('delete users');
+
         if ($id === auth()->id()) {
             Flux::toast(variant: 'danger', text: __("You can't delete your own account."));
 

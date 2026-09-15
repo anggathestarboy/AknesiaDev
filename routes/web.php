@@ -10,7 +10,7 @@ if (config('cms.enabled')) {
     Route::prefix(config('cms.route'))->group(function () {
         Route::get('/', fn () => redirect()->route('dashboard'))->name('cms.home');
 
-        Route::middleware(['auth', 'verified'])->group(function () {
+        Route::middleware(['auth', 'verified', 'permission:access cp'])->group(function () {
             Route::view('dashboard', 'dashboard')->name('dashboard');
         });
     });

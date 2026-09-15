@@ -12,6 +12,11 @@ use Livewire\Component;
 #[Title('Roles')]
 class RoleManager extends Component
 {
+    public function mount(): void
+    {
+        auth()->user()->authorizePermission('edit roles');
+    }
+
     #[Computed]
     public function roles()
     {
@@ -20,6 +25,8 @@ class RoleManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('edit roles');
+
         Role::findOrFail($id)->delete();
 
         Flux::toast(variant: 'success', text: __('Role deleted.'));

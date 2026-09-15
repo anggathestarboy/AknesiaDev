@@ -18,6 +18,7 @@ class SubmissionController
 {
     public function show(Form $form, FormSubmission $submission): View
     {
+        auth()->user()->authorizePermission('configure forms');
         abort_unless($submission->form === $form->handle, 404);
 
         return view('forms::submission-detail', [
@@ -29,6 +30,7 @@ class SubmissionController
 
     public function exportTxt(Form $form, FormSubmission $submission): Response
     {
+        auth()->user()->authorizePermission('configure forms');
         abort_unless($submission->form === $form->handle, 404);
 
         $lines = collect($form->fields())
@@ -43,6 +45,7 @@ class SubmissionController
 
     public function exportJson(Form $form, FormSubmission $submission): JsonResponse
     {
+        auth()->user()->authorizePermission('configure forms');
         abort_unless($submission->form === $form->handle, 404);
 
         return response()->json($submission->data)

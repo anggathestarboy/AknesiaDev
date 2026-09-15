@@ -7,6 +7,7 @@ use App\Modules\Globals\Livewire\GlobalSetManager;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Globals\Models\GlobalSetVariable;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 function makeSite(string $handle, int $order = 0): Site
@@ -322,4 +323,155 @@ test('a blueprint tab with handle "sidebar" renders its fields in the global set
     Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
         ->assertSee('Site name')
         ->assertSee('Seo Title');
+});
+
+test('creating a global set requires the configure globals permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)->call('create')->assertStatus(403);
+});
+
+test('a user with configure globals permission can create a global set', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure globals']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)
+        ->call('create')
+        ->set('title', 'Site Settings')
+        ->set('handle', 'site_settings')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(GlobalSet::where('handle', 'site_settings')->exists())->toBeTrue();
+});
+
+test('editing a global set requires the configure globals permission', function () {
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)->call('edit', $globalSet->id)->assertStatus(403);
+});
+
+test('a user with configure globals permission can edit a global set', function () {
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure globals']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)
+        ->call('edit', $globalSet->id)
+        ->assertSet('handle', 'site_settings');
+});
+
+test('saving a global set definition requires the configure globals permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)
+        ->set('title', 'Site Settings')
+        ->set('handle', 'site_settings')
+        ->call('save')
+        ->assertStatus(403);
+});
+
+test('deleting a global set requires the configure globals permission', function () {
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)->call('delete', $globalSet->id)->assertStatus(403);
+});
+
+test('a user with configure globals permission can delete a global set', function () {
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => []]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure globals']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetManager::class)->call('delete', $globalSet->id);
+
+    expect(GlobalSet::find($globalSet->id))->toBeNull();
+});
+
+test('viewing a global set form requires the view globals permission', function () {
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'site_name', 'display' => 'Site name', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])->assertStatus(403);
+});
+
+test('a user with view globals permission can see the global set form', function () {
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'site_name', 'display' => 'Site name', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view site_settings globals']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])->assertOk();
+});
+
+test('saving global set values requires the edit globals permission', function () {
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'site_name', 'display' => 'Site name', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view site_settings globals']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->set('data.site_name', 'Acme Inc')
+        ->call('save')
+        ->assertStatus(403);
+});
+
+test('a user with edit globals permission can save global set values', function () {
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'site_name', 'display' => 'Site name', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view site_settings globals', 'edit site_settings globals']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->set('data.site_name', 'Acme Inc')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $variable = GlobalSetVariable::where('handle', 'site_settings')->sole();
+    expect($variable->data)->toBe(['site_name' => 'Acme Inc']);
 });

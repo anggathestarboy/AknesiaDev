@@ -75,6 +75,8 @@ class NavigationTreeEditor extends Component
 
     public function mount(Navigation $navigation): void
     {
+        auth()->user()->authorizePermission("view {$navigation->handle} navigation");
+
         $this->navigation = $navigation;
 
         if ($this->usesBlueprint()) {
@@ -219,6 +221,8 @@ class NavigationTreeEditor extends Component
 
     public function addReplicatorRow(array $path): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $field = $this->replicatorFieldAt($path);
 
         if (! $field) {
@@ -231,6 +235,8 @@ class NavigationTreeEditor extends Component
 
     public function removeReplicatorRow(array $path, int $rowIndex): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $rows = &$this->dataAt($path);
         unset($rows[$rowIndex]);
         $rows = array_values($rows);
@@ -238,6 +244,8 @@ class NavigationTreeEditor extends Component
 
     public function duplicateReplicatorRow(array $path, int $rowIndex): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $rows = &$this->dataAt($path);
 
         if (! array_key_exists($rowIndex, $rows)) {
@@ -258,6 +266,8 @@ class NavigationTreeEditor extends Component
      */
     public function reorderReplicatorRow(string $id, int $position, string $groupId): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $path = json_decode($groupId, true)['path'] ?? [];
         $rows = &$this->dataAt($path);
         $oldIndex = $this->findRowIndexByUid($rows, $id);
@@ -285,6 +295,8 @@ class NavigationTreeEditor extends Component
 
     public function removeAsset(array $path, int $assetId): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $ids = &$this->dataAt($path);
         $ids = collect($ids ?? [])->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => $id === $assetId)->values()->all();
     }
@@ -296,6 +308,8 @@ class NavigationTreeEditor extends Component
     #[On('assets-selected')]
     public function assetsSelected(array $path, array $ids): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         if (($path[0] ?? null) === '__bard__') {
             $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', urls: AssetMeta::whereIn('id', $ids)->get()->pluck('url')->all());
 
@@ -524,12 +538,16 @@ class NavigationTreeEditor extends Component
 
     public function addRoot(): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $this->tree = $this->treeService()->withAddedItem($this->tree, null, $this->blankAttributes());
         $this->expanded[] = $this->tree[array_key_last($this->tree)]['id'];
     }
 
     public function addChild(string $parentId): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $this->tree = $this->treeService()->withAddedItem($this->tree, $parentId, $this->blankAttributes());
 
         $children = $this->treeService()->findItem($this->tree, $parentId)['children'];
@@ -543,6 +561,8 @@ class NavigationTreeEditor extends Component
 
     public function duplicateItem(string $id): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $this->tree = $this->treeService()->withDuplicatedItem($this->tree, $id);
     }
 
@@ -554,6 +574,8 @@ class NavigationTreeEditor extends Component
 
     public function confirmDelete(): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         if ($this->deletingId === null) {
             return;
         }
@@ -572,6 +594,8 @@ class NavigationTreeEditor extends Component
      */
     public function sortRoot($id, $position): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $this->tree = $this->treeService()->withMovedItem($this->tree, $id, null, (int) $position);
     }
 
@@ -580,6 +604,8 @@ class NavigationTreeEditor extends Component
      */
     public function sortChildren($id, $position, $parentId): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         $this->tree = $this->treeService()->withMovedItem($this->tree, $id, $parentId, (int) $position);
     }
 
@@ -620,6 +646,8 @@ class NavigationTreeEditor extends Component
 
     public function confirmMove(): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         if ($this->movingId === null) {
             return;
         }
@@ -698,6 +726,8 @@ class NavigationTreeEditor extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
+
         if ($this->usesBlueprint()) {
             $validated = $this->validate($this->fieldRules());
             $data = $this->stripRowUids($validated['data'] ?? []);

@@ -13,6 +13,7 @@ use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 function makeSites(): void
@@ -2135,4 +2136,223 @@ test('an author field rejects a user id that does not exist', function () {
         ->set('data.author', '999999')
         ->call('save')
         ->assertHasErrors(['data.author']);
+});
+
+test('viewing a collection\'s entries requires the "view X entries" permission', function () {
+    makeSites();
+    makeBlogCollection(null);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => Collection::where('handle', 'blog')->firstOrFail()])->assertForbidden();
+});
+
+test('a user with "view X entries" permission can view a collection\'s entries', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->assertOk();
+});
+
+test('creating an entry requires the "create X entries" permission', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])->assertForbidden();
+});
+
+test('a user with "create X entries" permission can open the create form', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries', 'publish blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->slug)->toBe('hello-world');
+});
+
+test('editing an entry requires the "edit X entries" permission', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'data' => ['title' => 'Hello', 'status' => 'draft']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])->assertForbidden();
+});
+
+test('a user with "edit X entries" permission can open the edit form', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'data' => ['title' => 'Hello', 'status' => 'draft']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->assertSet('slug', 'hello');
+});
+
+test('saving an entry as published requires the "publish X entries" permission, but saving as draft does not', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->status)->toBe('draft');
+});
+
+test('saving an entry as published without the "publish X entries" permission is forbidden', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('status', 'published')
+        ->call('save')
+        ->assertForbidden();
+});
+
+test('a user with "publish X entries" permission can save an entry as published', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries', 'publish blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('status', 'published')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->status)->toBe('published');
+});
+
+test('deleting an entry requires the "delete X entries" permission', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Hello']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $entry->id)->assertForbidden();
+});
+
+test('a user with "delete X entries" permission can delete an entry', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'data' => ['title' => 'Hello']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'delete blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $entry->id);
+
+    expect(Entry::find($entry->id))->toBeNull();
+});
+
+test('reordering entries requires the "reorder X entries" permission', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $collection->update(['settings' => ['orderable' => true]]);
+    $collection->refresh();
+
+    $first = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'order' => 1, 'data' => ['title' => 'First']]);
+    $second = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'order' => 2, 'data' => ['title' => 'Second']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->call('reorderRoot', $second->id, 0)
+        ->assertForbidden();
+});
+
+test('a user with "reorder X entries" permission can reorder entries', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $collection->update(['settings' => ['orderable' => true]]);
+    $collection->refresh();
+
+    $first = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'order' => 1, 'data' => ['title' => 'First']]);
+    $second = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'order' => 2, 'data' => ['title' => 'Second']]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'reorder blog entries']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->call('reorderRoot', $second->id, 0);
+
+    expect($second->fresh()->order)->toBe(1);
+    expect($first->fresh()->order)->toBe(2);
 });

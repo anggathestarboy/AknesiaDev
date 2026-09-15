@@ -17,6 +17,8 @@ class FormSubmissionManager extends Component
 
     public function mount(Form $form): void
     {
+        auth()->user()->authorizePermission('configure forms');
+
         $this->form = $form;
     }
 
@@ -50,6 +52,8 @@ class FormSubmissionManager extends Component
 
     public function delete(string $id): void
     {
+        auth()->user()->authorizePermission('configure forms');
+
         FormSubmission::where('id', $id)->where('form', $this->form->handle)->delete();
 
         Flux::toast(variant: 'success', text: __('Submission deleted.'));

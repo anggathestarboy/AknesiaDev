@@ -14,37 +14,43 @@
             </div>
         </div>
 
-        <div class="space-y-4">
-            <flux:heading size="md">{{ __("Permissions") }}</flux:heading>
-
-            @foreach ($this->permissionGroups as $group)
-                <div class="rounded-lg border border-zinc-200 p-4 dark:border-white/10">
-                    <div class="mb-2 flex items-center justify-between">
-                        <flux:subheading>{{ $group["group"] }}</flux:subheading>
-
-                        @php $groupValues = collect(app(\App\Modules\Users\Services\PermissionRegistry::class)->flatten($group["permissions"]))->pluck("value")->all(); @endphp
-                        <div class="flex gap-2">
-                            <flux:button size="xs" type="button" wire:click="checkAll({{ \Illuminate\Support\Js::from($groupValues) }})">{{ __("Check all") }}</flux:button>
-                            <flux:button size="xs" type="button" variant="subtle" wire:click="uncheckAll({{ \Illuminate\Support\Js::from($groupValues) }})">{{ __("Uncheck all") }}</flux:button>
-                        </div>
-                    </div>
-
-                    <flux:checkbox.group wire:model="permissions">
-                        @foreach ($group["permissions"] as $permission)
-                            <flux:checkbox value="{{ $permission['value'] }}" label="{{ $permission['label'] }}" :description="$permission['description']" />
-
-                            @if ($permission["children"] !== [])
-                                <div class="ms-6 space-y-3 dark:border-white/10 mb-10 last:mb-0">
-                                    @foreach ($permission["children"] as $child)
-                                        <flux:checkbox value="{{ $child['value'] }}" label="{{ $child['label'] }}" :description="$child['description']" />
-                                    @endforeach
-                                </div>
-                            @endif
-                        @endforeach
-                    </flux:checkbox.group>
-                </div>
-            @endforeach
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
+            <flux:switch wire:model.live="superAdmin" :label="__('Super Admin')" :description="__('Full access, bypasses every permission check below. When on, this role can do everything, including things granted to no other role.')" />
         </div>
+
+        @unless ($superAdmin)
+            <div class="space-y-4">
+                <flux:heading size="md">{{ __("Permissions") }}</flux:heading>
+
+                @foreach ($this->permissionGroups as $group)
+                    <div class="rounded-lg border border-zinc-200 p-4 dark:border-white/10">
+                        <div class="mb-2 flex items-center justify-between">
+                            <flux:subheading>{{ $group["group"] }}</flux:subheading>
+
+                            @php $groupValues = collect(app(\App\Modules\Users\Services\PermissionRegistry::class)->flatten($group["permissions"]))->pluck("value")->all(); @endphp
+                            <div class="flex gap-2">
+                                <flux:button size="xs" type="button" wire:click="checkAll({{ \Illuminate\Support\Js::from($groupValues) }})">{{ __("Check all") }}</flux:button>
+                                <flux:button size="xs" type="button" variant="subtle" wire:click="uncheckAll({{ \Illuminate\Support\Js::from($groupValues) }})">{{ __("Uncheck all") }}</flux:button>
+                            </div>
+                        </div>
+
+                        <flux:checkbox.group wire:model="permissions">
+                            @foreach ($group["permissions"] as $permission)
+                                <flux:checkbox value="{{ $permission['value'] }}" label="{{ $permission['label'] }}" :description="$permission['description']" />
+
+                                @if ($permission["children"] !== [])
+                                    <div class="ms-6 space-y-3 dark:border-white/10 mb-10 last:mb-0">
+                                        @foreach ($permission["children"] as $child)
+                                            <flux:checkbox value="{{ $child['value'] }}" label="{{ $child['label'] }}" :description="$child['description']" />
+                                        @endforeach
+                                    </div>
+                                @endif
+                            @endforeach
+                        </flux:checkbox.group>
+                    </div>
+                @endforeach
+            </div>
+        @endunless
 
         <div class="flex justify-end gap-2">
             <flux:button :href="route('users.roles.index')" variant="filled" wire:navigate>{{ __("Cancel") }}</flux:button>

@@ -12,6 +12,7 @@ use App\Modules\Collections\Models\Collection;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Navigation\Models\Navigation;
+use App\Modules\Users\Models\Role;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 
@@ -1707,4 +1708,102 @@ test('link field rejects an allowed-collection handle that does not exist', func
         ])
         ->call('save')
         ->assertHasErrors(['fields.0.options']);
+});
+
+test('opening the blueprint create form requires the configure fields permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(BlueprintForm::class)->assertForbidden();
+});
+
+test('saving a blueprint requires the configure fields permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure fields']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields.0.handle', 'headline')
+        ->set('fields.0.display', 'Headline')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Blueprint::sole()->handle)->toBe('post');
+});
+
+test('deleting a blueprint requires the configure fields permission', function () {
+    $blueprint = Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => []]]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(BlueprintManager::class)->call('delete', $blueprint->id)->assertForbidden();
+});
+
+test('a user with configure fields permission can delete a blueprint', function () {
+    $blueprint = Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => []]]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure fields']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(BlueprintManager::class)->call('delete', $blueprint->id);
+
+    expect(Blueprint::find($blueprint->id))->toBeNull();
+});
+
+test('opening the fieldset create form requires the configure fields permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(FieldsetForm::class)->assertForbidden();
+});
+
+test('saving a fieldset requires the configure fields permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure fields']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(FieldsetForm::class)
+        ->set('handle', 'seo')
+        ->set('fields.0.handle', 'meta_title')
+        ->set('fields.0.display', 'Meta Title')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Fieldset::sole()->handle)->toBe('seo');
+});
+
+test('deleting a fieldset requires the configure fields permission', function () {
+    $fieldset = Fieldset::create(['handle' => 'seo', 'data' => ['fields' => []]]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(FieldsetManager::class)->call('delete', $fieldset->id)->assertForbidden();
+});
+
+test('a user with configure fields permission can delete a fieldset', function () {
+    $fieldset = Fieldset::create(['handle' => 'seo', 'data' => ['fields' => []]]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure fields']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(FieldsetManager::class)->call('delete', $fieldset->id);
+
+    expect(Fieldset::find($fieldset->id))->toBeNull();
 });

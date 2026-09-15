@@ -22,7 +22,7 @@ class SiteSettingsServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/resources/views', 'site-settings');
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('site-settings.')
             ->group(__DIR__.'/routes.php');

@@ -46,6 +46,8 @@ class GlobalSetForm extends Component
 
     public function mount(GlobalSet $globalSet): void
     {
+        auth()->user()->authorizePermission("view {$globalSet->handle} globals");
+
         $this->globalSet = $globalSet;
 
         $configuredSites = $globalSet->settings['sites'] ?? [];
@@ -454,6 +456,8 @@ class GlobalSetForm extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission("edit {$this->globalSet->handle} globals");
+
         $validated = $this->validate($this->fieldRules());
         $data = $validated['data'] ?? [];
 

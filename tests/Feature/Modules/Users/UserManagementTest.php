@@ -228,3 +228,255 @@ test('the permission registry generates its own checkboxes per navigation menu',
 
     expect($values)->toContain('view main navigation', 'edit main navigation', 'delete main navigation');
 });
+
+test('turning on super admin in the role form clears the permission tree', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(RoleForm::class)
+        ->set('title', 'Editor')
+        ->set('handle', 'editor')
+        ->set('permissions', ['access cp', 'configure collections'])
+        ->set('superAdmin', true)
+        ->assertSet('permissions', [])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Role::where('handle', 'editor')->sole()->permissions)->toBe(['super']);
+});
+
+test('editing a role with the super permission loads the super admin toggle on, and the permission tree without it', function () {
+    $this->actingAs(User::factory()->create());
+    $role = Role::create(['handle' => 'super-admin', 'title' => 'Super Admin', 'permissions' => ['super']]);
+
+    Livewire::test(RoleForm::class, ['role' => $role])
+        ->assertSet('superAdmin', true)
+        ->assertSet('permissions', []);
+});
+
+test('the super permission is no longer offered as a tree checkbox', function () {
+    $values = app(PermissionRegistry::class)->values();
+
+    expect($values)->not->toContain('super');
+});
+
+test('a user without access cp is forbidden from the whole control panel', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'no-access', 'title' => 'No Access', 'permissions' => []]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    $this->get('/admin-panel/dashboard')->assertForbidden();
+});
+
+test('viewing the users list requires the view users permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->assertForbidden();
+});
+
+test('a user with view users permission can view the users list', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->assertOk();
+});
+
+test('deleting a user requires the delete users permission', function () {
+    $victim = User::factory()->create();
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->call('delete', $victim->id)->assertForbidden();
+});
+
+test('a user with delete users permission can delete a user', function () {
+    $victim = User::factory()->create();
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view users', 'delete users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->call('delete', $victim->id);
+
+    expect(User::find($victim->id))->toBeNull();
+});
+
+test('creating a user requires the create users permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class)->assertForbidden();
+});
+
+test('a user with create users permission can open the create user form', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'create users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class)->assertOk();
+});
+
+test('editing a user requires the edit users permission', function () {
+    $other = User::factory()->create();
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])->assertForbidden();
+});
+
+test('a user with edit users permission can open the edit user form', function () {
+    $other = User::factory()->create();
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])->assertOk();
+});
+
+test('changing an existing user\'s password requires the change passwords permission', function () {
+    $other = User::factory()->create();
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])
+        ->set('name', $other->name)
+        ->set('email', $other->email)
+        ->set('password', 'newpassword123')
+        ->call('save')
+        ->assertForbidden();
+});
+
+test('a user with change passwords permission can change an existing user\'s password', function () {
+    $other = User::factory()->create();
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users', 'change passwords']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])
+        ->set('name', $other->name)
+        ->set('email', $other->email)
+        ->set('password', 'newpassword123')
+        ->call('save')
+        ->assertHasNoErrors();
+});
+
+test('assigning roles to an existing user requires the assign user roles permission', function () {
+    $other = User::factory()->create();
+    $editorRole = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp']]);
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])
+        ->set('name', $other->name)
+        ->set('email', $other->email)
+        ->set('roleHandles', [$editorRole->handle])
+        ->call('save')
+        ->assertForbidden();
+});
+
+test('a user with assign user roles permission can assign roles to an existing user', function () {
+    $other = User::factory()->create();
+    $editorRole = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp']]);
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users', 'assign user roles']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])
+        ->set('name', $other->name)
+        ->set('email', $other->email)
+        ->set('roleHandles', [$editorRole->handle])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($other->fresh()->roles->pluck('handle')->all())->toBe([$editorRole->handle]);
+});
+
+test('assigning groups to an existing user requires the assign user groups permission', function () {
+    $other = User::factory()->create();
+    $group = UserGroup::create(['handle' => 'staff', 'title' => 'Staff']);
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])
+        ->set('name', $other->name)
+        ->set('email', $other->email)
+        ->set('groupHandles', [$group->handle])
+        ->call('save')
+        ->assertForbidden();
+});
+
+test('a user with assign user groups permission can assign groups to an existing user', function () {
+    $other = User::factory()->create();
+    $group = UserGroup::create(['handle' => 'staff', 'title' => 'Staff']);
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit users', 'assign user groups']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserForm::class, ['user' => $other])
+        ->set('name', $other->name)
+        ->set('email', $other->email)
+        ->set('groupHandles', [$group->handle])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($other->fresh()->userGroups->pluck('handle')->all())->toBe([$group->handle]);
+});
+
+test('managing roles requires the edit roles permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(RoleManager::class)->assertForbidden();
+});
+
+test('a user with edit roles permission can manage roles', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit roles']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(RoleManager::class)->assertOk();
+    Livewire::test(RoleForm::class)->assertOk();
+});
+
+test('managing user groups requires the edit user groups permission', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserGroupManager::class)->assertForbidden();
+});
+
+test('a user with edit user groups permission can manage user groups', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'edit user groups']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserGroupManager::class)->call('create')->assertOk();
+});

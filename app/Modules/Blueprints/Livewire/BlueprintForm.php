@@ -102,6 +102,8 @@ class BlueprintForm extends Component
 
     public function mount(?Blueprint $blueprint = null): void
     {
+        auth()->user()->authorizePermission('configure fields');
+
         if (! $blueprint) {
             $this->addField('main', 'main');
 
@@ -496,6 +498,8 @@ class BlueprintForm extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('configure fields');
+
         $this->fields = $this->normalizeFieldsTree($this->fields);
 
         $validated = $this->validate([

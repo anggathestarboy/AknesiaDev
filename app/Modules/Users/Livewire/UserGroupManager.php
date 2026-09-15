@@ -26,6 +26,11 @@ class UserGroupManager extends Component
      */
     public array $roleHandles = [];
 
+    public function mount(): void
+    {
+        auth()->user()->authorizePermission('edit user groups');
+    }
+
     #[Computed]
     public function groups()
     {
@@ -40,12 +45,16 @@ class UserGroupManager extends Component
 
     public function create(): void
     {
+        auth()->user()->authorizePermission('edit user groups');
+
         $this->reset(['editingId', 'title', 'handle', 'roleHandles']);
         Flux::modal('user-group-form')->show();
     }
 
     public function edit(int $id): void
     {
+        auth()->user()->authorizePermission('edit user groups');
+
         $group = UserGroup::with('roles')->findOrFail($id);
 
         $this->editingId = $group->id;
@@ -63,6 +72,8 @@ class UserGroupManager extends Component
 
     public function save(): void
     {
+        auth()->user()->authorizePermission('edit user groups');
+
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'handle' => ['required', 'string', 'max:255', Rule::unique('user_groups', 'handle')->ignore($this->editingId)],
@@ -84,6 +95,8 @@ class UserGroupManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('edit user groups');
+
         UserGroup::findOrFail($id)->delete();
 
         Flux::toast(variant: 'success', text: __('User group deleted.'));

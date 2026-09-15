@@ -25,6 +25,9 @@ class EntryManager extends Component
     public function mount(Collection $collection): void
     {
         $this->collection = $collection;
+
+        auth()->user()->authorizePermission("view {$this->collection->handle} entries");
+
         $this->siteFilter = Site::orderBy('order')->value('handle') ?? '';
     }
 
@@ -166,6 +169,8 @@ class EntryManager extends Component
      */
     protected function reorder(string $id, int $position, ?string $parentId): void
     {
+        auth()->user()->authorizePermission("reorder {$this->collection->handle} entries");
+
         if (! $this->collection->orderable() || $this->siteFilter === '') {
             return;
         }
@@ -246,6 +251,8 @@ class EntryManager extends Component
 
     public function delete(string $id, bool $deleteLocaleSiblings = true): void
     {
+        auth()->user()->authorizePermission("delete {$this->collection->handle} entries");
+
         $entry = Entry::where('collection', $this->collection->handle)->findOrFail($id);
 
         if ($deleteLocaleSiblings) {

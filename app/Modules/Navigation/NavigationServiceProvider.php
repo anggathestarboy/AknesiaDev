@@ -26,7 +26,7 @@ class NavigationServiceProvider extends ServiceProvider
             SeedAdminSidebarCommand::class,
         ]);
 
-        Route::middleware(['web', 'auth', 'verified'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('navigation.')
             ->group(__DIR__.'/routes.php');

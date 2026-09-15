@@ -25,6 +25,8 @@ class FieldsetManager extends Component
 
     public function delete(int $id): void
     {
+        auth()->user()->authorizePermission('configure fields');
+
         Fieldset::findOrFail($id)->delete();
 
         Flux::toast(variant: 'success', text: __('Fieldset deleted.'));
