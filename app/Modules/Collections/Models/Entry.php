@@ -6,6 +6,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Services\EntryUrlResolver;
+use App\Modules\Sitemap\Services\SitemapSyncer;
 use App\Modules\SiteSettings\Services\SchemaMarkupBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +42,18 @@ class Entry extends Model
         'schema' => 'array',
         'seo' => 'array',
     ];
+
+    /**
+     * Keeps the sitemaps table in sync with every entry save/delete — see
+     * SitemapSyncer. Runs on every save regardless of which admin screen
+     * (or test) made it, rather than only from EntryForm::save(), so
+     * sitemap.xml never drifts from what's actually published.
+     */
+    protected static function booted(): void
+    {
+        static::saved(fn (self $entry) => app(SitemapSyncer::class)->sync($entry));
+        static::deleted(fn (self $entry) => app(SitemapSyncer::class)->remove($entry));
+    }
 
     /**
      * Every "SEO" tab field key with its default value — a freshly-enabled

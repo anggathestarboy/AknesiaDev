@@ -48,7 +48,7 @@
                 <flux:checkbox value="{{ $value }}" label="{{ $label }}" />
             @endforeach
         </flux:checkbox.group>
-        <flux:description>{{ __('If left blank then the default is "noindex, nofollow".') }}</flux:description>
+        <flux:description>{{ __('If left blank then the default is "noindex, nofollow". Checking "No Index" also excludes this entry from sitemap.xml.') }}</flux:description>
         @error ("seo.robots")
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
         @enderror
