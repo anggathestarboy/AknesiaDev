@@ -2,20 +2,31 @@
     $isOriginLocale = $this->isOriginLocale();
     $robotsOptions = \App\Modules\Collections\Livewire\EntryForm::SEO_ROBOTS_OPTIONS;
     $readOnlyBox = fn ($value) => is_scalar($value) ? ($value ?: "—") : __("Set in the default language");
+    // Google typically truncates a title/description shown in search
+    // results past these lengths — not a hard field limit, just the
+    // widely-used SEO rule of thumb for staying fully visible.
+    $titleLimit = 60;
+    $descriptionLimit = 160;
 @endphp
 
 <div class="space-y-6">
-    <flux:field>
+    <flux:field x-data="{ len: {{ strlen((string) ($seo['meta_title'] ?? '')) }} }">
         <flux:label>{{ __("Meta Title") }} <span class="text-red-500">*</span></flux:label>
-        <flux:input wire:model="seo.meta_title" />
+        <flux:input wire:model="seo.meta_title" x-on:input="len = $event.target.value.length" />
+        <div class="flex justify-end">
+            <flux:text class="text-xs" x-text="len + ' / {{ $titleLimit }}'" x-bind:class="len > {{ $titleLimit }} ? 'text-red-500' : 'text-zinc-400'"></flux:text>
+        </div>
         @error ("seo.meta_title")
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
         @enderror
     </flux:field>
 
-    <flux:field>
+    <flux:field x-data="{ len: {{ strlen((string) ($seo['meta_description'] ?? '')) }} }">
         <flux:label>{{ __("Meta Description") }} <span class="text-red-500">*</span></flux:label>
-        <flux:textarea wire:model="seo.meta_description" rows="3" />
+        <flux:textarea wire:model="seo.meta_description" x-on:input="len = $event.target.value.length" rows="3" />
+        <div class="flex justify-end">
+            <flux:text class="text-xs" x-text="len + ' / {{ $descriptionLimit }}'" x-bind:class="len > {{ $descriptionLimit }} ? 'text-red-500' : 'text-zinc-400'"></flux:text>
+        </div>
         @error ("seo.meta_description")
             <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
         @enderror
