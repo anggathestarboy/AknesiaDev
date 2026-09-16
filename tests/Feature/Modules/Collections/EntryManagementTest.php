@@ -2644,3 +2644,55 @@ test('the first entry of a new site is not auto-promoted to homepage unless the 
     $entry = Entry::where('site', 'english')->sole();
     expect($entry->order)->toBeNull();
 });
+
+test('creating a new translation prefills a localizable field with the origin locale\'s value instead of leaving it blank', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeBlogCollection(null);
+    makeSites();
+
+    Blueprint::create([
+        'namespace' => 'collections.blog',
+        'handle' => 'post',
+        'data' => ['fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'localizable' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ]],
+    ]);
+
+    $original = Entry::create([
+        'site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post',
+        'data' => ['title' => 'Halo', 'headline' => 'Selamat datang'],
+    ]);
+
+    // Opening the CREATE form for the English translation (no entry saved
+    // yet, arriving via ?origin= like the site-switcher link does) should
+    // start "headline" off with the Indonesian value, not blank.
+    $this->get("/admin-panel/collections/blog/entries/create/english?origin={$original->id}")
+        ->assertSee('Selamat datang', false);
+});
+
+test('editing an already-saved translation does not overwrite its own (possibly still blank) localizable field with the origin\'s value', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeBlogCollection(null);
+    makeSites();
+
+    Blueprint::create([
+        'namespace' => 'collections.blog',
+        'handle' => 'post',
+        'data' => ['fields' => [
+            ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'localizable' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ]],
+    ]);
+
+    $original = Entry::create([
+        'site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post',
+        'data' => ['title' => 'Halo', 'headline' => 'Selamat datang'],
+    ]);
+
+    $translation = Entry::create([
+        'site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $original->id,
+        'data' => ['title' => 'Hello', 'headline' => ''],
+    ]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $translation])
+        ->assertSet('data.headline', '');
+});

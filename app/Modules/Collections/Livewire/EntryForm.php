@@ -194,6 +194,10 @@ class EntryForm extends Component
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originEntry()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
 
+            if (! $entry) {
+                $this->prefillLocalizableDataFromOrigin($this->blueprintFields(), $this->data, $originData);
+            }
+
             if ($this->collection->seoEnabled()) {
                 $originSeo = $this->originEntry()?->seoFields() ?? Entry::defaultSeoFields();
 
@@ -313,6 +317,25 @@ class EntryForm extends Component
             if (! ($field['localizable'] ?? false)) {
                 $data[$field['handle']] = $originData[$field['handle']] ?? ($data[$field['handle']] ?? null);
             }
+        }
+    }
+
+    /**
+     * Starts a brand-new translation's localizable fields off with the
+     * origin locale's value instead of blank — a translator begins from the
+     * origin's content and only overrides what needs to differ, rather than
+     * facing an empty field. Only for a not-yet-saved entry: once saved, a
+     * locale's own (possibly still-untranslated) value is authoritative and
+     * must not be silently overwritten by the origin's on every reopen.
+     */
+    protected function prefillLocalizableDataFromOrigin(array $fields, array &$data, array $originData): void
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator' || ! ($field['localizable'] ?? false)) {
+                continue;
+            }
+
+            $data[$field['handle']] = $originData[$field['handle']] ?? $data[$field['handle']];
         }
     }
 
