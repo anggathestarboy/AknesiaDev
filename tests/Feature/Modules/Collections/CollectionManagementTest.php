@@ -437,3 +437,13 @@ test('the action after save must be a known option', function () {
         ->call('save')
         ->assertHasErrors(['saveAction']);
 });
+
+test('collection handle can be regenerated from the title', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->call('create')
+        ->set('title', 'Blog Posts')
+        ->call('regenerateHandle')
+        ->assertSet('handle', 'blog_posts');
+});

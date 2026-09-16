@@ -7,6 +7,7 @@ use App\Modules\Collections\Models\Entry;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -147,6 +148,11 @@ class CollectionManager extends Component
         $this->saveAction = $collection->saveAction();
 
         Flux::modal('collection-form')->show();
+    }
+
+    public function regenerateHandle(): void
+    {
+        $this->handle = Str::slug($this->title, '_');
     }
 
     /**

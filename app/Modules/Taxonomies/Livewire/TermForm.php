@@ -12,6 +12,7 @@ use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -98,6 +99,11 @@ class TermForm extends Component
     protected function configuredSites(): array
     {
         return $this->taxonomy->sites ?? [];
+    }
+
+    public function regenerateSlug(): void
+    {
+        $this->slug = Str::slug($this->title);
     }
 
     /**

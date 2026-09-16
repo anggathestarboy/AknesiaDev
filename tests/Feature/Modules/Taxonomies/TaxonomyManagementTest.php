@@ -144,6 +144,19 @@ test('a term requires a slug', function () {
         ->assertHasErrors(['slug' => 'required']);
 });
 
+test('a term\'s slug can be regenerated from the title', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->set('title', 'World Politics, Again!')
+        ->set('slug', 'something-else')
+        ->call('regenerateSlug')
+        ->assertSet('slug', 'world-politics-again');
+});
+
 test('a required blueprint field on a term shows its display label, not the raw data key, in the error message', function () {
     $this->actingAs(User::factory()->create());
     makeTaxonomySites();

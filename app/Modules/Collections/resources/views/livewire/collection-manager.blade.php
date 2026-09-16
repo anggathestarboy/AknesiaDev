@@ -43,7 +43,13 @@
             <flux:heading size="lg">{{ $editingId ? __("Edit collection") : __("New collection") }}</flux:heading>
 
             <flux:input wire:model="title" :label="__('Title')" required autofocus />
-            <flux:input wire:model="handle" :label="__('Handle')" required />
+
+            <div class="flex items-end gap-2">
+                <div class="flex-1">
+                    <flux:input wire:model="handle" :label="__('Handle')" placeholder="blog_posts" required />
+                </div>
+                <flux:button type="button" icon="arrow-path" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
+            </div>
 
             @if ($this->availableSites->isNotEmpty())
                 <flux:checkbox.group wire:model.live="sites" :label="__('Sites')" :description="__('Which sites is this collection available on? Leave all checked for no restriction. The default site is the origin language and can\'t be removed.')">

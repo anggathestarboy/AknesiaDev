@@ -144,7 +144,10 @@
 
             <flux:field>
                 <flux:label>{{ __("Slug") }} <span class="text-red-500">*</span></flux:label>
-                <flux:input wire:model="slug" required placeholder="my-term-slug" size="sm" />
+                <div class="grid grid-cols-[1fr_auto] items-end gap-2">
+                    <flux:input wire:model="slug" class="min-w-0 w-full" required placeholder="my-term-slug" size="sm" />
+                    <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateSlug" :tooltip="__('Regenerate from title')" />
+                </div>
             </flux:field>
 
             @include ("collections::livewire.partials.sidebar-fields", ["sidebarFields" => $sidebarFields, "sidebarSections" => $sidebarSections, "data" => $data, "preview" => false])
