@@ -1033,6 +1033,24 @@ class EntryForm extends Component
             }
         }
 
+        // A structured+orderable collection's first root entry for a site
+        // becomes that site's homepage only via order = 1 (see
+        // EntryUrlResolver::path()) — without this, a freshly-added
+        // translation stays orderless and never becomes its site's
+        // homepage until someone drags it or types "1" in manually.
+        $order = $validated['order'] !== null ? (int) $validated['order'] : null;
+
+        if ($order === null && ! $this->editingId && $this->collection->structured() && $this->collection->orderable() && $this->parentId === null) {
+            $hasHomepage = Entry::where('collection', $this->collection->handle)
+                ->where('site', $this->site)
+                ->where('order', 1)
+                ->exists();
+
+            if (! $hasHomepage) {
+                $order = 1;
+            }
+        }
+
         $attributes = [
             'site' => $this->site,
             'origin_id' => $this->originId,
@@ -1042,7 +1060,7 @@ class EntryForm extends Component
             'status' => $validated['status'],
             'published' => $validated['status'] === 'published',
             'date' => str_replace('T', ' ', $validated['entryDate']),
-            'order' => $validated['order'] !== null ? (int) $validated['order'] : null,
+            'order' => $order,
             'data' => $data,
         ];
 

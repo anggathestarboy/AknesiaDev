@@ -2554,3 +2554,93 @@ test('changing the search or site filter clears the current bulk selection', fun
         ->set('siteFilter', 'english')
         ->assertSet('selected', []);
 });
+
+test('the first root entry created for a new site in a structured+orderable collection automatically becomes that site\'s homepage', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true, 'orderable' => true]]);
+    $collection->refresh();
+
+    // Indonesia already has its homepage (order 1).
+    Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Home', 'status' => 'draft']]);
+
+    // The very first English entry — no order typed in — should still
+    // become English's homepage instead of staying orderless.
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'english'])
+        ->set('title', 'Home EN')
+        ->set('slug', 'home-en')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::where('site', 'english')->sole();
+    expect($entry->order)->toBe(1);
+});
+
+test('a second root entry for a site that already has a homepage stays orderless unless order is set explicitly', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true, 'orderable' => true]]);
+    $collection->refresh();
+
+    Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Home', 'status' => 'draft']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'About')
+        ->set('slug', 'about')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::where('slug', 'about')->sole();
+    expect($entry->order)->toBeNull();
+});
+
+test('a new child entry never auto-becomes the homepage, even when its site has none yet', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true, 'orderable' => true]]);
+    $collection->refresh();
+
+    $parent = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'order' => 1, 'data' => ['title' => 'Home', 'status' => 'draft']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Child')
+        ->set('slug', 'child')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('parentId', $parent->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::where('slug', 'child')->sole();
+    expect($entry->order)->toBeNull();
+});
+
+test('the first entry of a new site is not auto-promoted to homepage unless the collection is both structured and orderable', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => ['structured' => true]]);
+    $collection->refresh();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'english'])
+        ->set('title', 'Home EN')
+        ->set('slug', 'home-en')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::where('site', 'english')->sole();
+    expect($entry->order)->toBeNull();
+});
