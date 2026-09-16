@@ -566,7 +566,10 @@ class EntryForm extends Component
         foreach ($fields as $field) {
             if ($field['type'] === 'replicator') {
                 $existingRows = $existingData[$field['handle']] ?? [];
-                $data[$field['handle']] = array_map(fn (array $row): array => $this->fillFieldsData($field['replicator_fields'] ?? [], $row), $existingRows);
+                $data[$field['handle']] = array_map(fn (array $row): array => array_merge(
+                    ['_enabled' => $row['_enabled'] ?? true],
+                    $this->fillFieldsData($field['replicator_fields'] ?? [], $row)
+                ), $existingRows);
 
                 continue;
             }
@@ -598,7 +601,7 @@ class EntryForm extends Component
         }
 
         $rows = &$this->dataAt($path);
-        $rows[] = $this->fillFieldsData($field['replicator_fields'] ?? [], null);
+        $rows[] = array_merge(['_enabled' => true], $this->fillFieldsData($field['replicator_fields'] ?? [], null));
     }
 
     public function removeReplicatorRow(array $path, int $rowIndex): void
@@ -606,6 +609,23 @@ class EntryForm extends Component
         $rows = &$this->dataAt($path);
         unset($rows[$rowIndex]);
         $rows = array_values($rows);
+    }
+
+    /**
+     * Inserts a copy of the row at $rowIndex right after it — same field
+     * data (which itself gets its own fresh copy of whatever nested
+     * replicator rows it has), so the duplicate is independently editable
+     * from the moment it appears.
+     */
+    public function duplicateReplicatorRow(array $path, int $rowIndex): void
+    {
+        $rows = &$this->dataAt($path);
+
+        if (! array_key_exists($rowIndex, $rows)) {
+            return;
+        }
+
+        array_splice($rows, $rowIndex + 1, 0, [$rows[$rowIndex]]);
     }
 
     /**
@@ -845,6 +865,7 @@ class EntryForm extends Component
 
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
+                $rules["{$key}.*._enabled"] = ['boolean'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
 
                 continue;

@@ -832,8 +832,8 @@ test('entry can store rows of data for a replicator field', function () {
     $entry = Entry::sole();
 
     expect($entry->data['gallery'])->toBe([
-        ['caption' => 'First image', 'featured' => true],
-        ['caption' => 'Second image', 'featured' => false],
+        ['_enabled' => true, 'caption' => 'First image', 'featured' => true],
+        ['_enabled' => true, 'caption' => 'Second image', 'featured' => false],
     ]);
 });
 
@@ -944,7 +944,7 @@ test('entry can store data for a replicator nested inside another replicator', f
     $entry = Entry::sole();
 
     expect($entry->data['sections'])->toBe([
-        ['items' => [['label' => 'First item']]],
+        ['_enabled' => true, 'items' => [['_enabled' => true, 'label' => 'First item']]],
     ]);
 });
 
@@ -2695,4 +2695,84 @@ test('editing an already-saved translation does not overwrite its own (possibly 
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $translation])
         ->assertSet('data.headline', '');
+});
+
+test('a replicator row can be duplicated, inserted right after the original', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.0.caption', 'First')
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.1.caption', 'Third')
+        ->call('duplicateReplicatorRow', ['gallery'], 0)
+        ->assertSet('data.gallery', [
+            ['_enabled' => true, 'caption' => 'First'],
+            ['_enabled' => true, 'caption' => 'First'],
+            ['_enabled' => true, 'caption' => 'Third'],
+        ]);
+});
+
+test('a new replicator row defaults to enabled', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('addReplicatorRow', ['gallery'])
+        ->assertSet('data.gallery.0._enabled', true);
+});
+
+test('a replicator row can be disabled, and the flag is persisted on save', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->call('addReplicatorRow', ['gallery'])
+        ->set('data.gallery.0.caption', 'Disabled row')
+        ->set('data.gallery.0._enabled', false)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+
+    expect($entry->data['gallery'])->toBe([
+        ['_enabled' => false, 'caption' => 'Disabled row'],
+    ]);
 });

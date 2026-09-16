@@ -132,19 +132,57 @@ class Entry extends Model
      * the asset up itself. A non-localizable field (see
      * overlayNonLocalizableData()) always reflects the origin locale's
      * current value, even on a translation whose own stored value is stale
-     * or was never filled in — a template never has to null-guard it.
+     * or was never filled in — a template never has to null-guard it. A
+     * "replicator" row switched off in the editor (see
+     * filterEnabledReplicatorRows()) is dropped entirely, at any nesting
+     * depth, instead of being handed to the template.
      */
     public function fluentData(): Fluent
     {
         $fields = $this->blueprintFields();
 
         $data = $this->overlayNonLocalizableData($this->data ?? [], $fields);
+        $data = $this->filterEnabledReplicatorRows($data, $fields);
         $data = $this->resolveTaxonomyFields($data);
         $data = $this->resolveAuthorFields($data);
         $data = $this->resolveLinkFields($data, $fields);
         $data = $this->resolveAssetFields($data, $fields);
 
         return static::wrapFluent($data);
+    }
+
+    /**
+     * Drops every "replicator" row whose "_enabled" toggle was switched off
+     * in the editor (default true, for a row created before the toggle
+     * existed) — a template only ever sees the enabled rows, in their
+     * original order, and never has to check the flag itself. Recurses into
+     * each surviving row's own nested replicator fields, and strips the
+     * now-redundant "_enabled" key from what the template receives.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
+    protected function filterEnabledReplicatorRows(array $data, array $fields): array
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] !== 'replicator') {
+                continue;
+            }
+
+            $data[$field['handle']] = collect($data[$field['handle']] ?? [])
+                ->filter(fn (array $row): bool => $row['_enabled'] ?? true)
+                ->map(function (array $row) use ($field): array {
+                    $row = $this->filterEnabledReplicatorRows($row, $field['replicator_fields'] ?? []);
+                    unset($row['_enabled']);
+
+                    return $row;
+                })
+                ->values()
+                ->all();
+        }
+
+        return $data;
     }
 
     /**

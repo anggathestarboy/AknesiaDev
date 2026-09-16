@@ -313,7 +313,7 @@
             @forelse ($rows ?? [] as $rowIndex => $row)
                 <div
                     wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}"
-                    class="rounded-lg border border-zinc-200 px-2 pt-1 pb-2 dark:border-zinc-700"
+                    class="rounded-lg border border-zinc-200 px-2 pt-1 pb-2 dark:border-zinc-700 {{ ($row['_enabled'] ?? true) ? '' : 'opacity-60' }}"
                     x-data="{ collapsed: false }"
                     x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true"
                     x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false"
@@ -324,7 +324,11 @@
                             <flux:icon.chevron-down x-show="!collapsed" x-cloak class="size-4 shrink-0" />
                             <span class="truncate">{{ __(":label #:number", ["label" => $field["display"], "number" => $rowIndex + 1]) }}</span>
                         </button>
-                        <flux:button size="sm" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                        <div class="flex shrink-0 items-center gap-1">
+                            <flux:switch wire:model="{{ $prefix }}.{{ $rowIndex }}._enabled" size="sm" title="{{ __('Enabled') }}" />
+                            <flux:button size="sm" variant="ghost" icon="document-duplicate" type="button" title="{{ __('Duplicate') }}" wire:click='duplicateReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                            <flux:button size="sm" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                        </div>
                     </div>
 
                     <div class="mt-3 grid gap-3" x-show="!collapsed" x-cloak>
