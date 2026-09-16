@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Sites\Models\Site;
 
@@ -38,6 +39,9 @@ test('draft:setup chains user creation, default site, the pages collection, the 
     expect($entry->status)->toBe('published');
 
     expect(Navigation::where('handle', 'sidebar-admin')->exists())->toBeTrue();
+
+    $container = AssetContainer::where('handle', 'assets')->sole();
+    expect($container->disk)->toBe('public');
 });
 
 test('draft:setup stops before creating anything else when the admin step fails', function () {
