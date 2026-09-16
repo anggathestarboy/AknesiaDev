@@ -256,6 +256,19 @@
                     @endforeach
                 </flux:checkbox.group>
             </div>
+        @elseif ($field["type"] === "replicator")
+            <div class="mt-3 grid grid-cols-3 gap-3">
+                <div>
+                    <flux:input type="number" min="0" wire:model="{{ $prefix }}.max_items" :label="__('Max rows')" placeholder="{{ __('No maximum') }}" size="sm" />
+                    @error ("{$prefix}.max_items")
+                        <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                    @enderror
+                </div>
+
+                <div class="col-span-2 flex items-end pb-1.5">
+                    <flux:switch wire:model="{{ $prefix }}.collapsed_by_default" :label="__('Collapse rows by default')" />
+                </div>
+            </div>
         @endif
 
         @unless ($field["type"] === "fieldset")

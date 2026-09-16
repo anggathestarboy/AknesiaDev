@@ -112,6 +112,7 @@ trait HasFieldBuilder
             'condition_value' => $field['conditions']['value'] ?? '',
             'min_items' => isset($field['min_items']) ? (string) $field['min_items'] : '',
             'max_items' => isset($field['max_items']) ? (string) $field['max_items'] : '',
+            'collapsed_by_default' => (bool) ($field['collapsed_by_default'] ?? false),
             'toolbar' => array_values($field['toolbar'] ?? []),
             'tab' => $field['tab'] ?? 'main',
             'section' => $field['section'] ?? '',
@@ -493,7 +494,7 @@ trait HasFieldBuilder
             'handle' => '', 'display' => '', 'type' => 'text', 'required' => false, 'localizable' => false, 'options' => '',
             'placeholder' => '', 'default' => '', 'validation' => '', 'instructions' => '', 'sometimes' => false,
             'condition_mode' => 'always', 'condition_field' => '', 'condition_operator' => 'equals', 'condition_value' => '',
-            'min_items' => '', 'max_items' => '', 'toolbar' => [], 'tab' => 'main', 'section' => '',
+            'min_items' => '', 'max_items' => '', 'collapsed_by_default' => false, 'toolbar' => [], 'tab' => 'main', 'section' => '',
             'replicator_fields' => [],
         ];
     }
@@ -537,6 +538,7 @@ trait HasFieldBuilder
             'condition_value' => ['nullable', 'string', 'max:255'],
             'min_items' => ['nullable', 'integer', 'min:0'],
             'max_items' => ['nullable', 'integer', 'min:0'],
+            'collapsed_by_default' => ['boolean'],
             'toolbar' => ['array'],
             'toolbar.*' => [Rule::in(array_keys(static::$bardToolbarButtons))],
             'tab' => ['nullable', 'string'],
@@ -648,7 +650,7 @@ trait HasFieldBuilder
             }
 
             if (
-                in_array($field['type'], ['assets', 'checkbox', 'taxonomy'], true)
+                in_array($field['type'], ['assets', 'checkbox', 'taxonomy', 'replicator'], true)
                 && ! isset($errors["{$errorKey}.max_items"])
                 && ($field['min_items'] ?? '') !== ''
                 && ($field['max_items'] ?? '') !== ''
@@ -720,7 +722,7 @@ trait HasFieldBuilder
                 ->all();
         }
 
-        if (in_array($field['type'], ['assets', 'checkbox', 'taxonomy'], true)) {
+        if (in_array($field['type'], ['assets', 'checkbox', 'taxonomy', 'replicator'], true)) {
             $normalized['min_items'] = ($field['min_items'] ?? '') !== '' ? (int) $field['min_items'] : null;
             $normalized['max_items'] = ($field['max_items'] ?? '') !== '' ? (int) $field['max_items'] : null;
         }
@@ -730,6 +732,7 @@ trait HasFieldBuilder
         }
 
         if ($field['type'] === 'replicator') {
+            $normalized['collapsed_by_default'] = (bool) ($field['collapsed_by_default'] ?? false);
             $normalized['replicator_fields'] = array_map(
                 fn (array $sub): array => $this->normalizeFieldForStorage($sub, topLevel: false),
                 $field['replicator_fields'] ?? []

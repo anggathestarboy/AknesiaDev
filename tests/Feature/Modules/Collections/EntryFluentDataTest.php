@@ -131,3 +131,68 @@ test('an origin entry (no origin_id) is unaffected by the non-localizable overla
 
     expect($origin->fluentData()->contentss)->toBe('Original body');
 });
+
+test('a replicator row disabled in the editor is dropped from the frontend data entirely', function () {
+    Collection::firstOrCreate(['handle' => 'pages'], ['title' => 'Pages', 'settings' => []]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'blocks', 'display' => 'Blocks', 'type' => 'replicator', 'replicator_fields' => [
+            ['handle' => 'label', 'display' => 'Label', 'type' => 'text'],
+        ]],
+    ]]]);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => [
+        'title' => 'Home',
+        'blocks' => [
+            ['_enabled' => true, 'label' => 'Visible'],
+            ['_enabled' => false, 'label' => 'Hidden'],
+        ],
+    ]]);
+
+    $resolved = $entry->fluentData()->blocks;
+
+    expect($resolved)->toHaveCount(1);
+    expect($resolved[0]->label)->toBe('Visible');
+    expect(property_exists($resolved[0], '_enabled'))->toBeFalse();
+});
+
+test('a replicator row with no "_enabled" key at all (created before the toggle existed) is treated as enabled', function () {
+    Collection::firstOrCreate(['handle' => 'pages'], ['title' => 'Pages', 'settings' => []]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'blocks', 'display' => 'Blocks', 'type' => 'replicator', 'replicator_fields' => [
+            ['handle' => 'label', 'display' => 'Label', 'type' => 'text'],
+        ]],
+    ]]]);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => [
+        'title' => 'Home',
+        'blocks' => [['label' => 'Legacy row']],
+    ]]);
+
+    $resolved = $entry->fluentData()->blocks;
+
+    expect($resolved)->toHaveCount(1);
+    expect($resolved[0]->label)->toBe('Legacy row');
+});
+
+test('a disabled row nested inside another replicator is dropped too', function () {
+    Collection::firstOrCreate(['handle' => 'pages'], ['title' => 'Pages', 'settings' => []]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'sections', 'display' => 'Sections', 'type' => 'replicator', 'replicator_fields' => [
+            ['handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'replicator_fields' => [
+                ['handle' => 'label', 'display' => 'Label', 'type' => 'text'],
+            ]],
+        ]],
+    ]]]);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => [
+        'title' => 'Home',
+        'sections' => [
+            ['_enabled' => true, 'items' => [
+                ['_enabled' => true, 'label' => 'Kept'],
+                ['_enabled' => false, 'label' => 'Dropped'],
+            ]],
+        ],
+    ]]);
+
+    $resolved = $entry->fluentData()->sections[0]->items;
+
+    expect($resolved)->toHaveCount(1);
+    expect($resolved[0]->label)->toBe('Kept');
+});

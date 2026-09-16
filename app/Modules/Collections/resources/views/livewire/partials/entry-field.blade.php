@@ -292,7 +292,12 @@
         @enderror
     </div>
 @elseif ($field["type"] === "replicator")
-    @php $replicatorKey = implode('-', $path); @endphp
+    @php
+        $replicatorKey = implode("-", $path);
+        $replicatorMaxItems = $field["max_items"] ?? null;
+        $replicatorRowCount = count($rows ?? []);
+        $replicatorLimitReached = $replicatorMaxItems !== null && $replicatorRowCount >= $replicatorMaxItems;
+    @endphp
     <div>
         <div class="flex items-center justify-between gap-2">
             <div>
@@ -301,7 +306,7 @@
                     <flux:text class="block text-xs text-zinc-500">{{ $field["instructions"] }}</flux:text>
                 @endif
             </div>
-            @if (! empty($rows))
+            @if (!empty($rows))
                 <div class="flex shrink-0 gap-1">
                     <flux:button size="xs" variant="ghost" icon="chevron-double-down" type="button" title="{{ __('Expand all') }}" x-on:click="$dispatch('replicator-expand-{{ $replicatorKey }}')" />
                     <flux:button size="xs" variant="ghost" icon="chevron-double-up" type="button" title="{{ __('Collapse all') }}" x-on:click="$dispatch('replicator-collapse-{{ $replicatorKey }}')" />
@@ -311,45 +316,51 @@
 
         <div class="mt-2 space-y-3">
             @forelse ($rows ?? [] as $rowIndex => $row)
-                <div
-                    wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}"
-                    class="rounded-lg border border-zinc-200 px-2 pt-1 pb-2 dark:border-zinc-700"
-                    x-data="{ collapsed: false }"
-                    x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true"
-                    x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false"
-                >
-                    <div class="flex items-center justify-between gap-4">
-                        <button type="button" class="flex min-w-0 items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-300" x-on:click="collapsed = !collapsed">
-                            <flux:icon.chevron-right x-show="collapsed" class="size-4 shrink-0" />
-                            <flux:icon.chevron-down x-show="!collapsed" x-cloak class="size-4 shrink-0" />
-                            <span class="truncate">{{ __(":label #:number", ["label" => $field["display"], "number" => $rowIndex + 1]) }}</span>
-                        </button>
-                        <flux:button size="sm" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
-                    </div>
-
-                    <div class="mt-3 grid gap-3" x-show="!collapsed" x-cloak>
-                        @foreach ($field["replicator_fields"] ?? [] as $sub)
-                            <div>
-                                @include ("collections::livewire.partials.entry-field",
-                                    [
-                                        "field" => $sub,
-                                        "path" => [...$path, $rowIndex, $sub["handle"]],
-                                        "rows" => $sub["type"] === "replicator" ? $row[$sub["handle"]] ?? [] : null,
-                                        "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
-                                        "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
-                                        "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
-                                        "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null,
-                                        "preview" => $preview
-                                    ])
+                <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-xl bg-gray-200 border border-zinc-200 p-1 dark:border-zinc-700 {{ ($row['_enabled'] ?? true) ? '' : 'opacity-60' }}" x-data="{ collapsed: @js($field['collapsed_by_default'] ?? false) }" x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true" x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false">
+                    <div class="">
+                        <div class="flex items-center justify-between gap-4 py-1 px-3">
+                            <button type="button" class="flex min-w-0 hover:text-orange-700 cursor-pointer items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-300" x-on:click="collapsed = !collapsed">
+                                <flux:icon.chevron-right x-show="collapsed" class="size-4 shrink-0" />
+                                <flux:icon.chevron-down x-show="!collapsed" x-cloak class="size-4 shrink-0" />
+                                <span class="truncate">{{ __(":label #:number", ["label" => $field["display"], "number" => $rowIndex + 1]) }}</span>
+                            </button>
+                            <div class="flex shrink-0 items-center gap-1">
+                                <flux:switch wire:model="{{ $prefix }}.{{ $rowIndex }}._enabled" size="sm" title="{{ __('Enabled') }}" />
+                                <flux:button size="xs" variant="ghost" icon="document-duplicate" type="button" title="{{ __('Duplicate') }}" :disabled="$replicatorLimitReached" wire:click='duplicateReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                                <flux:button size="xs" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' wire:confirm="{{ __('Delete this item? This cannot be undone.') }}" />
                             </div>
-                        @endforeach
+                        </div>
+
+                        <div class="mt-1 grid gap-3 bg-white rounded-xl px-2 py-3" x-show="!collapsed" x-cloak>
+                            @foreach ($field["replicator_fields"] ?? [] as $sub)
+                                <div>
+                                    @include ("collections::livewire.partials.entry-field",
+                                        [
+                                            "field" => $sub,
+                                            "path" => [...$path, $rowIndex, $sub["handle"]],
+                                            "rows" => $sub["type"] === "replicator" ? $row[$sub["handle"]] ?? [] : null,
+                                            "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
+                                            "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
+                                            "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
+                                            "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null,
+                                            "preview" => $preview
+                                        ])
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             @empty
                 <flux:text class="text-sm text-zinc-500">{{ __("No entries yet.") }}</flux:text>
             @endforelse
 
-            <flux:button size="sm" variant="filled" type="button" wire:click='addReplicatorRow({{ json_encode($path) }})'>{{ __("Add :label", ["label" => $field["display"]]) }}</flux:button>
+            <div class="flex items-center gap-2">
+                <flux:button size="sm" variant="filled" type="button" :disabled="$replicatorLimitReached" wire:click='addReplicatorRow({{ json_encode($path) }})'>{{ __("Add :label", ["label" => $field["display"]]) }}</flux:button>
+
+                @if ($replicatorMaxItems !== null)
+                    <flux:text class="text-xs text-zinc-500">{{ __(":count / :max", ["count" => $replicatorRowCount, "max" => $replicatorMaxItems]) }}</flux:text>
+                @endif
+            </div>
         </div>
     </div>
 @elseif ($field["type"] === "taxonomy")
@@ -433,7 +444,9 @@
         // actually rendered below — an id whose asset was deleted from the
         // Media Library would otherwise silently occupy a slot forever,
         // hiding the "+" button even though nothing visible is selected.
-        $validAssetIds = $this->selectedAssets($assetIds ?? [])->pluck("id")->all();
+        $validAssetIds = $this->selectedAssets($assetIds ?? [])
+            ->pluck("id")
+            ->all();
         $selectedCount = count($validAssetIds);
         $maxReached = ($field["max_items"] ?? null) !== null && $selectedCount >= $field["max_items"];
     @endphp
@@ -467,7 +480,11 @@
             @endforeach
 
             @unless ($maxReached)
-                <button type="button" wire:click='$dispatch("open-asset-picker", { path: {{ json_encode($path) }}, container: {{ json_encode($field['options'] ?? '') }}, selected: {{ json_encode($validAssetIds) }}, max: {{ json_encode($field['max_items'] ?? null) }} })' class="flex size-16 items-center justify-center rounded border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600">
+                <button
+                    type="button"
+                    wire:click='$dispatch("open-asset-picker", { path: {{ json_encode($path) }}, container: {{ json_encode($field['options'] ?? '') }}, selected: {{ json_encode($validAssetIds) }}, max: {{ json_encode($field['max_items'] ?? null) }} })'
+                    class="flex size-16 items-center justify-center rounded border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600"
+                >
                     <flux:icon.plus class="size-5" />
                 </button>
             @endunless

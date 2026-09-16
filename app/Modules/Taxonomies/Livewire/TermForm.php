@@ -293,7 +293,10 @@ class TermForm extends Component
             if ($field['type'] === 'replicator') {
                 $existingRows = $existingData[$field['handle']] ?? [];
                 $data[$field['handle']] = array_map(
-                    fn (array $row): array => $this->fillFieldsData($field['replicator_fields'] ?? [], $row),
+                    fn (array $row): array => array_merge(
+                        ['_enabled' => $row['_enabled'] ?? true],
+                        $this->fillFieldsData($field['replicator_fields'] ?? [], $row)
+                    ),
                     $existingRows
                 );
 
@@ -323,7 +326,12 @@ class TermForm extends Component
         }
 
         $rows = &$this->dataAt($path);
-        $rows[] = $this->fillFieldsData($field['replicator_fields'] ?? [], null);
+
+        if (($field['max_items'] ?? null) !== null && count($rows) >= $field['max_items']) {
+            return;
+        }
+
+        $rows[] = array_merge(['_enabled' => true], $this->fillFieldsData($field['replicator_fields'] ?? [], null));
     }
 
     public function removeReplicatorRow(array $path, int $rowIndex): void
@@ -331,6 +339,23 @@ class TermForm extends Component
         $rows = &$this->dataAt($path);
         unset($rows[$rowIndex]);
         $rows = array_values($rows);
+    }
+
+    public function duplicateReplicatorRow(array $path, int $rowIndex): void
+    {
+        $rows = &$this->dataAt($path);
+
+        if (! array_key_exists($rowIndex, $rows)) {
+            return;
+        }
+
+        $field = $this->replicatorFieldAt($path);
+
+        if (($field['max_items'] ?? null) !== null && count($rows) >= $field['max_items']) {
+            return;
+        }
+
+        array_splice($rows, $rowIndex + 1, 0, [$rows[$rowIndex]]);
     }
 
     public function removeAsset(array $path, int $assetId): void
@@ -484,6 +509,12 @@ class TermForm extends Component
 
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $rules[$key][] = "max:{$field['max_items']}";
+                }
+
+                $rules["{$key}.*._enabled"] = ['boolean'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
 
                 continue;
