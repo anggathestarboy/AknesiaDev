@@ -322,7 +322,7 @@
                             <div class="flex shrink-0 items-center gap-1">
                                 <flux:switch wire:model="{{ $prefix }}.{{ $rowIndex }}._enabled" size="sm" title="{{ __('Enabled') }}" />
                                 <flux:button size="xs" variant="ghost" icon="document-duplicate" type="button" title="{{ __('Duplicate') }}" wire:click='duplicateReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
-                                <flux:button size="xs" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                                <flux:button size="xs" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' wire:confirm="{{ __('Delete this item? This cannot be undone.') }}" />
                             </div>
                         </div>
 
