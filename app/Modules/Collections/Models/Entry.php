@@ -129,16 +129,58 @@ class Entry extends Model
      * ids are resolved to the actual AssetMeta model(s) — one directly for
      * a single-file field (max_items = 1), a list for anything else — so a
      * template can use $data->fieldHandle->url directly instead of looking
-     * the asset up itself.
+     * the asset up itself. A non-localizable field (see
+     * overlayNonLocalizableData()) always reflects the origin locale's
+     * current value, even on a translation whose own stored value is stale
+     * or was never filled in — a template never has to null-guard it.
      */
     public function fluentData(): Fluent
     {
-        $data = $this->resolveTaxonomyFields($this->data);
+        $fields = $this->blueprintFields();
+
+        $data = $this->overlayNonLocalizableData($this->data ?? [], $fields);
+        $data = $this->resolveTaxonomyFields($data);
         $data = $this->resolveAuthorFields($data);
-        $data = $this->resolveLinkFields($data, $this->blueprintFields());
-        $data = $this->resolveAssetFields($data, $this->blueprintFields());
+        $data = $this->resolveLinkFields($data, $fields);
+        $data = $this->resolveAssetFields($data, $fields);
 
         return static::wrapFluent($data);
+    }
+
+    /**
+     * Overwrites this entry's own value for every non-localizable field
+     * ("Locale" switched off on the blueprint field — editable only from
+     * the origin locale) with the origin entry's CURRENT value, live on
+     * every read. Mirrors EntryForm::save()'s own copy-from-origin step,
+     * but that one only runs when a translation is itself saved — a
+     * translation nobody has re-saved since the origin's shared field last
+     * changed would otherwise keep showing a stale (or, if never filled in,
+     * empty) value on its public page. An origin entry (no origin_id) has
+     * nothing to overlay from and is returned unchanged.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
+    protected function overlayNonLocalizableData(array $data, array $fields): array
+    {
+        $origin = $this->origin_id ? static::find($this->origin_id) : null;
+
+        if (! $origin) {
+            return $data;
+        }
+
+        $originData = $origin->data ?? [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator' || ($field['localizable'] ?? false)) {
+                continue;
+            }
+
+            $data[$field['handle']] = $originData[$field['handle']] ?? ($data[$field['handle']] ?? null);
+        }
+
+        return $data;
     }
 
     /**

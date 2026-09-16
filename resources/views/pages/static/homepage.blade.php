@@ -5,6 +5,10 @@
                 <div class="mx-auto max-w-prose text-center">
                     <h1 class="text-4xl font-bold text-gray-900 sm:text-5xl">{{ $data->heading }}</h1>
 
+                    <div class="">
+                        <img src="{{ $data->gambar?->url }}" alt="" />
+                    </div>
+
                     @if ($data->subheading)
                         <p class="mt-4 text-base text-pretty text-gray-700 sm:text-lg/relaxed">{{ $data->subheading }}</p>
                     @endif

@@ -82,3 +82,52 @@ test('an assets field nested inside a replicator row is resolved too', function 
     expect($resolved)->toBeInstanceOf(AssetMeta::class);
     expect($resolved->url)->toBe($asset->url);
 });
+
+test('a non-localizable assets field on a translation resolves from the origin entry\'s current value, even if the translation itself was never filled in', function () {
+    $asset = makeFluentDataAsset();
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'pilih_gambar', 'display' => 'Pilih Gambar', 'type' => 'assets', 'options' => 'assets', 'max_items' => 1, 'localizable' => false],
+    ]]]);
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'pilih_gambar' => [$asset->id]]]);
+    $translation = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'origin_id' => $origin->id, 'data' => ['title' => 'Home', 'pilih_gambar' => []]]);
+
+    $resolved = $translation->fluentData()->pilih_gambar;
+
+    expect($resolved)->toBeInstanceOf(AssetMeta::class);
+    expect($resolved->url)->toBe($asset->url);
+});
+
+test('a non-localizable field reflects the origin entry\'s latest value, not whatever the translation itself last had saved', function () {
+    Collection::firstOrCreate(['handle' => 'pages'], ['title' => 'Pages', 'settings' => []]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'contentss', 'display' => 'Contentss', 'type' => 'textarea', 'localizable' => false],
+    ]]]);
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'contentss' => 'Original body']]);
+    $translation = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'origin_id' => $origin->id, 'data' => ['title' => 'Home', 'contentss' => 'Stale english body']]);
+
+    // Origin was edited after the translation was last saved.
+    $origin->update(['data' => ['title' => 'Home', 'contentss' => 'Updated body']]);
+
+    expect($translation->fluentData()->contentss)->toBe('Updated body');
+});
+
+test('a localizable field on a translation keeps its own value instead of following the origin', function () {
+    Collection::firstOrCreate(['handle' => 'pages'], ['title' => 'Pages', 'settings' => []]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'localizable' => true],
+    ]]]);
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'headline' => 'Selamat datang']]);
+    $translation = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'origin_id' => $origin->id, 'data' => ['title' => 'Home', 'headline' => 'Welcome']]);
+
+    expect($translation->fluentData()->headline)->toBe('Welcome');
+});
+
+test('an origin entry (no origin_id) is unaffected by the non-localizable overlay', function () {
+    Collection::firstOrCreate(['handle' => 'pages'], ['title' => 'Pages', 'settings' => []]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'contentss', 'display' => 'Contentss', 'type' => 'textarea', 'localizable' => false],
+    ]]]);
+    $origin = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'contentss' => 'Original body']]);
+
+    expect($origin->fluentData()->contentss)->toBe('Original body');
+});
