@@ -292,7 +292,12 @@
         @enderror
     </div>
 @elseif ($field["type"] === "replicator")
-    @php $replicatorKey = implode("-", $path); @endphp
+    @php
+        $replicatorKey = implode("-", $path);
+        $replicatorMaxItems = $field["max_items"] ?? null;
+        $replicatorRowCount = count($rows ?? []);
+        $replicatorLimitReached = $replicatorMaxItems !== null && $replicatorRowCount >= $replicatorMaxItems;
+    @endphp
     <div>
         <div class="flex items-center justify-between gap-2">
             <div>
@@ -311,7 +316,7 @@
 
         <div class="mt-2 space-y-3">
             @forelse ($rows ?? [] as $rowIndex => $row)
-                <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-xl bg-gray-200 border border-zinc-200 p-1 dark:border-zinc-700 {{ ($row['_enabled'] ?? true) ? '' : 'opacity-60' }}" x-data="{ collapsed: false }" x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true" x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false">
+                <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-xl bg-gray-200 border border-zinc-200 p-1 dark:border-zinc-700 {{ ($row['_enabled'] ?? true) ? '' : 'opacity-60' }}" x-data="{ collapsed: @js($field['collapsed_by_default'] ?? false) }" x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true" x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false">
                     <div class="">
                         <div class="flex items-center justify-between gap-4 py-1 px-3">
                             <button type="button" class="flex min-w-0 hover:text-orange-700 cursor-pointer items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-300" x-on:click="collapsed = !collapsed">
@@ -321,7 +326,7 @@
                             </button>
                             <div class="flex shrink-0 items-center gap-1">
                                 <flux:switch wire:model="{{ $prefix }}.{{ $rowIndex }}._enabled" size="sm" title="{{ __('Enabled') }}" />
-                                <flux:button size="xs" variant="ghost" icon="document-duplicate" type="button" title="{{ __('Duplicate') }}" wire:click='duplicateReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
+                                <flux:button size="xs" variant="ghost" icon="document-duplicate" type="button" title="{{ __('Duplicate') }}" :disabled="$replicatorLimitReached" wire:click='duplicateReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' />
                                 <flux:button size="xs" variant="ghost" icon="trash" type="button" wire:click='removeReplicatorRow({{ json_encode($path) }}, {{ $rowIndex }})' wire:confirm="{{ __('Delete this item? This cannot be undone.') }}" />
                             </div>
                         </div>
@@ -349,7 +354,13 @@
                 <flux:text class="text-sm text-zinc-500">{{ __("No entries yet.") }}</flux:text>
             @endforelse
 
-            <flux:button size="sm" variant="filled" type="button" wire:click='addReplicatorRow({{ json_encode($path) }})'>{{ __("Add :label", ["label" => $field["display"]]) }}</flux:button>
+            <div class="flex items-center gap-2">
+                <flux:button size="sm" variant="filled" type="button" :disabled="$replicatorLimitReached" wire:click='addReplicatorRow({{ json_encode($path) }})'>{{ __("Add :label", ["label" => $field["display"]]) }}</flux:button>
+
+                @if ($replicatorMaxItems !== null)
+                    <flux:text class="text-xs text-zinc-500">{{ __(":count / :max", ["count" => $replicatorRowCount, "max" => $replicatorMaxItems]) }}</flux:text>
+                @endif
+            </div>
         </div>
     </div>
 @elseif ($field["type"] === "taxonomy")

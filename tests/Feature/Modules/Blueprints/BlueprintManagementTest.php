@@ -553,6 +553,72 @@ test('replicator field can be created with sub-fields', function () {
     expect($field['replicator_fields'][0])->toMatchArray(['handle' => 'caption', 'type' => 'text', 'required' => true]);
 });
 
+test('replicator field can have a max row count, and it fails when its own max is less than min', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'max_items' => '3',
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['max_items'])->toBe(3);
+});
+
+test('replicator field can be set to collapse its rows by default', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'collapsed_by_default' => true,
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['collapsed_by_default'])->toBeTrue();
+});
+
+test('replicator field defaults to not collapsed and no row limit when left unset', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            [
+                'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false, 'options' => '',
+                'replicator_fields' => [
+                    ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false],
+                ],
+            ],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['collapsed_by_default'])->toBeFalse();
+    expect($field['max_items'])->toBeNull();
+});
+
 test('replicator field requires at least one sub-field', function () {
     $this->actingAs(User::factory()->create());
 

@@ -2776,3 +2776,74 @@ test('a replicator row can be disabled, and the flag is persisted on save', func
         ['_enabled' => false, 'caption' => 'Disabled row'],
     ]);
 });
+
+test('adding a replicator row stops once the field\'s max row count is reached', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null, 'max_items' => 2,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('addReplicatorRow', ['gallery'])
+        ->call('addReplicatorRow', ['gallery'])
+        ->assertCount('data.gallery', 2)
+        ->call('addReplicatorRow', ['gallery'])
+        ->assertCount('data.gallery', 2);
+});
+
+test('duplicating a replicator row is a no-op once the field\'s max row count is reached', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null, 'max_items' => 1,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('addReplicatorRow', ['gallery'])
+        ->call('duplicateReplicatorRow', ['gallery'], 0)
+        ->assertCount('data.gallery', 1);
+});
+
+test('saving an entry with more replicator rows than the field\'s max is rejected server-side', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        [
+            'handle' => 'gallery', 'display' => 'Gallery', 'type' => 'replicator', 'required' => false,
+            'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null,
+            'validate_sometimes' => false, 'conditions' => null, 'max_items' => 1,
+            'replicator_fields' => [
+                ['handle' => 'caption', 'display' => 'Caption', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null],
+            ],
+        ],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.gallery', [
+            ['_enabled' => true, 'caption' => 'One'],
+            ['_enabled' => true, 'caption' => 'Two'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['data.gallery']);
+});

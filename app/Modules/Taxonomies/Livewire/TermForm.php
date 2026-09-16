@@ -326,6 +326,11 @@ class TermForm extends Component
         }
 
         $rows = &$this->dataAt($path);
+
+        if (($field['max_items'] ?? null) !== null && count($rows) >= $field['max_items']) {
+            return;
+        }
+
         $rows[] = array_merge(['_enabled' => true], $this->fillFieldsData($field['replicator_fields'] ?? [], null));
     }
 
@@ -341,6 +346,12 @@ class TermForm extends Component
         $rows = &$this->dataAt($path);
 
         if (! array_key_exists($rowIndex, $rows)) {
+            return;
+        }
+
+        $field = $this->replicatorFieldAt($path);
+
+        if (($field['max_items'] ?? null) !== null && count($rows) >= $field['max_items']) {
             return;
         }
 
@@ -498,6 +509,11 @@ class TermForm extends Component
 
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $rules[$key][] = "max:{$field['max_items']}";
+                }
+
                 $rules["{$key}.*._enabled"] = ['boolean'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
 
