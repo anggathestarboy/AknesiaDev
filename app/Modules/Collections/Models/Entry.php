@@ -9,6 +9,7 @@ use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sitemap\Services\SitemapSyncer;
 use App\Modules\SiteSettings\Services\SchemaMarkupBuilder;
+use App\Support\Templating\FluentWrapper;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Fluent;
@@ -247,7 +248,7 @@ class Entry extends Model
     /**
      * @return array<int, array<string, mixed>>
      */
-    protected function blueprintFields(): array
+    public function blueprintFields(): array
     {
         return Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? [];
     }
@@ -371,14 +372,6 @@ class Entry extends Model
 
     protected static function wrapFluent(array $data): Fluent
     {
-        return new Fluent(collect($data)->map(function ($value) {
-            if (! is_array($value)) {
-                return $value;
-            }
-
-            return array_is_list($value)
-                ? collect($value)->map(fn ($item) => is_array($item) ? static::wrapFluent($item) : $item)->all()
-                : static::wrapFluent($value);
-        })->all());
+        return FluentWrapper::wrap($data);
     }
 }
