@@ -64,6 +64,16 @@ From there you manage:
 - **Globals** — sitewide key/value data not tied to any one entry (`/admin-panel/globals`)
 - **Navigation, Sites, Media, Forms, Redirects, Users/Roles** — the rest of the admin sidebar
 
+### Scheduled entries (requires a server cron)
+
+Picking **Published** on an entry whose **Date** is in the future saves it as **Scheduled** instead (mirroring [Statamic's scheduling](https://statamic.dev/advanced-topics/scheduling)) — it stays off the frontend and out of `@collection()` until that date arrives. Nothing flips it back to Published on its own: the `entries:publish-scheduled` command does that, registered on Laravel's scheduler in `routes/console.php`, but the scheduler itself only runs when the server actually invokes it. **Every environment (including production) needs one real cron entry:**
+
+```cron
+* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Without that cron entry, scheduled entries will simply never go live — nothing will error, they'll just sit as "Scheduled" forever. Confirm it's working with `php artisan schedule:list`.
+
 ## Frontend templating
 
 A public request hits `App\Modules\Collections\Http\Controllers\PageController`, which resolves the `Site` from the request host/path, finds the matching published `Entry` by its URL, and renders the Blade view configured on that entry's blueprint (`Blueprint::data.template`) with:

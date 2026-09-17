@@ -143,6 +143,7 @@
                         <flux:table.cell class="w-28">
                             <flux:badge :color="match ($entry->status) {
         'published' => 'green',
+        'scheduled' => 'blue',
         'need_review' => 'amber',
         default => 'zinc',
     }"> {{ $statuses[$entry->status] ?? $entry->status }} </flux:badge>

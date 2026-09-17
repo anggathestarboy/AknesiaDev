@@ -8,6 +8,8 @@
         <div class="flex gap-3 items-center border border-gray-200 py-2 px-3.5 rounded-xl">
             @if ($status == "published")
                 <div class="w-2.5 h-6 bg-emerald-500 rounded-full"></div>
+            @elseif ($status == "scheduled")
+                <div class="w-2.5 h-6 bg-blue-500 rounded-full"></div>
             @elseif ($status == "need_review")
                 <div class="w-2.5 h-6 bg-amber-500 rounded-full"></div>
             @elseif ($status == "draft")
@@ -250,6 +252,13 @@
 
             <flux:field>
                 <flux:label>{{ __("Status") }} <span class="text-red-500">*</span></flux:label>
+                {{--
+                    Picking "Published" (or "Scheduled") with a Date in the
+                    future saves it as "Scheduled" regardless of which of
+                    the two was picked — see EntryForm::save() — until
+                    entries:publish-scheduled flips it live once that date
+                    passes.
+                --}}
                 @if ($preview)
                     <flux:radio.group wire:model.live="status" class="">
                         @foreach ($statuses as $value => $label)

@@ -9,6 +9,7 @@ use App\Modules\Collections\Services\CollectionTreeService;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -365,7 +366,7 @@ class EntryManager extends Component
             return;
         }
 
-        if ($status === 'published') {
+        if (in_array($status, ['published', 'scheduled'], true)) {
             auth()->user()->authorizePermission("publish {$this->collection->handle} entries");
         }
 
@@ -377,7 +378,16 @@ class EntryManager extends Component
         Entry::where('collection', $this->collection->handle)
             ->whereIn('id', $this->selected)
             ->get()
-            ->each(fn (Entry $entry) => $entry->update(['status' => $status, 'published' => $status === 'published']));
+            ->each(function (Entry $entry) use ($status): void {
+                // Same "published"/"scheduled" resolution as EntryForm::save()
+                // — a future-dated entry stays/becomes "scheduled" no matter
+                // which of the two was bulk-picked.
+                $resolved = in_array($status, ['published', 'scheduled'], true)
+                    ? ($entry->date && Carbon::parse($entry->date)->isFuture() ? 'scheduled' : 'published')
+                    : $status;
+
+                $entry->update(['status' => $resolved, 'published' => $resolved === 'published']);
+            });
 
         $count = count($this->selected);
         $this->selected = [];

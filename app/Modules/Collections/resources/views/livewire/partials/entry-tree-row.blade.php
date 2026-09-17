@@ -27,6 +27,7 @@
         <div class="flex shrink-0 gap-2">
             <flux:badge size="sm" :color="match ($entry->status) {
         'published' => 'green',
+        'scheduled' => 'blue',
         'need_review' => 'amber',
         default => 'zinc',
     }">{{ $statuses[$entry->status] ?? $entry->status }}</flux:badge>
