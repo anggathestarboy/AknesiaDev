@@ -233,6 +233,37 @@ test('a blueprint tab with handle "sidebar" renders its fields in the term form\
         ->assertSee('Seo Title');
 });
 
+test('a term field with a "show when" condition only renders once it matches', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+
+    Blueprint::create(['namespace' => null, 'handle' => 'news_categories', 'data' => ['fields' => [
+        ['handle' => 'is_featured', 'display' => 'Is Featured', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'banner_text', 'display' => 'Banner Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'is_featured', 'operator' => 'equals', 'value' => 'true']],
+    ]]]);
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->assertDontSee('Banner Text')
+        ->set('data.is_featured', true)
+        ->assertSee('Banner Text');
+});
+
+test('a term field referenced by another field\'s condition is bound live', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+
+    Blueprint::create(['namespace' => null, 'handle' => 'news_categories', 'data' => ['fields' => [
+        ['handle' => 'is_featured', 'display' => 'Is Featured', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'banner_text', 'display' => 'Banner Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'is_featured', 'operator' => 'equals', 'value' => 'true']],
+    ]]]);
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    $html = Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])->html();
+
+    expect($html)->toContain('wire:model.live="data.is_featured"');
+});
+
 test('creating a taxonomy requires the configure taxonomies permission', function () {
     $user = User::factory()->create();
     $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);

@@ -30,28 +30,32 @@
             $tabSections = $activeTabDef["sections"] ?? [];
             $tabFields = collect($this->blueprintFields())->filter(fn($field) => ($field["tab"] ?? "main") === $activeTab);
             $ungroupedFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === "");
+            $conditionTargets = $this->conditionTargetHandles($this->blueprintFields());
         @endphp
 
         @foreach ($ungroupedFields as $field)
-            <div>
-                @if ($field["type"] === "replicator")
-                    @include ("navigation::livewire.partials.menu-list",
-                        [
-                            "field" => $field,
-                            "path" => [$field["handle"]],
-                            "rows" => $data[$field["handle"]] ?? []
-                        ])
-                @else
-                    @include ("collections::livewire.partials.entry-field",
-                        [
-                            "field" => $field,
-                            "path" => [$field["handle"]],
-                            "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                            "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                            "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
-                        ])
-                @endif
-            </div>
+            @if ($this->fieldIsVisible($field, $data))
+                <div>
+                    @if ($field["type"] === "replicator")
+                        @include ("navigation::livewire.partials.menu-list",
+                            [
+                                "field" => $field,
+                                "path" => [$field["handle"]],
+                                "rows" => $data[$field["handle"]] ?? []
+                            ])
+                    @else
+                        @include ("collections::livewire.partials.entry-field",
+                            [
+                                "field" => $field,
+                                "path" => [$field["handle"]],
+                                "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
+                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                "forceLive" => in_array($field["handle"], $conditionTargets, true)
+                            ])
+                    @endif
+                </div>
+            @endif
         @endforeach
 
         @foreach ($tabSections as $section)
@@ -64,25 +68,28 @@
 
                     <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
                         @foreach ($sectionFields as $field)
-                            <div>
-                                @if ($field["type"] === "replicator")
-                                    @include ("navigation::livewire.partials.menu-list",
-                                        [
-                                            "field" => $field,
-                                            "path" => [$field["handle"]],
-                                            "rows" => $data[$field["handle"]] ?? []
-                                        ])
-                                @else
-                                    @include ("collections::livewire.partials.entry-field",
-                                        [
-                                            "field" => $field,
-                                            "path" => [$field["handle"]],
-                                            "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                            "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                            "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
-                                        ])
-                                @endif
-                            </div>
+                            @if ($this->fieldIsVisible($field, $data))
+                                <div>
+                                    @if ($field["type"] === "replicator")
+                                        @include ("navigation::livewire.partials.menu-list",
+                                            [
+                                                "field" => $field,
+                                                "path" => [$field["handle"]],
+                                                "rows" => $data[$field["handle"]] ?? []
+                                            ])
+                                    @else
+                                        @include ("collections::livewire.partials.entry-field",
+                                            [
+                                                "field" => $field,
+                                                "path" => [$field["handle"]],
+                                                "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
+                                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                                "forceLive" => in_array($field["handle"], $conditionTargets, true)
+                                            ])
+                                    @endif
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>

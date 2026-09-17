@@ -12,6 +12,7 @@
         $sidebarTab = collect($this->blueprintTabs)->firstWhere("handle", "sidebar");
         $sidebarFields = collect($this->blueprintFields())->where("tab", "sidebar");
         $sidebarSections = $sidebarTab["sections"] ?? [];
+        $conditionTargets = $this->conditionTargetHandles($this->blueprintFields());
     @endphp
 
     <form wire:submit="save" class="flex flex-col md:flex-row items-start gap-7 @if (count($this->siteLinks) > 0) md:grid-cols-3 @endif">
@@ -32,30 +33,33 @@
             @endphp
 
             @forelse ($ungroupedFields as $field)
-                <div>
-                    @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
-                        <flux:field>
-                            <flux:label
-                                >{{ $field["display"] }}
-                                @if ($field["required"] ?? false)
-                                    <span class="text-red-500">*</span>
-                                @endif
-                            </flux:label>
-                            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
-                            <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
-                        </flux:field>
-                    @else
-                        @include ("collections::livewire.partials.entry-field",
-                            [
-                                "field" => $field,
-                                "path" => [$field["handle"]],
-                                "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
-                                "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
-                            ])
-                    @endif
-                </div>
+                @if ($this->fieldIsVisible($field, $data))
+                    <div>
+                        @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
+                            <flux:field>
+                                <flux:label
+                                    >{{ $field["display"] }}
+                                    @if ($field["required"] ?? false)
+                                        <span class="text-red-500">*</span>
+                                    @endif
+                                </flux:label>
+                                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
+                                <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
+                            </flux:field>
+                        @else
+                            @include ("collections::livewire.partials.entry-field",
+                                [
+                                    "field" => $field,
+                                    "path" => [$field["handle"]],
+                                    "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
+                                    "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
+                                    "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                    "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                    "forceLive" => in_array($field["handle"], $conditionTargets, true)
+                                ])
+                        @endif
+                    </div>
+                @endif
             @empty
                 @if ($tabFields->isEmpty())
                     @if (count($this->blueprintFields()) === 0)
@@ -81,30 +85,33 @@
 
                         <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
                             @foreach ($sectionFields as $field)
-                                <div>
-                                    @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
-                                        <flux:field>
-                                            <flux:label
-                                                >{{ $field["display"] }}
-                                                @if ($field["required"] ?? false)
-                                                    <span class="text-red-500">*</span>
-                                                @endif
-                                            </flux:label>
-                                            <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
-                                            <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
-                                        </flux:field>
-                                    @else
-                                        @include ("collections::livewire.partials.entry-field",
-                                            [
-                                                "field" => $field,
-                                                "path" => [$field["handle"]],
-                                                "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
-                                                "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
-                                                "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
-                                                "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null
-                                            ])
-                                    @endif
-                                </div>
+                                @if ($this->fieldIsVisible($field, $data))
+                                    <div>
+                                        @if (!($field["localizable"] ?? false) && !$this->isOriginLocale())
+                                            <flux:field>
+                                                <flux:label
+                                                    >{{ $field["display"] }}
+                                                    @if ($field["required"] ?? false)
+                                                        <span class="text-red-500">*</span>
+                                                    @endif
+                                                </flux:label>
+                                                <div class="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">{{ is_scalar($data[$field["handle"]] ?? null) ? ($data[$field["handle"]] ?: "—") : __("Set in the default language") }}</div>
+                                                <flux:description>{{ __("Same for every language — edit it from the default language.") }}</flux:description>
+                                            </flux:field>
+                                        @else
+                                            @include ("collections::livewire.partials.entry-field",
+                                                [
+                                                    "field" => $field,
+                                                    "path" => [$field["handle"]],
+                                                    "rows" => $field["type"] === "replicator" ? $data[$field["handle"]] ?? [] : null,
+                                                    "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
+                                                    "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
+                                                    "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                                    "forceLive" => in_array($field["handle"], $conditionTargets, true)
+                                                ])
+                                        @endif
+                                    </div>
+                                @endif
                             @endforeach
                         </div>
                     </div>

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Forms\Http\Controllers;
 
+use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Forms\Models\Form;
 use App\Modules\Forms\Models\FormSubmission;
 use Illuminate\Http\RedirectResponse;
@@ -16,9 +17,15 @@ use Illuminate\Validation\Rule;
  */
 class FormSubmissionController
 {
+    use EvaluatesFieldConditions;
+
     public function store(Request $request, Form $form): RedirectResponse
     {
-        $validated = $request->validate($this->rulesFor($form->fields()), [], $this->attributesFor($form->fields()));
+        $validated = $request->validate(
+            $this->rulesFor($form->fields(), (array) $request->input('data', [])),
+            [],
+            $this->attributesFor($form->fields())
+        );
 
         if ($form->storesSubmissions()) {
             FormSubmission::create([
@@ -36,14 +43,21 @@ class FormSubmissionController
 
     /**
      * @param  array<int, array<string, mixed>>  $fields
+     * @param  array<string, mixed>  $submittedData
      * @return array<string, mixed>
      */
-    protected function rulesFor(array $fields): array
+    protected function rulesFor(array $fields, array $submittedData = []): array
     {
         $rules = [];
 
         foreach ($fields as $field) {
             $key = "data.{$field['handle']}";
+
+            if (! $this->fieldIsVisible($field, $submittedData)) {
+                $rules[$key] = ['nullable'];
+
+                continue;
+            }
 
             $fieldRules = [($field['required'] ?? false) ? 'required' : 'nullable'];
 

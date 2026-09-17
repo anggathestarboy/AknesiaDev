@@ -2,6 +2,7 @@
 
 namespace App\Modules\Navigation\Livewire;
 
+use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Navigation\Models\Navigation;
@@ -38,6 +39,8 @@ use Livewire\Component;
 #[Title('Navigation')]
 class NavigationTreeEditor extends Component
 {
+    use EvaluatesFieldConditions;
+
     public Navigation $navigation;
 
     /**
@@ -381,7 +384,7 @@ class NavigationTreeEditor extends Component
 
     protected function fieldRules(): array
     {
-        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+        return $this->fieldRulesFor($this->blueprintFields(), 'data', $this->data);
     }
 
     /**
@@ -410,7 +413,7 @@ class NavigationTreeEditor extends Component
         return $attributes;
     }
 
-    protected function fieldRulesFor(array $fields, string $prefix): array
+    protected function fieldRulesFor(array $fields, string $prefix, ?array $scopeValues = null): array
     {
         $rules = [];
 
@@ -420,6 +423,12 @@ class NavigationTreeEditor extends Component
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($scopeValues !== null && ! $this->fieldIsVisible($field, $scopeValues)) {
+                $rules[$key] = ['nullable'];
 
                 continue;
             }

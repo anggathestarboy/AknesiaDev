@@ -102,7 +102,9 @@ trait HasFieldBuilder
             'localizable' => (bool) ($field['localizable'] ?? false),
             'options' => is_array($field['options'] ?? null) ? implode(', ', $field['options']) : (string) ($field['options'] ?? ''),
             'placeholder' => $field['placeholder'] ?? '',
-            'default' => is_array($field['default'] ?? null) ? implode(', ', $field['default']) : (string) ($field['default'] ?? ''),
+            'default' => ($field['type'] ?? 'text') === 'toggle'
+                ? $this->toggleDefaultToString($field['default'] ?? null)
+                : (is_array($field['default'] ?? null) ? implode(', ', $field['default']) : (string) ($field['default'] ?? '')),
             'validation' => $field['validation'] ?? '',
             'instructions' => $field['instructions'] ?? '',
             'sometimes' => (bool) ($field['validate_sometimes'] ?? false),
@@ -120,6 +122,20 @@ trait HasFieldBuilder
                 ->map(fn (array $sub): array => $this->mapFieldFromStorage($sub))
                 ->all(),
         ];
+    }
+
+    /**
+     * The editor's toggle default is a "true"/"false" radio group, but
+     * storage holds a real boolean (see normalizeFieldForStorage()) — except
+     * for blueprints saved before that was the case, which still have the
+     * legacy "true"/"false" string. Handles both so old data keeps editing
+     * correctly until the blueprint is next saved.
+     */
+    protected function toggleDefaultToString(mixed $default): string
+    {
+        $value = is_string($default) ? $default === 'true' : (bool) $default;
+
+        return $value ? 'true' : 'false';
     }
 
     public function addField(string $tab = 'main', string $section = ''): void
@@ -181,13 +197,19 @@ trait HasFieldBuilder
 
     /**
      * Drag-and-drop reorder handler for wire:sort (see field-editor.blade.php
-     * and the tab/section field lists in blueprint-manager.blade.php). $id
-     * is the dragged field's stable "_uid" (matching its wire:key, so
-     * Livewire's morph keeps the same DOM/Alpine state — e.g. a field's
-     * collapsed/expanded toggle — across the reorder instead of resetting
-     * it), and $position is its new zero-based position within that list.
-     * $groupId is JSON describing which list: {"tab":...,"section":...} for
-     * a top-level tab/section group, or {"parentPath":[...]} for a
+     * and the tab/section field lists in blueprint-manager.blade.php). $id is
+     * the dragged field's stable "_uid" (used only by wire:sort:item to
+     * identify which field moved — the field-editor's own wire:key is
+     * position-based instead, deliberately NOT the field's _uid: Flux's form
+     * controls are custom elements with no attributeChangedCallback, so
+     * morphing a keyed-move of the whole field panel left stale values
+     * behind after a drag; keeping the key tied to the field's slot instead
+     * makes Livewire patch that slot's content in place — the well-trodden
+     * code path — at the cost of a field's collapsed/expanded state now
+     * following its slot rather than the field itself across a reorder).
+     * $position is the dragged field's new zero-based position within that
+     * list. $groupId is JSON describing which list: {"tab":...,"section":...}
+     * for a top-level tab/section group, or {"parentPath":[...]} for a
      * replicator's fields.
      */
     public function reorderFields(string $id, int $position, string $groupId): void
@@ -682,7 +704,11 @@ trait HasFieldBuilder
             'placeholder' => in_array($field['type'], ['toggle', 'date', 'replicator', 'assets', 'fieldset', 'taxonomy', 'author'], true)
                 ? null
                 : (($field['placeholder'] ?? '') ?: null),
-            'default' => in_array($field['type'], ['replicator', 'assets', 'link', 'fieldset', 'taxonomy', 'author'], true) ? null : (($field['default'] ?? '') ?: null),
+            'default' => match (true) {
+                in_array($field['type'], ['replicator', 'assets', 'link', 'fieldset', 'taxonomy', 'author'], true) => null,
+                $field['type'] === 'toggle' => ($field['default'] ?? 'false') === 'true',
+                default => ($field['default'] ?? '') ?: null,
+            },
             'validation' => ($field['validation'] ?? '') ?: null,
             'instructions' => ($field['instructions'] ?? '') ?: null,
             'validate_sometimes' => (bool) ($field['sometimes'] ?? false),

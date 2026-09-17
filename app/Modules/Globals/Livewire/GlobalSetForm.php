@@ -3,6 +3,7 @@
 namespace App\Modules\Globals\Livewire;
 
 use App\Models\User;
+use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Globals\Models\GlobalSetVariable;
@@ -26,6 +27,8 @@ use Livewire\Component;
  */
 class GlobalSetForm extends Component
 {
+    use EvaluatesFieldConditions;
+
     public GlobalSet $globalSet;
 
     public string $activeTab = 'main';
@@ -316,7 +319,7 @@ class GlobalSetForm extends Component
 
     protected function fieldRules(): array
     {
-        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+        return $this->fieldRulesFor($this->blueprintFields(), 'data', $this->data);
     }
 
     /**
@@ -345,7 +348,7 @@ class GlobalSetForm extends Component
         return $attributes;
     }
 
-    protected function fieldRulesFor(array $fields, string $prefix): array
+    protected function fieldRulesFor(array $fields, string $prefix, ?array $scopeValues = null): array
     {
         $rules = [];
 
@@ -355,6 +358,12 @@ class GlobalSetForm extends Component
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($scopeValues !== null && ! $this->fieldIsVisible($field, $scopeValues)) {
+                $rules[$key] = ['nullable'];
 
                 continue;
             }
