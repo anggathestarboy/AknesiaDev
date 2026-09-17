@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasFlexibleData;
+use App\Support\Templating\FluentWrapper;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Fluent;
 
 class TaxonomyTerm extends Model
 {
@@ -21,6 +23,19 @@ class TaxonomyTerm extends Model
     public function getRouteKeyName(): string
     {
         return 'uri';
+    }
+
+    /**
+     * This term's field data for public templates, Fluent-wrapped like
+     * Entry::fluentData() so a template can read it as $data->title — see
+     * the @taxonomy Blade directive (App\Providers\TemplatingServiceProvider).
+     */
+    public function fluentData(): Fluent
+    {
+        return FluentWrapper::wrap(array_merge($this->data ?? [], [
+            'id' => $this->id,
+            'slug' => $this->slug,
+        ]));
     }
 
     public function taxonomyModel(): BelongsTo
