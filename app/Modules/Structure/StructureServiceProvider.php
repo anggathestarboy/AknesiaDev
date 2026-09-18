@@ -18,8 +18,6 @@ class StructureServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/resources/views', 'structure');
-
         Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
             ->prefix(config('cms.route'))
             ->name('structure.')
