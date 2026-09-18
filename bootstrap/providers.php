@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Auth\AuthServiceProvider;
 use App\Modules\Blueprints\BlueprintsServiceProvider;
 use App\Modules\Collections\CollectionsServiceProvider;
 use App\Modules\Forms\FormsServiceProvider;
@@ -15,15 +16,14 @@ use App\Modules\Structure\StructureServiceProvider;
 use App\Modules\Taxonomies\TaxonomiesServiceProvider;
 use App\Modules\Users\UsersServiceProvider;
 use App\Providers\AppServiceProvider;
-use App\Providers\FortifyServiceProvider;
 use App\Providers\TemplatingServiceProvider;
 
 return [
     AppServiceProvider::class,
-    FortifyServiceProvider::class,
     TemplatingServiceProvider::class,
 
     // CMS modules (app/Modules/*) — see docs/AI-CONTEXT.md "Sistem modul CMS".
+    AuthServiceProvider::class,
     CollectionsServiceProvider::class,
     TaxonomiesServiceProvider::class,
     BlueprintsServiceProvider::class,

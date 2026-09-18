@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Livewire\Settings\TwoFactor;
+namespace App\Modules\Auth\Livewire\Settings\TwoFactor;
 
 use Exception;
+use Illuminate\Contracts\View\View;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -47,5 +48,10 @@ class RecoveryCodes extends Component
                 $this->recoveryCodes = [];
             }
         }
+    }
+
+    public function render(): View
+    {
+        return view('auth::livewire.settings.two-factor.recovery-codes');
     }
 }

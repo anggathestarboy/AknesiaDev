@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Livewire\Settings;
+namespace App\Modules\Auth\Livewire\Settings;
 
-use App\Concerns\PasswordValidationRules;
+use App\Modules\Auth\Concerns\PasswordValidationRules;
 use Exception;
 use Flux\Flux;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
@@ -308,5 +309,10 @@ class Security extends Component
             'description' => __('To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app.'),
             'buttonText' => __('Continue'),
         ];
+    }
+
+    public function render(): View
+    {
+        return view('auth::livewire.settings.security');
     }
 }

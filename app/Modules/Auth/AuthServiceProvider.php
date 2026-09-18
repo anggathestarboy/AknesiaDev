@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Providers;
+namespace App\Modules\Auth;
 
-use App\Actions\Fortify\ResetUserPassword;
+use App\Modules\Auth\Actions\ResetUserPassword;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -12,8 +12,16 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Fortify;
+use Livewire\Livewire;
 
-class FortifyServiceProvider extends ServiceProvider
+/**
+ * Login, password reset, two-factor challenge, email verification, and
+ * password confirmation — everything Laravel Fortify handles — plus the
+ * authenticated user's own account settings (profile, security/2FA/
+ * passkeys, appearance, account deletion). Owns no tables of its own
+ * (Fortify persists onto the existing users table).
+ */
+class AuthServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
@@ -28,6 +36,15 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->loadViewsFrom(__DIR__.'/resources/views', 'auth');
+
+        // Lets @livewire("auth::settings.delete-user-form") and
+        // @livewire("auth::settings.two-factor.recovery-codes") calls in
+        // this module's own views resolve to this module's own Livewire
+        // namespace — same convention as MediaServiceProvider's 'media'
+        // namespace for @livewire("media::asset-picker").
+        Livewire::addNamespace('auth', classNamespace: 'App\\Modules\\Auth\\Livewire');
+
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
@@ -68,12 +85,12 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn () => view('livewire.auth.login'));
-        Fortify::verifyEmailView(fn () => view('livewire.auth.verify-email'));
-        Fortify::twoFactorChallengeView(fn () => view('livewire.auth.two-factor-challenge'));
-        Fortify::confirmPasswordView(fn () => view('livewire.auth.confirm-password'));
-        Fortify::resetPasswordView(fn () => view('livewire.auth.reset-password'));
-        Fortify::requestPasswordResetLinkView(fn () => view('livewire.auth.forgot-password'));
+        Fortify::loginView(fn () => view('auth::livewire.login'));
+        Fortify::verifyEmailView(fn () => view('auth::livewire.verify-email'));
+        Fortify::twoFactorChallengeView(fn () => view('auth::livewire.two-factor-challenge'));
+        Fortify::confirmPasswordView(fn () => view('auth::livewire.confirm-password'));
+        Fortify::resetPasswordView(fn () => view('auth::livewire.reset-password'));
+        Fortify::requestPasswordResetLinkView(fn () => view('auth::livewire.forgot-password'));
     }
 
     /**

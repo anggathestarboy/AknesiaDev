@@ -30,7 +30,7 @@
         </form>
 
         @if ($this->showDeleteUser)
-            <livewire:settings.delete-user-form />
+            @livewire('auth::settings.delete-user-form')
         @endif
     </x-settings.layout>
 </section>

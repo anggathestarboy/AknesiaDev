@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Livewire\Settings;
+namespace App\Modules\Auth\Livewire\Settings;
 
-use App\Concerns\ProfileValidationRules;
+use App\Modules\Auth\Concerns\ProfileValidationRules;
 use Flux\Flux;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -80,5 +81,10 @@ class Profile extends Component
         $user = Auth::user();
 
         return ! $user instanceof MustVerifyEmail || $user->hasVerifiedEmail();
+    }
+
+    public function render(): View
+    {
+        return view('auth::livewire.settings.profile');
     }
 }

@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\Settings\Security;
 use App\Models\User;
+use App\Modules\Auth\Livewire\Settings\Security;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Fortify\Features;
 use Livewire\Livewire;
