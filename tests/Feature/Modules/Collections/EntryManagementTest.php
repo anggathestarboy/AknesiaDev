@@ -147,6 +147,120 @@ test('a required field shows a red asterisk after its label, an optional one doe
     expect($html)->toContain('Status <span class="text-red-500">*</span>');
 });
 
+test('a "show when" field only renders once the field it depends on matches', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'has_video', 'display' => 'Has Video', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'has_video', 'operator' => 'equals', 'value' => 'true']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertDontSee('Video Url')
+        ->set('data.has_video', true)
+        ->assertSee('Video Url')
+        ->set('data.has_video', false)
+        ->assertDontSee('Video Url');
+});
+
+test('a "hide when" field disappears once the field it depends on matches', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'status', 'display' => 'Status', 'type' => 'select', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['draft', 'archived']],
+        ['handle' => 'headline', 'display' => 'Headline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'hide', 'field' => 'status', 'operator' => 'equals', 'value' => 'archived']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSee('Headline')
+        ->set('data.status', 'archived')
+        ->assertDontSee('Headline')
+        ->set('data.status', 'draft')
+        ->assertSee('Headline');
+});
+
+test('a field referenced by another field\'s condition is bound live, so the dependent field updates immediately', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'has_video', 'display' => 'Has Video', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'has_video', 'operator' => 'equals', 'value' => 'true']],
+        ['handle' => 'subtitle', 'display' => 'Subtitle', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $html = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])->html();
+
+    // "has_video" is a condition's target field, so it must sync live —
+    // otherwise "Video Url" only appears/disappears on some later,
+    // unrelated request instead of immediately, unlike Collections'
+    // existing Live Preview fields.
+    expect($html)->toContain('wire:model.live="data.has_video"');
+    // "subtitle" isn't referenced by any condition, so it stays deferred.
+    expect($html)->toContain('wire:model="data.subtitle"');
+    expect($html)->not->toContain('wire:model.live="data.subtitle"');
+});
+
+test('a replicator sub-field referenced by a sibling condition within the same row is bound live', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'replicator_fields' => [
+            ['handle' => 'kind', 'display' => 'Kind', 'type' => 'select', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['image', 'video']],
+            ['handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'kind', 'operator' => 'equals', 'value' => 'video']],
+        ]],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $html = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('addReplicatorRow', ['items'])
+        ->html();
+
+    expect($html)->toContain('wire:model.live="data.items.0.kind"');
+});
+
+test('a conditionally hidden required field is not enforced on save', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'has_video', 'display' => 'Has Video', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ['handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'has_video', 'operator' => 'equals', 'value' => 'true']],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    // "video_url" is required, but hidden because "has_video" is off — it
+    // must not block saving.
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'My Post')
+        ->set('slug', 'my-post')
+        ->set('status', 'published')
+        ->call('save')
+        ->assertHasNoErrors('data.video_url');
+});
+
+test('a replicator sub-field\'s condition is scoped to its own row', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'replicator_fields' => [
+            ['handle' => 'kind', 'display' => 'Kind', 'type' => 'select', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => ['image', 'video']],
+            ['handle' => 'video_url', 'display' => 'Video Url', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => ['mode' => 'show', 'field' => 'kind', 'operator' => 'equals', 'value' => 'video']],
+        ]],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('addReplicatorRow', ['items'])
+        ->call('addReplicatorRow', ['items'])
+        ->set('data.items.0.kind', 'video')
+        ->set('data.items.1.kind', 'image')
+        ->assertSeeInOrder(['Kind', 'Video Url', 'Kind'])
+        ->assertSeeHtml('data.items.0.video_url')
+        ->assertDontSeeHtml('data.items.1.video_url');
+});
+
 test('entry form shows a section heading and its fields, both grouped and ungrouped', function () {
     $this->actingAs(User::factory()->create());
 

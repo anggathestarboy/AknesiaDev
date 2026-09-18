@@ -6,6 +6,7 @@ use App\Models\Taxonomy;
 use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
@@ -28,6 +29,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class TermForm extends Component
 {
+    use EvaluatesFieldConditions;
+
     const DEFAULT_SITE = 'indonesia';
 
     public Taxonomy $taxonomy;
@@ -471,7 +474,7 @@ class TermForm extends Component
 
     protected function fieldRules(): array
     {
-        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+        return $this->fieldRulesFor($this->blueprintFields(), 'data', $this->data);
     }
 
     /**
@@ -500,7 +503,7 @@ class TermForm extends Component
         return $attributes;
     }
 
-    protected function fieldRulesFor(array $fields, string $prefix): array
+    protected function fieldRulesFor(array $fields, string $prefix, ?array $scopeValues = null): array
     {
         $rules = [];
 
@@ -516,6 +519,12 @@ class TermForm extends Component
 
                 $rules["{$key}.*._enabled"] = ['boolean'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($scopeValues !== null && ! $this->fieldIsVisible($field, $scopeValues)) {
+                $rules[$key] = ['nullable'];
 
                 continue;
             }

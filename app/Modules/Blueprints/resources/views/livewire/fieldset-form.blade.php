@@ -22,7 +22,7 @@
             @enderror
 
             <div class="space-y-3" wire:sort="reorderFields" wire:sort:group="fieldset-fields" wire:sort:group-id="{{ json_encode(['tab' => 'main', 'section' => '']) }}">
-                @forelse ($fields as $index => $field)
+                @foreach ($fields as $index => $field)
                     @include ('blueprints::livewire.partials.field-editor',
                         [
                             'field' => $field,
@@ -41,10 +41,12 @@
                             'bardToolbarButtons' => $bardToolbarButtons,
                             'tabs' => $tabs
                         ])
-                @empty
-                    <flux:text class="text-sm text-zinc-500">{{ __('No fields yet.') }}</flux:text>
-                @endforelse
+                @endforeach
             </div>
+
+            @if (empty($fields))
+                <flux:text class="text-sm text-zinc-500">{{ __('No fields yet.') }}</flux:text>
+            @endif
         </div>
 
         <div class="flex justify-end gap-2">

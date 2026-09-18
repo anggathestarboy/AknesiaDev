@@ -825,6 +825,58 @@ test('changing a field type resets its stale default value', function () {
         ->assertSet('fields.0.default', '');
 });
 
+test('a toggle field stores its default value as a real boolean, not the string "false"', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'featured', 'display' => 'Featured', 'type' => 'toggle', 'required' => false, 'condition_mode' => 'always', 'default' => 'false'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $field = Blueprint::sole()->data['fields'][0];
+
+    expect($field['default'])->toBeFalse();
+});
+
+test('a toggle field defaulted to true round-trips correctly when editing the blueprint again', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => 'featured', 'display' => 'Featured', 'type' => 'toggle', 'required' => false, 'condition_mode' => 'always', 'default' => 'true'],
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $blueprint = Blueprint::sole();
+
+    expect($blueprint->data['fields'][0]['default'])->toBeTrue();
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
+        ->assertSet('fields.0.default', 'true');
+});
+
+test('a legacy toggle field saved with a string default still edits correctly', function () {
+    $this->actingAs(User::factory()->create());
+
+    $blueprint = Blueprint::create([
+        'handle' => 'post',
+        'data' => [
+            'tabs' => [['handle' => 'main', 'display' => 'Main', 'sections' => []]],
+            'fields' => [
+                ['handle' => 'featured', 'display' => 'Featured', 'type' => 'toggle', 'required' => false, 'default' => 'false'],
+            ],
+        ],
+    ]);
+
+    Livewire::test(BlueprintForm::class, ['blueprint' => $blueprint])
+        ->assertSet('fields.0.default', 'false');
+});
+
 test('blueprint always has a reserved "main" tab that new fields default to', function () {
     $this->actingAs(User::factory()->create());
 

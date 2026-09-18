@@ -116,7 +116,7 @@
                         @endif
 
                         <div class="space-y-3" wire:sort="reorderFields" wire:sort:group="blueprint-fields" wire:sort:group-id="{{ json_encode(['tab' => $tab['handle'], 'section' => '']) }}">
-                            @forelse ($ungroupedFieldIndexes as $position => $index)
+                            @foreach ($ungroupedFieldIndexes as $position => $index)
                                 @include ("blueprints::livewire.partials.field-editor",
                                     [
                                         "field" => $fields[$index],
@@ -135,12 +135,12 @@
                                         "bardToolbarButtons" => $bardToolbarButtons,
                                         "tabs" => $tabs
                                     ])
-                            @empty
-                                @if (empty($tab["sections"]))
-                                    <flux:text class="text-sm text-zinc-500">{{ __("No fields in this tab yet.") }}</flux:text>
-                                @endif
-                            @endforelse
+                            @endforeach
                         </div>
+
+                        @if ($ungroupedFieldIndexes->isEmpty() && empty($tab["sections"]))
+                            <flux:text class="text-sm text-zinc-500">{{ __("No fields in this tab yet.") }}</flux:text>
+                        @endif
 
                         <div class="space-y-3" wire:sort="reorderSections" wire:sort:group="blueprint-sections-{{ $tabIndex }}" wire:sort:group-id="{{ $tabIndex }}">
                             @foreach ($tab["sections"] ?? [] as $sectionIndex => $section)
@@ -207,7 +207,7 @@
                                     @endif
 
                                     <div wire:sort="reorderFields" wire:sort:group="blueprint-fields" wire:sort:group-id="{{ json_encode(['tab' => $tab['handle'], 'section' => $section['handle']]) }}" class="space-y-3">
-                                        @forelse ($sectionFieldIndexes as $position => $index)
+                                        @foreach ($sectionFieldIndexes as $position => $index)
                                             @include ("blueprints::livewire.partials.field-editor",
                                                 [
                                                     "field" => $fields[$index],
@@ -224,10 +224,12 @@
                                                     "bardToolbarButtons" => $bardToolbarButtons,
                                                     "tabs" => $tabs
                                                 ])
-                                        @empty
-                                            <flux:text class="text-sm text-zinc-500">{{ __("No fields in this section yet.") }}</flux:text>
-                                        @endforelse
+                                        @endforeach
                                     </div>
+
+                                    @if ($sectionFieldIndexes->isEmpty())
+                                        <flux:text class="text-sm text-zinc-500">{{ __("No fields in this section yet.") }}</flux:text>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>

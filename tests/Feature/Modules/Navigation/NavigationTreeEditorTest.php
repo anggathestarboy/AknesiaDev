@@ -382,6 +382,43 @@ test('a navigation with blueprint fields uses a single blueprint-driven form, wi
     expect(app(NavigationTreeService::class)->load($navigation->fresh()))->toBe(['header_text' => 'Welcome']);
 });
 
+test('a navigation field with a "show when" condition only renders once it matches', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'show_header', 'display' => 'Show Header', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'instructions' => null, 'conditions' => null],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'show_header', 'operator' => 'equals', 'value' => 'true']],
+        ]],
+    ]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->assertDontSee('Header Text')
+        ->set('data.show_header', true)
+        ->assertSee('Header Text');
+});
+
+test('a navigation field referenced by another field\'s condition is bound live', function () {
+    $this->actingAs(User::factory()->create());
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'show_header', 'display' => 'Show Header', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'instructions' => null, 'conditions' => null],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'show_header', 'operator' => 'equals', 'value' => 'true']],
+        ]],
+    ]);
+
+    $html = Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])->html();
+
+    expect($html)->toContain('wire:model.live="data.show_header"');
+});
+
 test('saving fails validation when a required blueprint field is left blank', function () {
     $this->actingAs(User::factory()->create());
 

@@ -28,7 +28,7 @@
     $fieldTabSections = collect($tabs ?? [])->firstWhere("handle", $field["tab"])["sections"] ?? [];
 @endphp
 
-<div wire:key="field-{{ $field['_uid'] }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 px-1.5 py-1 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: @js($fieldsCollapsedByDefault ?? false) }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
+<div wire:key="field-{{ implode('-', $path) }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 px-1.5 py-1 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: @js($fieldsCollapsedByDefault ?? false) }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
     <div class="flex items-center justify-between bg-gray-100 rounded-lg w-full">
         <span wire:sort:handle class="flex h-full cursor-grab items-center px-1 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-300" title="{{ __('Drag to reorder') }}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">

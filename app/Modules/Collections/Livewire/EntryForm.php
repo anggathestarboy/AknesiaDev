@@ -6,6 +6,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
+use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Collections\Services\CollectionTreeService;
@@ -32,7 +33,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class EntryForm extends Component
 {
-    use HasSchemaBlocks;
+    use EvaluatesFieldConditions, HasSchemaBlocks;
 
     const DEFAULT_SITE = 'indonesia';
 
@@ -803,12 +804,18 @@ class EntryForm extends Component
      * Build Laravel validation rules per blueprint field, using the field's
      * type, required flag, "sometimes" flag and custom rule string. A
      * replicator recurses into its own sub-fields under a "*" wildcard per
-     * row, to any nesting depth. Field conditions (show/hide) are not
-     * evaluated here — see docs/AI-CONTEXT.md.
+     * row, to any nesting depth. A top-level field hidden by its own
+     * "show when"/"hide when" condition (see EvaluatesFieldConditions) is
+     * relaxed to "nullable" instead of enforcing its normal rules, since the
+     * user never had a chance to fill in a field they can't see. Conditions
+     * on a replicator's own sub-fields aren't accounted for here — each row
+     * can be independently hidden/shown, but a single wildcard rule applies
+     * to every row alike, so those fields keep their normal validation
+     * regardless of visibility.
      */
     protected function fieldRules(): array
     {
-        return $this->fieldRulesFor($this->blueprintFields(), 'data');
+        return $this->fieldRulesFor($this->blueprintFields(), 'data', $this->data);
     }
 
     /**
@@ -867,7 +874,7 @@ class EntryForm extends Component
         return $attributes;
     }
 
-    protected function fieldRulesFor(array $fields, string $prefix): array
+    protected function fieldRulesFor(array $fields, string $prefix, ?array $scopeValues = null): array
     {
         $rules = [];
 
@@ -883,6 +890,12 @@ class EntryForm extends Component
 
                 $rules["{$key}.*._enabled"] = ['boolean'];
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+
+                continue;
+            }
+
+            if ($scopeValues !== null && ! $this->fieldIsVisible($field, $scopeValues)) {
+                $rules[$key] = ['nullable'];
 
                 continue;
             }

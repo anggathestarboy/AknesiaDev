@@ -1,18 +1,22 @@
 @php
     $prefix = "data." . implode(".", $path);
     $fieldLabel = new \Illuminate\Support\HtmlString(e($field["display"]) . ($field["required"] ?? false ? ' <span class="text-red-500">*</span>' : ""));
-    // When the collection has Live Preview enabled, typed/selected fields
-    // sync to the server as you go (instead of only on the next unrelated
-    // request) so the preview pane can stay up to date. Complex fields
-    // (bard, assets, replicator, taxonomy checkboxes) already sync on every
-    // interaction via explicit $wire calls/clicks, so they're left alone.
+    // Typed/selected fields sync to the server as you go — instead of only
+    // on the next unrelated request — whenever the collection has Live
+    // Preview enabled ($preview), or another sibling field's "show
+    // when"/"hide when" condition depends on this one ($forceLive), so that
+    // dependent field's visibility updates immediately instead of lagging
+    // behind. Complex fields (bard, assets, replicator, taxonomy checkboxes)
+    // already sync on every interaction via explicit $wire calls/clicks, so
+    // they're left alone.
     $preview = $preview ?? false;
+    $live = $preview || ($forceLive ?? false);
 @endphp
 
 @if ($field["type"] === "toggle")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:switch wire:model.live="{{ $prefix }}" title="{{ $field['handle'] }}" />
         @else
             <flux:switch wire:model="{{ $prefix }}" title="{{ $field['handle'] }}" />
@@ -27,7 +31,7 @@
 @elseif ($field["type"] === "select")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:select wire:model.live="{{ $prefix }}" :placeholder="$field['placeholder'] ?? __('Select an option')">
                 @foreach ($field["options"] ?? [] as $option)
                     <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
@@ -50,7 +54,7 @@
 @elseif ($field["type"] === "author")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:select wire:model.live="{{ $prefix }}" placeholder="{{ __('Select an author') }}">
                 @foreach ($this->availableAuthors() as $author)
                     <flux:select.option value="{{ $author->id }}">{{ $author->name }}</flux:select.option>
@@ -73,7 +77,7 @@
 @elseif ($field["type"] === "radio")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:radio.group wire:model.live="{{ $prefix }}">
                 @foreach ($field["options"] ?? [] as $option)
                     <flux:radio value="{{ $option }}" label="{{ $option }}" />
@@ -104,7 +108,7 @@
     @endphp
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:checkbox.group wire:model.live="{{ $prefix }}">
                 @foreach ($field["options"] ?? [] as $option)
                     <flux:checkbox value="{{ $option }}" label="{{ $option }}" />
@@ -128,7 +132,7 @@
 @elseif ($field["type"] === "date")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:input type="date" wire:model.live.debounce.600ms="{{ $prefix }}" />
         @else
             <flux:input type="date" wire:model="{{ $prefix }}" />
@@ -143,7 +147,7 @@
 @elseif ($field["type"] === "number")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:input type="number" wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder']" />
         @else
             <flux:input type="number" wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />
@@ -158,7 +162,7 @@
 @elseif ($field["type"] === "textarea" || $field["type"] === "markdown")
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:textarea wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
         @else
             <flux:textarea wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" rows="4" />
@@ -273,7 +277,7 @@
         </div>
 
         <div x-show="mode === 'url'">
-            @if ($preview)
+            @if ($live)
                 <flux:input wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder'] ?: __('https://...')" size="sm" />
             @else
                 <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder'] ?: __('https://...')" size="sm" />
@@ -297,6 +301,7 @@
         $replicatorMaxItems = $field["max_items"] ?? null;
         $replicatorRowCount = count($rows ?? []);
         $replicatorLimitReached = $replicatorMaxItems !== null && $replicatorRowCount >= $replicatorMaxItems;
+        $replicatorConditionTargets = $this->conditionTargetHandles($field["replicator_fields"] ?? []);
     @endphp
     <div>
         <div class="flex items-center justify-between gap-2">
@@ -333,19 +338,22 @@
 
                         <div class="mt-1 grid gap-3 bg-white rounded-xl px-2 py-3" x-show="!collapsed" x-cloak>
                             @foreach ($field["replicator_fields"] ?? [] as $sub)
-                                <div>
-                                    @include ("collections::livewire.partials.entry-field",
-                                        [
-                                            "field" => $sub,
-                                            "path" => [...$path, $rowIndex, $sub["handle"]],
-                                            "rows" => $sub["type"] === "replicator" ? $row[$sub["handle"]] ?? [] : null,
-                                            "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
-                                            "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
-                                            "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
-                                            "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null,
-                                            "preview" => $preview
-                                        ])
-                                </div>
+                                @if ($this->fieldIsVisible($sub, $row))
+                                    <div>
+                                        @include ("collections::livewire.partials.entry-field",
+                                            [
+                                                "field" => $sub,
+                                                "path" => [...$path, $rowIndex, $sub["handle"]],
+                                                "rows" => $sub["type"] === "replicator" ? $row[$sub["handle"]] ?? [] : null,
+                                                "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
+                                                "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
+                                                "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
+                                                "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null,
+                                                "preview" => $preview,
+                                                "forceLive" => in_array($sub["handle"], $replicatorConditionTargets, true)
+                                            ])
+                                    </div>
+                                @endif
                             @endforeach
                         </div>
                     </div>
@@ -497,7 +505,7 @@
 @else
     <flux:field>
         <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-        @if ($preview)
+        @if ($live)
             <flux:input wire:model.live.debounce.600ms="{{ $prefix }}" :placeholder="$field['placeholder']" />
         @else
             <flux:input wire:model="{{ $prefix }}" :placeholder="$field['placeholder']" />

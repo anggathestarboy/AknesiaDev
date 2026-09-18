@@ -151,6 +151,52 @@ test('global set values require blueprint required fields', function () {
         ->assertSee('The Site name field is required.');
 });
 
+test('a global set field with a "show when" condition only renders once it matches', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'use_custom_logo', 'display' => 'Use Custom Logo', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'instructions' => null, 'conditions' => null],
+        ['handle' => 'logo_url', 'display' => 'Logo Url', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'use_custom_logo', 'operator' => 'equals', 'value' => 'true']],
+    ]]]);
+
+    $globalSet = GlobalSet::create([
+        'title' => 'Site Settings',
+        'handle' => 'site_settings',
+        'settings' => ['blueprint' => 'site_settings'],
+    ]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->assertDontSee('Logo Url')
+        ->set('data.use_custom_logo', true)
+        ->assertSee('Logo Url');
+});
+
+test('a field referenced by another field\'s condition is bound live, so the dependent field updates immediately', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'use_custom_logo', 'display' => 'Use Custom Logo', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'instructions' => null, 'conditions' => null],
+        ['handle' => 'logo_url', 'display' => 'Logo Url', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'use_custom_logo', 'operator' => 'equals', 'value' => 'true']],
+        ['handle' => 'tagline', 'display' => 'Tagline', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'conditions' => null],
+    ]]]);
+
+    $globalSet = GlobalSet::create([
+        'title' => 'Site Settings',
+        'handle' => 'site_settings',
+        'settings' => ['blueprint' => 'site_settings'],
+    ]);
+
+    $html = Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])->html();
+
+    // "use_custom_logo" is a condition's target field, so it must sync
+    // live — otherwise "Logo Url" only appears/disappears on some later,
+    // unrelated request instead of immediately.
+    expect($html)->toContain('wire:model.live="data.use_custom_logo"');
+    // "tagline" isn't referenced by any condition, so it stays deferred.
+    expect($html)->toContain('wire:model="data.tagline"');
+    expect($html)->not->toContain('wire:model.live="data.tagline"');
+});
+
 test('creating a global set defaults to checking the first configured site', function () {
     $this->actingAs(User::factory()->create());
     makeSite('indonesia', 0);

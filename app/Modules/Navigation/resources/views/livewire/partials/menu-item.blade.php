@@ -4,6 +4,7 @@
     $preview = trim((string) ($row[$previewField["handle"] ?? null] ?? ""));
     $preview = $preview !== "" ? $preview : __("Untitled");
     $rowUid = $row["_uid"] ?? $rowIndex;
+    $replicatorConditionTargets = $this->conditionTargetHandles($field["replicator_fields"] ?? []);
 @endphp
 
 <div wire:key="menu-item-{{ $rowUid }}-{{ $rowIndex }}" wire:sort:item="{{ $rowUid }}" class="rounded-lg border border-zinc-200 dark:border-zinc-700" x-data="{ expanded: true }">
@@ -48,17 +49,20 @@
         <div class="grid gap-3">
             @foreach ($field["replicator_fields"] ?? [] as $sub)
                 @continue ($sub["type"] === "replicator")
-                <div class="{{ in_array($sub['type'], ['link', 'textarea', 'markdown', 'bard'], true) ? 'col-span-2' : '' }}">
-                    @include ("collections::livewire.partials.entry-field",
-                        [
-                            "field" => $sub,
-                            "path" => [...$path, $rowIndex, $sub["handle"]],
-                            "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
-                            "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
-                            "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
-                            "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null
-                        ])
-                </div>
+                @if ($this->fieldIsVisible($sub, $row))
+                    <div class="{{ in_array($sub['type'], ['link', 'textarea', 'markdown', 'bard'], true) ? 'col-span-2' : '' }}">
+                        @include ("collections::livewire.partials.entry-field",
+                            [
+                                "field" => $sub,
+                                "path" => [...$path, $rowIndex, $sub["handle"]],
+                                "assetIds" => $sub["type"] === "assets" ? $row[$sub["handle"]] ?? [] : null,
+                                "linkValue" => $sub["type"] === "link" ? $row[$sub["handle"]] ?? "" : null,
+                                "taxonomyIds" => $sub["type"] === "taxonomy" ? $row[$sub["handle"]] ?? [] : null,
+                                "bardValue" => $sub["type"] === "bard" ? $row[$sub["handle"]] ?? "" : null,
+                                "forceLive" => in_array($sub["handle"], $replicatorConditionTargets, true)
+                            ])
+                    </div>
+                @endif
             @endforeach
         </div>
 
