@@ -2961,3 +2961,76 @@ test('saving an entry with more replicator rows than the field\'s max is rejecte
         ->call('save')
         ->assertHasErrors(['data.gallery']);
 });
+
+test('picking Published with a future date auto-schedules the entry instead', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', now()->addDays(5)->format('Y-m-d\TH:i'))
+        ->set('status', 'published')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+    expect($entry->status)->toBe('scheduled');
+    expect($entry->published)->toBeFalse();
+});
+
+test('picking Published with a past or present date saves it as published, unaffected', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', now()->subDay()->format('Y-m-d\TH:i'))
+        ->set('status', 'published')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $entry = Entry::sole();
+    expect($entry->status)->toBe('published');
+    expect($entry->published)->toBeTrue();
+});
+
+test('a scheduled entry re-saved after its date has passed becomes published', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $entry = Entry::create([
+        'site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post',
+        'status' => 'scheduled', 'slug' => 'hello', 'date' => now()->addDays(5)->format('Y-m-d H:i'),
+        'data' => ['title' => 'Hello', 'status' => 'draft'],
+    ]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->set('entryDate', now()->subDay()->format('Y-m-d\TH:i'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($entry->fresh()->status)->toBe('published');
+});
+
+test('bulk-publishing selected entries schedules the future-dated ones instead of publishing them', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $future = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'status' => 'draft', 'slug' => 'future', 'date' => now()->addDays(5)->format('Y-m-d H:i'), 'data' => []]);
+    $past = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'status' => 'draft', 'slug' => 'past', 'date' => now()->subDay()->format('Y-m-d H:i'), 'data' => []]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->set('selected', [$future->id, $past->id])
+        ->call('bulkUpdateStatus', 'published');
+
+    expect($future->fresh()->status)->toBe('scheduled');
+    expect($past->fresh()->status)->toBe('published');
+});

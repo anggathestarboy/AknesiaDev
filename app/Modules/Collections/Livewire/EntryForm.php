@@ -16,6 +16,7 @@ use App\Modules\Sites\Models\Site;
 use App\Modules\SiteSettings\Support\HasSchemaBlocks;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -42,6 +43,7 @@ class EntryForm extends Component
      */
     const STATUSES = [
         'published' => 'Published',
+        'scheduled' => 'Scheduled',
         'need_review' => 'Need Review',
         'draft' => 'Draft',
     ];
@@ -1084,7 +1086,16 @@ class EntryForm extends Component
 
         $validated = $this->validate($rules);
 
-        if ($validated['status'] === 'published') {
+        // Whether a "Published"/"Scheduled" pick actually goes live now or
+        // later is decided by the date, not by which of the two was picked
+        // — a future date always stores "scheduled", mirroring Statamic.
+        // The entries:publish-scheduled scheduled command flips it to
+        // "published" once that date passes (see routes/console.php).
+        if (in_array($validated['status'], ['published', 'scheduled'], true)) {
+            $validated['status'] = Carbon::parse($validated['entryDate'])->isFuture() ? 'scheduled' : 'published';
+        }
+
+        if (in_array($validated['status'], ['published', 'scheduled'], true)) {
             auth()->user()->authorizePermission("publish {$this->collection->handle} entries");
         }
 

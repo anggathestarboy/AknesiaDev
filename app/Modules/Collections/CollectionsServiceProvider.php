@@ -4,6 +4,7 @@ namespace App\Modules\Collections;
 
 use App\Modules\Collections\Console\Commands\CreateDefaultPagesCollectionCommand;
 use App\Modules\Collections\Console\Commands\CreateHomepageEntryCommand;
+use App\Modules\Collections\Console\Commands\PublishScheduledEntriesCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +27,7 @@ class CollectionsServiceProvider extends ServiceProvider
         $this->commands([
             CreateDefaultPagesCollectionCommand::class,
             CreateHomepageEntryCommand::class,
+            PublishScheduledEntriesCommand::class,
         ]);
 
         Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
