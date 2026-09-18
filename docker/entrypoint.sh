@@ -10,7 +10,10 @@ cd /app
 # has no "db" container to wait for and nothing to migrate.
 if [ "$1" = "supervisord" ]; then
     echo "Waiting for the database..."
-    until php artisan migrate:status > /dev/null 2>&1; do
+    # db:show only needs a working connection, unlike migrate:status — which
+    # errors ("Migration table not found") on a brand-new database with no
+    # migrations table yet, so it would never succeed on first boot.
+    until php artisan db:show > /dev/null 2>&1; do
         sleep 2
     done
 
