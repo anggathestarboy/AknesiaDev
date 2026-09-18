@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('site');
             $table->uuid('origin_id')->nullable()->comment('Self-ref for localization (nullable)');
             $table->tinyInteger('published')->default(1);
+            $table->string('status')->default('draft');
             $table->string('slug')->nullable();
             $table->string('uri')->nullable();
             $table->string('date')->nullable();
@@ -20,6 +21,8 @@ return new class extends Migration
             $table->string('collection');
             $table->string('blueprint', 30)->nullable();
             $table->json('data');
+            $table->json('schema')->nullable();
+            $table->json('seo')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
 

@@ -18,9 +18,10 @@ app/
   Modules/             — SEMUA fitur CMS hidup di sini, 1 folder per modul.
                           Lihat bagian "Sistem modul CMS" di bawah.
   Providers/
-database/migrations/    — skema CMS versi awal (semua tabel dari docs/PRD.md
-                           §3) masih di sini, BELUM dipindah ke masing-masing
-                           modul. Jangan dipindah tanpa diminta — lihat aturan
+database/migrations/    — SEMUA migration app ini hidup di sini, termasuk
+                           tabel milik modul (mis. `entries`, `taxonomy_terms`,
+                           `roles`). Modul TIDAK punya folder
+                           `database/migrations/` sendiri lagi — lihat aturan
                            di bawah.
 routes/
   web.php               — route `/` dan (kalau cms.enabled) `dashboard`.
@@ -54,8 +55,6 @@ app/Modules/{Nama}/
   Actions/                 — action class satu-tugas (pola app/Actions/Fortify)
   Policies/                — authorization policy milik modul ini
   routes.php               — route modul ini SAJA (lihat isi provider di bawah)
-  database/migrations/     — migration BARU untuk modul ini (lihat catatan
-                              migration di bawah — migration lama TIDAK di sini)
   resources/views/         — Blade view modul ini, di-load lewat view
                               namespace sendiri (mis. `media::index`)
   {Nama}ServiceProvider.php
@@ -69,7 +68,6 @@ kuat):
 public function boot(): void
 {
     $this->loadViewsFrom(__DIR__.'/resources/views', '{slug}');
-    $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
     Route::middleware(['web', 'auth', 'verified'])
         ->prefix(config('cms.route'))
@@ -115,12 +113,18 @@ atas).
    relevan (contoh: Structure untuk tree) — jangan membuat modul baru tanpa
    didiskusikan dulu ke user, dan jangan taruh di `app/Support` atau
    sejenisnya tanpa persetujuan (belum ada folder itu).
-3. **Migration existing di `database/migrations/` TIDAK BOLEH dipindah** ke
-   folder modul. Itu sudah berjalan di database production/dev sekarang.
-   Migration BARU untuk tabel yang sudah ada (mis. menambah kolom) tetap
-   ditaruh di `app/Modules/{Nama}/database/migrations/` — Laravel akan
-   otomatis menemukannya lewat `loadMigrationsFrom()` di provider, tidak
-   perlu didaftarkan manual.
+3. **Semua migration — punya modul manapun — ditaruh di `database/migrations/`
+   root**, bukan di folder modul. Tidak ada `app/Modules/{Nama}/database/`
+   lagi; setiap modul provider TIDAK memanggil `loadMigrationsFrom()`.
+   Sebelum app ini live di production (belum ada data nyata yang harus
+   dijaga), kalau perlu ubah skema sebuah tabel, **edit langsung migration
+   `create_{tabel}_table` yang sudah ada** (lalu `migrate:fresh`) — jangan
+   bikin migration baru bertipe `add_x_to_y_table`/`change_x_on_y_table`,
+   supaya riwayat migration tetap bersih (hanya migration `create_*`).
+   Begitu sudah ada instalasi production dengan data nyata, konvensi ini
+   berubah: migration baru untuk kolom baru ditaruh sebagai file baru di
+   `database/migrations/` (bukan edit migration lama), karena `migrate:fresh`
+   sudah tidak aman lagi saat itu.
 4. **Route baru untuk modul ditaruh di `app/Modules/{Nama}/routes.php`**,
    bukan di `routes/web.php`. `routes/web.php` hanya untuk route level
    aplikasi (home, dashboard shell) yang bukan milik modul manapun.

@@ -20,7 +20,6 @@ class BlueprintsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'blueprints');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->commands([
             CreateHomepageBlueprintCommand::class,

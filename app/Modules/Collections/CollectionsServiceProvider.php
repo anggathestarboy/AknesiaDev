@@ -22,7 +22,6 @@ class CollectionsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'collections');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->commands([
             CreateDefaultPagesCollectionCommand::class,

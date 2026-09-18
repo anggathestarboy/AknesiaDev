@@ -22,7 +22,6 @@ class MediaServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'media');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         Livewire::addNamespace('media', classNamespace: 'App\\Modules\\Media\\Livewire');
 

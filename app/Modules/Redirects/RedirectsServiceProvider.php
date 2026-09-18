@@ -20,7 +20,6 @@ class RedirectsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'redirects');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->app['router']->pushMiddlewareToGroup('web', ApplyRedirects::class);
 
