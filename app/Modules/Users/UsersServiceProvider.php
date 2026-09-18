@@ -20,7 +20,6 @@ class UsersServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'users');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->commands([
             CreateSuperAdminCommand::class,

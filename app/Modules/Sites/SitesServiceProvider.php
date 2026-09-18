@@ -20,7 +20,6 @@ class SitesServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'sites');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->commands([
             CreateDefaultSiteCommand::class,

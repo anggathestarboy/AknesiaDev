@@ -104,6 +104,13 @@
             {{-- <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank"> {{ __("Documentation") }} </flux:sidebar.item> --}}
         </flux:sidebar.nav>
 
+        {{-- Same appearance switcher as /settings/appearance (App\Modules\Auth\Livewire\Settings\Appearance) — surfaced here too so switching light/dark doesn't require leaving whatever admin page you're on. --}}
+        <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="px-2">
+            <flux:radio value="light" icon="sun" />
+            <flux:radio value="dark" icon="moon" />
+            <flux:radio value="system" icon="computer-desktop" />
+        </flux:radio.group>
+
         <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
     </flux:sidebar>
 

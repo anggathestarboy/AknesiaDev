@@ -20,7 +20,6 @@ class NavigationServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/resources/views', 'navigation');
-        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->commands([
             SeedAdminSidebarCommand::class,

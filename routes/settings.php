@@ -1,8 +1,8 @@
 <?php
 
-use App\Livewire\Settings\Appearance;
-use App\Livewire\Settings\Profile;
-use App\Livewire\Settings\Security;
+use App\Modules\Auth\Livewire\Settings\Appearance;
+use App\Modules\Auth\Livewire\Settings\Profile;
+use App\Modules\Auth\Livewire\Settings\Security;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {

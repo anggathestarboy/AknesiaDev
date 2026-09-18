@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsurePermission;
-use App\Http\Middleware\EnsureUserIsNotBanned;
+use App\Modules\Auth\Http\Middleware\EnsureUserIsNotBanned;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
