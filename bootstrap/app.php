@@ -16,6 +16,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['permission' => EnsurePermission::class]);
         $middleware->web(append: [EnsureUserIsNotBanned::class]);
+
+        // Trust the reverse proxy in front of this app (e.g. the Docker
+        // staging setup's host proxy/Cloudflare terminating HTTPS and
+        // forwarding plain HTTP to the container) so Laravel reads the
+        // client's real scheme/host/IP from X-Forwarded-* headers instead
+        // of the proxy's own plain-HTTP connection — otherwise every
+        // generated URL (including Livewire's own update/asset endpoints)
+        // comes out as http://, which browsers block as mixed content on
+        // an https:// page. '*' trusts any proxy IP, which is fine here
+        // since the app is never reachable except through one.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
