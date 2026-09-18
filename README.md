@@ -190,6 +190,115 @@ Options combine freely:
 
 > A directive's `@` must be preceded by whitespace or punctuation, not a letter — this is standard Blade behavior (it's how Blade tells `@if` apart from an email address like `name@if.com`). Writing `foo@collection(...)` inline won't compile; `foo @collection(...)` will.
 
+## Docker (staging)
+
+A self-contained Docker setup for spinning up a staging build — e.g. for a project manager to click around a real deploy — without installing PHP/Node/MySQL on the server at all, just Docker. One `app` container runs [FrankenPHP](https://frankenphp.dev/) (PHP and the Caddy web server bundled into a single binary — no separate Nginx/PHP-FPM processes or fastcgi config to keep in sync, see `docker/Caddyfile`) plus the Laravel scheduler, both under Supervisor (`docker/supervisord.conf`); a `db` container runs MySQL. Deliberately simple: one app instance, no queue worker (the app doesn't dispatch any queued jobs today — add a `queue:work` program to `docker/supervisord.conf` if that changes), meant for a staging box, not scaled production traffic.
+
+### Prerequisites on the server
+
+- [Docker Engine + the Compose plugin](https://docs.docker.com/engine/install/) installed (`docker --version` and `docker compose version` both work).
+- A user in the `docker` group (or root) — no PHP, Composer, Node, or MySQL need to be installed on the host; everything runs inside the containers.
+- The port you'll expose (`8080` by default) open on the server's firewall if it needs to be reached from outside — see [Reverse proxy / domain](#reverse-proxy--domain-optional) below if you want it behind a host reverse proxy on port 80/443 with a real domain instead.
+
+### Step-by-step: first deploy
+
+**1. Clone the repository onto the server**
+
+```bash
+git clone <repo-url> draftcms
+cd draftcms
+```
+
+**2. Copy the staging env file**
+
+```bash
+cp .env.staging.example .env
+```
+
+`.env.staging.example` differs from `.env.example` in exactly the ways Docker needs: `DB_HOST=db` (the compose service name, not `127.0.0.1`), `APP_ENV=staging`, `APP_DEBUG=false`. Don't substitute a plain `.env.example` copy here — the DB connection won't resolve.
+
+**3. Edit `.env` for this deployment**
+
+At minimum, change:
+
+- `APP_URL` — the URL this staging site will actually be reached at, e.g. `http://staging.example.com` or `http://203.0.113.10:8080`.
+- `DB_PASSWORD` — replace the placeholder `change-me` with a real password (also used as the MySQL root password — see Notes below).
+- `APP_PORT` — the host port FrankenPHP is published on, if `8080` is already taken on this server.
+
+**4. Build the image**
+
+```bash
+docker compose build
+```
+
+This installs Composer dependencies, builds the frontend assets (`npm run build`), and assembles the FrankenPHP image — see the multi-stage `Dockerfile`. Expect this step to take a few minutes the first time.
+
+**5. Generate an `APP_KEY`**
+
+No PHP needs to be installed on the host for this — it runs inside a throwaway container built from the image you just built:
+
+```bash
+docker compose run --rm --no-deps app php artisan key:generate --show
+```
+
+Copy the printed value (`base64:...`) into `.env` as `APP_KEY=`.
+
+**6. Start the stack**
+
+```bash
+docker compose up -d
+```
+
+`docker/entrypoint.sh` waits for MySQL to accept connections, then runs `migrate --force`, `storage:link`, and caches config/routes/views — automatically, every time the container starts. So the app is fully ready as soon as this command returns; no separate "run migrations" step.
+
+**7. Bootstrap the CMS content (one time only)**
+
+The database schema exists at this point, but there's no admin user, site, or default collection yet — that's what `draft:setup` does everywhere, Docker included:
+
+```bash
+docker compose exec app php artisan draft:setup \
+  --name="Admin" --email=admin@example.com --password=change-me-1234 \
+  --site-name="Staging" --site-handle=default
+```
+
+**8. Verify it's up**
+
+```bash
+docker compose ps                 # both "app" and "db" should show "healthy"/"running"
+docker compose logs -f app        # tail FrankenPHP/scheduler output
+curl -I http://localhost:8080     # expect a 200/302, not a connection error
+```
+
+Then hand the project manager the URL — `http://<server-address>:8080`, and `/admin-panel` for the CMS login screen with the credentials from step 7.
+
+### Redeploying after a code change
+
+```bash
+git pull
+docker compose build app
+docker compose up -d
+```
+
+Migrations and the config/route/view caches re-run automatically on every container start (step 6's entrypoint logic) — steps 5 and 7 are one-time only and shouldn't be repeated on every deploy.
+
+### Reverse proxy / domain (optional)
+
+For a staging URL on port 80/443 with a real domain (rather than `http://ip:8080`), put a reverse proxy (Nginx, Caddy, or Traefik) on the host in front of the `app` container, proxying to `127.0.0.1:${APP_PORT}`. That's a host-level concern outside this repo's `docker-compose.yml` — e.g. a minimal host Nginx `server` block with `proxy_pass http://127.0.0.1:8080;`, or a host Caddyfile pointed at the same address for automatic HTTPS.
+
+### What's running
+
+- **`app`** — FrankenPHP (mapped to `APP_PORT` on the host, default `8080`) and `php artisan schedule:work` (so [scheduled entries](#scheduled-entries-requires-a-server-cron) actually go live in staging, without needing a real crontab on the host machine).
+- **`db`** — MySQL 8.4, with a named volume (`db-data`) so data survives `docker compose down` (use `docker compose down -v` to wipe it too — this deletes all staging data, so double-check before running it).
+- Uploaded media persists in the `storage-app` named volume across image rebuilds.
+
+### Notes
+
+- Never run with `APP_DEBUG=true` on anything a client/PM can reach: Laravel's debug page leaks `.env` values and stack traces.
+- `DB_USERNAME` must not be `root` — the MySQL image's `MYSQL_USER` rejects that value (root is already managed separately via `MYSQL_ROOT_PASSWORD`, which `docker-compose.yml` also derives from `DB_PASSWORD`).
+- `db` is not published to the host by default — only `app`'s web port is. To connect a DB client (TablePlus, DBeaver, etc.) from outside Docker, add a `ports: ["3306:3306"]` entry under the `db` service in `docker-compose.yml`.
+- Logs from both `app` processes (FrankenPHP, the scheduler) go to the container's stdout — view them with `docker compose logs -f app`.
+- If `docker compose up -d` seems to hang on first boot, it's very likely step 6's entrypoint still waiting on MySQL to finish initializing (`docker compose logs -f app` will show "Waiting for the database..." repeating) — that's normal on the very first start and can take up to ~30 seconds while MySQL's own image bootstraps.
+
 ## Testing
 
 ```bash

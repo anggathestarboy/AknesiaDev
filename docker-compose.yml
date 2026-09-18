@@ -1,0 +1,44 @@
+services:
+    app:
+        build:
+            context: .
+        ports:
+            - "${APP_PORT:-8080}:80"
+        env_file:
+            - .env
+        depends_on:
+            db:
+                condition: service_healthy
+        volumes:
+            - storage-app:/app/storage/app
+        restart: unless-stopped
+
+    db:
+        image: mysql:8.4
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-draftcms}
+            MYSQL_USER: ${DB_USERNAME:-draftcms}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+        volumes:
+            - db-data:/var/lib/mysql
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "mysqladmin",
+                    "ping",
+                    "-h",
+                    "localhost",
+                    "-u",
+                    "root",
+                    "-p${DB_PASSWORD:-secret}",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        restart: unless-stopped
+
+volumes:
+    db-data:
+    storage-app:
