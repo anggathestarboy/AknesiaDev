@@ -55,3 +55,16 @@ test('a video asset gets a playable, controlled video element in the preview mod
     expect($html)->toContain('controls');
     expect($html)->toContain($asset->url);
 });
+
+test('a video asset on the public disk is served through the range-capable stream route, not the raw storage symlink', function () {
+    $this->actingAs(User::factory()->create());
+    Storage::fake('public');
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'clip.mp4', 'filename' => 'clip', 'extension' => 'mp4', 'path' => 'clip.mp4', 'meta' => ['mime_type' => 'video/mp4']]);
+
+    // The plain storage symlink is served directly by the web server and ignores Range
+    // requests, which browsers need to seek to a trailing moov atom before they can even
+    // start playback — so video must go through the app's own Range-aware route instead.
+    expect($asset->url)->toBe(route('media.stream.public', ['path' => 'photos/clip.mp4']));
+});

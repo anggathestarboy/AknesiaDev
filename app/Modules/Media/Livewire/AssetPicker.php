@@ -8,10 +8,12 @@ use App\Modules\Media\Services\MediaService;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Symfony\Component\HttpFoundation\File\File;
 
 /**
  * Global, reusable asset picker modal: any component can open it by
@@ -47,6 +49,13 @@ class AssetPicker extends Component
      */
     public ?int $maxSelectable = null;
 
+    /**
+     * The "assets" field's own validation rule (e.g. "image"), enforced here
+     * too so a non-matching file can't even be uploaded from inside the
+     * picker instead of only being rejected later when the entry is saved.
+     */
+    public ?string $validationRule = null;
+
     public string $folder = '';
 
     public string $search = '';
@@ -58,12 +67,13 @@ class AssetPicker extends Component
      * @param  array<int, int>  $selected
      */
     #[On('open-asset-picker')]
-    public function open(array $path, string $container, array $selected = [], ?int $max = null): void
+    public function open(array $path, string $container, array $selected = [], ?int $max = null, ?string $validation = null): void
     {
         $this->targetPath = $path;
         $this->container = $container;
         $this->selectedIds = array_map('intval', $selected);
         $this->maxSelectable = $max;
+        $this->validationRule = $validation ?: null;
         $this->folder = '';
         $this->search = '';
 
@@ -156,12 +166,37 @@ class AssetPicker extends Component
             return;
         }
 
+        $asset = AssetMeta::find($assetId);
+
+        if ($asset && ! $this->isAssetAllowed($asset)) {
+            Flux::toast(text: __('This file type is not allowed for this field.'), variant: 'warning');
+
+            return;
+        }
+
         $this->selectedIds = [...$this->selectedIds, $assetId];
     }
 
     public function isSelected(int $assetId): bool
     {
         return in_array($assetId, $this->selectedIds, true);
+    }
+
+    /**
+     * Whether an already-uploaded asset satisfies the field's own validation
+     * rule (e.g. "image") — checked both when toggling a selection and in
+     * the grid so a mismatched file (a video under an "image" rule) can't be
+     * picked from the library, not just blocked from being freshly uploaded.
+     */
+    public function isAssetAllowed(AssetMeta $asset): bool
+    {
+        if (! $this->validationRule) {
+            return true;
+        }
+
+        $file = new File($asset->absolutePath());
+
+        return ! Validator::make(['file' => $file], ['file' => $this->validationRule])->fails();
     }
 
     public function confirm(): void
@@ -182,7 +217,13 @@ class AssetPicker extends Component
             return;
         }
 
-        $this->validate(['uploads.*' => ['required', 'file', 'max:51200']]);
+        $uploadRules = ['required', 'file', 'max:51200'];
+
+        if ($this->validationRule) {
+            $uploadRules[] = $this->validationRule;
+        }
+
+        $this->validate(['uploads.*' => $uploadRules]);
 
         $service = app(MediaService::class);
         $failures = [];
