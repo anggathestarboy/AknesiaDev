@@ -242,10 +242,13 @@
                 @enderror
             @endif
 
-            @if ($preview)
-                <flux:input type="number" wire:model.live.debounce.600ms="order" :label="__('Order')" placeholder="1" size="sm" />
-            @else
-                <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
+            {{-- Hidden when the collection's "Visible Order" setting is off — ordering (and the "first entry becomes the homepage" logic) still works either way, see Collection::visibleOrder(). --}}
+            @if ($collection->visibleOrder())
+                @if ($preview)
+                    <flux:input type="number" wire:model.live.debounce.600ms="order" :label="__('Order')" placeholder="1" size="sm" />
+                @else
+                    <flux:input type="number" wire:model="order" :label="__('Order')" placeholder="1" size="sm" />
+                @endif
             @endif
 
             <flux:field>

@@ -35,6 +35,7 @@ test('collection can be created', function () {
         'sites' => [],
         'structured' => false,
         'orderable' => false,
+        'visible_order' => true,
         'live_preview' => false,
         'schema_enabled' => false,
         'seo_enabled' => false,
@@ -446,4 +447,27 @@ test('collection handle can be regenerated from the title', function () {
         ->set('title', 'Blog Posts')
         ->call('regenerateHandle')
         ->assertSet('handle', 'blog_posts');
+});
+
+test('visible order defaults to true for a new collection and can be turned off', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(CollectionManager::class)
+        ->assertSet('visibleOrder', true)
+        ->set('title', 'Blog')
+        ->set('handle', 'blog')
+        ->set('visibleOrder', false)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Collection::sole()->visibleOrder())->toBeFalse();
+});
+
+test('an existing collection with visible order off loads that setting when edited', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog', 'settings' => ['visible_order' => false]]);
+
+    Livewire::test(CollectionManager::class)
+        ->call('edit', $collection->id)
+        ->assertSet('visibleOrder', false);
 });

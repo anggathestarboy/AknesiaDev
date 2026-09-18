@@ -66,13 +66,47 @@ From there you manage:
 
 ### Scheduled entries (requires a server cron)
 
-Picking **Published** on an entry whose **Date** is in the future saves it as **Scheduled** instead (mirroring [Statamic's scheduling](https://statamic.dev/advanced-topics/scheduling)) — it stays off the frontend and out of `@collection()` until that date arrives. Nothing flips it back to Published on its own: the `entries:publish-scheduled` command does that, registered on Laravel's scheduler in `routes/console.php`, but the scheduler itself only runs when the server actually invokes it. **Every environment (including production) needs one real cron entry:**
+Picking **Published** on an entry whose **Date** is in the future saves it as **Scheduled** instead (mirroring [Statamic's scheduling](https://statamic.dev/advanced-topics/scheduling)) — it stays off the frontend and out of `@collection()` until that date arrives. The same rule applies to the bulk "Set status…" action in the entry list.
+
+#### How it goes live
+
+Nothing flips a Scheduled entry back to Published on its own — a scheduled command does that:
+
+- **Command**: `php artisan entries:publish-scheduled` (`App\Modules\Collections\Console\Commands\PublishScheduledEntriesCommand`) — finds every entry with `status = scheduled` whose `date` has passed and flips it to `published`.
+- **Registered on Laravel's scheduler**: `routes/console.php` runs it `->everyMinute()`.
+- **The scheduler itself is inert without a cron entry** — Laravel's scheduler only checks "is anything due?" when something actually calls `php artisan schedule:run`. Registering a command in `routes/console.php` is not enough by itself.
+
+#### Production / staging setup
+
+Add **one** real crontab entry per server (this is the only entry needed — every scheduled task in the app, present or future, runs through it):
 
 ```cron
 * * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Without that cron entry, scheduled entries will simply never go live — nothing will error, they'll just sit as "Scheduled" forever. Confirm it's working with `php artisan schedule:list`.
+```bash
+crontab -e   # paste the line above, adjusting the path, then save
+```
+
+Without this cron entry, scheduled entries will simply never go live — nothing errors, they just sit as "Scheduled" forever. After adding it:
+
+- `php artisan schedule:list` — confirms `entries:publish-scheduled` is registered and shows when it's next due.
+- Wait a minute, then check `storage/logs/laravel.log` and the entry's status if something looks stuck.
+
+#### Local development
+
+Cron isn't running on a dev machine, so use one of:
+
+```bash
+php artisan schedule:work      # keeps running in a terminal, ticks every minute like real cron would
+php artisan entries:publish-scheduled   # or just run the command directly, once, whenever you want to test it
+```
+
+#### Notes
+
+- **Timezone**: "is the date in the future?" is evaluated with `Carbon::parse($entry->date)->isFuture()`, which compares against the app's configured timezone (`config('app.timezone')` / `APP_TIMEZONE` in `.env`) — make sure that's set correctly for your audience, since an entry dated for "9am" means 9am in that timezone, not UTC or the server's local time.
+- **Frequency**: `everyMinute()` means an entry can go live up to ~60 seconds after its scheduled time, not instantly at the exact second.
+- **Manual override**: an editor can always bypass the wait by opening the entry and re-saving with a past/present date — see `EntryForm::save()`, which resolves Published-vs-Scheduled the same way on every save.
 
 ## Frontend templating
 
