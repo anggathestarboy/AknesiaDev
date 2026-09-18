@@ -3,9 +3,13 @@ services:
         build:
             context: .
         ports:
-            - "${APP_PORT:-8080}:80"
+            # Change the host-side "8080" if that port is already taken —
+            # this is the one docker-compose.yml value that can't live in
+            # .env.docker (port mapping is resolved before any container's
+            # env is even read).
+            - "8080:80"
         env_file:
-            - .env
+            - .env.docker
         depends_on:
             db:
                 condition: service_healthy
@@ -15,25 +19,16 @@ services:
 
     db:
         image: mysql:8.4
-        environment:
-            MYSQL_DATABASE: ${DB_DATABASE:-draftcms}
-            MYSQL_USER: ${DB_USERNAME:-draftcms}
-            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+        env_file:
+            - .env.docker
         volumes:
             - db-data:/var/lib/mysql
         healthcheck:
-            test:
-                [
-                    "CMD",
-                    "mysqladmin",
-                    "ping",
-                    "-h",
-                    "localhost",
-                    "-u",
-                    "root",
-                    "-p${DB_PASSWORD:-secret}",
-                ]
+            # $$ (not $) so Compose passes a literal "$MYSQL_ROOT_PASSWORD"
+            # into the container, expanded by its own shell from the
+            # container's real runtime env (set via env_file above) — not
+            # by Compose's separate, unrelated top-level "${...}" mechanism.
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\""]
             interval: 5s
             timeout: 5s
             retries: 10

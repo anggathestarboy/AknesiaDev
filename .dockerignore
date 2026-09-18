@@ -18,11 +18,6 @@ storage/logs/*
 !storage/framework/views/.gitignore
 !storage/logs/.gitignore
 
-.env
-.env.*
-!.env.example
-!.env.staging.example
-
 .phpunit.result.cache
 database/database.sqlite
 
