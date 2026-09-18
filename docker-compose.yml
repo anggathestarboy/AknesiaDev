@@ -3,11 +3,13 @@ services:
         build:
             context: .
         ports:
-            # Change the host-side "8080" if that port is already taken —
-            # this is the one docker-compose.yml value that can't live in
-            # .env.docker (port mapping is resolved before any container's
-            # env is even read).
-            - "8080:80"
+            # APP_PORT comes from .env.docker — but only because every
+            # command below is run with `--env-file .env.docker` (Compose
+            # only reads variables for this "${...}" substitution from a
+            # file explicitly passed that way, or one literally named
+            # ".env" — it does NOT read them from the env_file: list below,
+            # which only injects vars into the containers themselves).
+            - "${APP_PORT:-8080}:80"
         env_file:
             - .env.docker
         depends_on:

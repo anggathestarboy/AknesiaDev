@@ -205,8 +205,8 @@ A self-contained Docker setup for spinning up a staging build — e.g. for a pro
 ```bash
 git clone <repo-url> draftcms
 cd draftcms
-docker compose build
-docker compose up -d
+docker compose --env-file .env.docker build
+docker compose --env-file .env.docker up -d
 ```
 
 That's it — no `.env` to copy, no `APP_KEY` to generate and paste anywhere, no separate bootstrap command to run afterward. Here's what makes that possible, and why:
@@ -214,22 +214,27 @@ That's it — no `.env` to copy, no `APP_KEY` to generate and paste anywhere, no
 - **`.env.docker`** is committed to the repo (unlike a normal `.env`) with working staging defaults already filled in — including a real, pre-generated `APP_KEY` — and is wired directly into `docker-compose.yml`'s `env_file:` for both services. There's nothing to copy or fill in for a first deploy to work.
 - **`docker/entrypoint.sh`** waits for MySQL, migrates, and — only the very first time (it checks the `users` table directly before doing this, so it's a safe no-op on every later boot) — runs `draft:setup` itself, using the `DRAFT_ADMIN_*`/`DRAFT_SITE_*` values from `.env.docker`. So the admin account, default site, and default "Pages" collection already exist by the time `docker compose up -d` returns.
 
-Visit `http://<server-address>:8080` — `/admin-panel` to log in with the default admin account (`admin@example.com` / `change-me-1234`, from `.env.docker`'s `DRAFT_ADMIN_*` values — **change this password after your first login**, from Settings → Security in the admin panel).
+> **Every `docker compose` command in this section needs `--env-file .env.docker`** — that's what makes `APP_PORT` (and everything else in that file) actually take effect; Compose otherwise only auto-reads a file literally named `.env`, which this project doesn't use for Docker. Forgetting the flag doesn't error, it just silently falls back to defaults (port `8080`, etc.) — if a value you set in `.env.docker` doesn't seem to apply, check you included it. Tip: `alias dc='docker compose --env-file .env.docker'` in your shell profile avoids retyping it.
+
+Visit `http://<server-address>:8080` (or whatever `APP_PORT` you set — see below) — `/admin-panel` to log in with the default admin account (`admin@example.com` / `change-me-1234`, from `.env.docker`'s `DRAFT_ADMIN_*` values — **change this password after your first login**, from Settings → Security in the admin panel).
 
 ### Customizing before the first boot
 
-Since `.env.docker` is committed but still a real env file, edit it before your *first* `docker compose up -d` if you want something other than the defaults — e.g. `DRAFT_ADMIN_EMAIL`/`DRAFT_ADMIN_PASSWORD` for a different admin account, or `APP_URL` for the real domain this deploy will be reached at. Editing it *after* the first boot only affects `app`/`db`'s runtime config (still takes a `docker compose down && docker compose up -d` to pick up) — it won't re-run the one-time admin/site bootstrap, since that already happened.
+`.env.docker` is committed but still a real env file — edit it before your *first* `docker compose --env-file .env.docker up -d` if you want something other than the defaults:
 
-If you do want to change `DB_PASSWORD`, also update `MYSQL_PASSWORD`/`MYSQL_ROOT_PASSWORD` in the same file to match — see the comment above them in `.env.docker` for why there are two names for the same value.
+- `APP_PORT` — the host port the app is published on, if `8080` is already taken on this server (or you just want a different one).
+- `DRAFT_ADMIN_EMAIL`/`DRAFT_ADMIN_PASSWORD` — the first admin account's login.
+- `APP_URL` — the real domain/address this deploy will actually be reached at.
+- `DB_PASSWORD` — also update `MYSQL_PASSWORD`/`MYSQL_ROOT_PASSWORD` in the same file to match if you change this; see the comment above them in `.env.docker` for why there are two names for the same value.
 
-The host port (`8080`) is the one thing that can't live in `.env.docker` — Docker resolves port mappings before any container's env is even read. To change it, edit the `ports:` line directly in `docker-compose.yml`.
+Editing any of these *after* the first boot needs a restart to take effect (`docker compose --env-file .env.docker down && docker compose --env-file .env.docker up -d`) — and for `DRAFT_ADMIN_*`/`DB_PASSWORD`/`MYSQL_*` specifically, only actually changes anything on a database that's still empty (a fresh volume) or has been wiped with `down -v` — see Notes below.
 
 ### Verifying it came up
 
 ```bash
 docker compose ps                 # both "app" and "db" should show "healthy"
 docker compose logs -f app        # tail FrankenPHP/scheduler/setup output
-curl -I http://localhost:8080     # expect a 200/302, not a connection error
+curl -I http://localhost:8080     # expect a 200/302, not a connection error — adjust the port if you changed APP_PORT
 ```
 
 If `docker compose ps` shows `app` stuck on "health: starting" for more than ~30 seconds on a brand-new deploy, check `docker compose logs app` — it's most likely still waiting on MySQL to finish its own first-time initialization (`Waiting for the database...` repeating is normal here and resolves on its own).
@@ -238,20 +243,20 @@ If `docker compose ps` shows `app` stuck on "health: starting" for more than ~30
 
 ```bash
 git pull
-docker compose build app
-docker compose up -d
+docker compose --env-file .env.docker build app
+docker compose --env-file .env.docker up -d
 ```
 
 Migrations and the config/route/view caches re-run automatically on every container start — the one-time admin/site bootstrap correctly does not re-run (see above), so this is safe to repeat on every deploy.
 
 ### Reverse proxy / domain (optional)
 
-For a staging URL on port 80/443 with a real domain (rather than `http://ip:8080`), put a reverse proxy (Nginx, Caddy, or Traefik) on the host in front of the `app` container, proxying to `127.0.0.1:8080`. That's a host-level concern outside this repo's `docker-compose.yml` — e.g. a minimal host Nginx `server` block with `proxy_pass http://127.0.0.1:8080;`, or a host Caddyfile pointed at the same address for automatic HTTPS.
+For a staging URL on port 80/443 with a real domain (rather than `http://ip:8080`), put a reverse proxy (Nginx, Caddy, or Traefik) on the host in front of the `app` container, proxying to `127.0.0.1:${APP_PORT}` (`8080` unless you changed it). That's a host-level concern outside this repo's `docker-compose.yml` — e.g. a minimal host Nginx `server` block with `proxy_pass http://127.0.0.1:8080;`, or a host Caddyfile pointed at the same address for automatic HTTPS.
 
 ### What's running
 
-- **`app`** — FrankenPHP (mapped to port `8080` on the host) and `php artisan schedule:work` (so [scheduled entries](#scheduled-entries-requires-a-server-cron) actually go live in staging, without needing a real crontab on the host machine).
-- **`db`** — MySQL 8.4, with a named volume (`db-data`) so data survives `docker compose down` (use `docker compose down -v` to wipe it too — this also wipes the admin account, so the *next* `docker compose up -d` will re-bootstrap a fresh one from `.env.docker`'s `DRAFT_ADMIN_*` values).
+- **`app`** — FrankenPHP (mapped to `APP_PORT` on the host, default `8080`) and `php artisan schedule:work` (so [scheduled entries](#scheduled-entries-requires-a-server-cron) actually go live in staging, without needing a real crontab on the host machine).
+- **`db`** — MySQL 8.4, with a named volume (`db-data`) so data survives `docker compose down` (use `docker compose down -v` to wipe it too — this also wipes the admin account, so the *next* `docker compose --env-file .env.docker up -d` will re-bootstrap a fresh one from `.env.docker`'s `DRAFT_ADMIN_*` values, and will pick up any `DB_PASSWORD`/`MYSQL_*` changes made since the last time the volume was created).
 - Uploaded media persists in the `storage-app` named volume across image rebuilds.
 
 ### Notes
