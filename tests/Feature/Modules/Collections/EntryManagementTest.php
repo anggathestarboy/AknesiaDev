@@ -2920,3 +2920,40 @@ test('bulk-publishing selected entries schedules the future-dated ones instead o
     expect($future->fresh()->status)->toBe('scheduled');
     expect($past->fresh()->status)->toBe('published');
 });
+
+test('the Order field shows in the entry sidebar when the collection has Visible Order on', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertSeeHtml('wire:model="order"');
+});
+
+test('the Order field is hidden from the entry sidebar when the collection has Visible Order off', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['visible_order' => false])]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
+        ->assertDontSeeHtml('wire:model="order"');
+});
+
+test('ordering still works normally even when the Order field is hidden', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['visible_order' => false])]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection->fresh(), 'site' => 'indonesia'])
+        ->set('order', '5')
+        ->set('title', 'Hello')
+        ->set('slug', 'hello')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Entry::sole()->order)->toBe(5);
+});

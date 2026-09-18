@@ -83,6 +83,8 @@
 
                 <flux:checkbox wire:model="orderable" :label="__('Orderable')" :description="__('Let entries be manually reordered by drag-and-drop.')" />
 
+                <flux:checkbox wire:model="visibleOrder" :label="__('Visible Order')" :description="__('Show the Order field in the entry form sidebar. Ordering still works even when hidden.')" />
+
                 <flux:checkbox wire:model="livePreview" :label="__('Live Preview')" :description="__('Let editors preview an entry on the live site as they edit it, even before it\'s published.')" />
 
                 <flux:checkbox wire:model="schemaEnabled" :label="__('Schema')" :description="__('Add a Schema tab to this collection\'s entries for attaching schema.org JSON-LD blocks (Article, Organization, etc.) to individual entries.')" />

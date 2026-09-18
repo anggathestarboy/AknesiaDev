@@ -99,6 +99,18 @@ class Collection extends Model
     }
 
     /**
+     * Whether the "Order" field shows in the entry form sidebar. Purely a
+     * display toggle — reordering (see orderable()) and the "first root
+     * entry becomes the homepage via order = 1" logic (see
+     * EntryForm::save()) both keep working the same either way, whether or
+     * not an editor can see the field.
+     */
+    public function visibleOrder(): bool
+    {
+        return (bool) ($this->settings['visible_order'] ?? true);
+    }
+
+    /**
      * Whether entries can be viewed via the authenticated live preview pane
      * on the entry form regardless of their publish status, and whether
      * their fields sync to the server as they're typed so the preview stays

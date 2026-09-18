@@ -63,6 +63,11 @@ class CollectionManager extends Component
     public bool $orderable = false;
 
     /**
+     * Whether the "Order" field shows in the entry form sidebar.
+     */
+    public bool $visibleOrder = true;
+
+    /**
      * Whether the entry form's live preview pane is available for this
      * collection.
      */
@@ -119,7 +124,7 @@ class CollectionManager extends Component
     {
         auth()->user()->authorizePermission('configure collections');
 
-        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'livePreview', 'schemaEnabled', 'seoEnabled', 'maxDepth', 'expectsRoot', 'saveAction']);
+        $this->reset(['editingId', 'handle', 'title', 'route', 'routes', 'structured', 'orderable', 'visibleOrder', 'livePreview', 'schemaEnabled', 'seoEnabled', 'maxDepth', 'expectsRoot', 'saveAction']);
         $this->routeMode = 'single';
         $this->sites = $this->availableSites->pluck('handle')->all();
         Flux::modal('collection-form')->show();
@@ -140,6 +145,7 @@ class CollectionManager extends Component
         $this->sites = $collection->configuredSites() ?: $this->availableSites->pluck('handle')->all();
         $this->structured = $collection->structured();
         $this->orderable = $collection->orderable();
+        $this->visibleOrder = $collection->visibleOrder();
         $this->livePreview = $collection->livePreview();
         $this->schemaEnabled = $collection->schemaEnabled();
         $this->seoEnabled = $collection->seoEnabled();
@@ -199,6 +205,7 @@ class CollectionManager extends Component
             'sites.*' => [Rule::in($siteHandles)],
             'structured' => ['boolean'],
             'orderable' => ['boolean'],
+            'visibleOrder' => ['boolean'],
             'livePreview' => ['boolean'],
             'schemaEnabled' => ['boolean'],
             'seoEnabled' => ['boolean'],
@@ -236,6 +243,7 @@ class CollectionManager extends Component
                 'sites' => $sites,
                 'structured' => $validated['structured'],
                 'orderable' => $validated['orderable'],
+                'visible_order' => $validated['visibleOrder'],
                 'live_preview' => $validated['livePreview'],
                 'schema_enabled' => $validated['schemaEnabled'],
                 'seo_enabled' => $validated['seoEnabled'],
