@@ -43,6 +43,11 @@ Route::post('/!/forms/{form:handle}', [FormSubmissionController::class, 'store']
 // (route('home')) still resolves.
 Route::get('/', [PageController::class, 'show'])->name('home');
 
+// Excludes "storage/..." and "media/stream/..." so this wildcard doesn't swallow
+// them too — unlike the routes above, Laravel's own storage.* routes are only
+// registered once every provider has booted (see FilesystemServiceProvider),
+// i.e. after this one, so without the exclusion they'd never get a turn to match
+// and every private-disk asset (signed storage URLs, streamed video) would 404.
 Route::get('/{uri}', [PageController::class, 'show'])
-    ->where('uri', '.*')
+    ->where('uri', '^(?!storage/|media/stream/).*$')
     ->name('page.show');

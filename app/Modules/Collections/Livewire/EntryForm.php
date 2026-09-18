@@ -18,6 +18,7 @@ use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
@@ -25,6 +26,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -934,6 +936,22 @@ class EntryForm extends Component
 
                 $rules[$key] = $arrayRules;
                 $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
+
+                if (! empty($field['validation'])) {
+                    $rules["{$key}.*"][] = function (string $attribute, mixed $value, \Closure $fail) use ($field): void {
+                        $asset = AssetMeta::find($value);
+
+                        if (! $asset) {
+                            return;
+                        }
+
+                        $file = new File($asset->absolutePath());
+
+                        if (Validator::make(['file' => $file], ['file' => $field['validation']])->fails()) {
+                            $fail(__('The selected file does not match the allowed file type.'));
+                        }
+                    };
+                }
 
                 continue;
             }

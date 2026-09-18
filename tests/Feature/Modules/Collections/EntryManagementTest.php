@@ -15,6 +15,8 @@ use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sitemap\Models\Sitemap;
 use App\Modules\Sites\Models\Site;
 use App\Modules\Users\Models\Role;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 
@@ -672,6 +674,40 @@ test('assets field enforces its configured maximum item count', function () {
         ->set('data.gallery', [$first->id, $second->id])
         ->call('save')
         ->assertHasErrors(['data.gallery']);
+});
+
+test('assets field with an "image" validation rule rejects a non-image asset', function () {
+    $this->actingAs(User::factory()->create());
+
+    Storage::fake('public');
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Storage::disk('public')->put('photos/report.pdf', 'not actually an image');
+    $document = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'report.pdf', 'filename' => 'report', 'extension' => 'pdf', 'path' => 'report.pdf', 'meta' => []]);
+
+    Storage::disk('public')->putFileAs('photos', UploadedFile::fake()->image('sunset.jpg'), 'sunset.jpg');
+    $image = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.jpg', 'filename' => 'sunset', 'extension' => 'jpg', 'path' => 'sunset.jpg', 'meta' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'gallery', 'display' => 'Gallery', 'type' => 'assets', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => 'image', 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => 'photos'],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.gallery', [$document->id])
+        ->call('save')
+        ->assertHasErrors(['data.gallery.0']);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World Two')
+        ->set('slug', 'hello-world-two')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.gallery', [$image->id])
+        ->call('save')
+        ->assertHasNoErrors(['data.gallery.0']);
 });
 
 test('radio field defaults to its configured value and validates against its options', function () {

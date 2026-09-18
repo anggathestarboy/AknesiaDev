@@ -96,6 +96,26 @@ test('picker can browse into a sub-folder', function () {
         ->assertSee('beach.webp');
 });
 
+test('toggle refuses to select an asset that fails the field\'s validation rule', function () {
+    $this->actingAs(User::factory()->create());
+
+    Storage::fake('public');
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Storage::disk('public')->put('photos/report.pdf', 'not actually an image');
+    $document = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'report.pdf', 'filename' => 'report', 'extension' => 'pdf', 'path' => 'report.pdf', 'meta' => []]);
+
+    Storage::disk('public')->putFileAs('photos', UploadedFile::fake()->image('sunset.jpg'), 'sunset.jpg');
+    $image = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'sunset.jpg', 'filename' => 'sunset', 'extension' => 'jpg', 'path' => 'sunset.jpg', 'meta' => []]);
+
+    Livewire::test(AssetPicker::class)
+        ->call('open', ['gallery'], 'photos', [], null, 'image')
+        ->call('toggle', $document->id)
+        ->assertSet('selectedIds', [])
+        ->call('toggle', $image->id)
+        ->assertSet('selectedIds', [$image->id]);
+});
+
 test('uploading a file adds it to the container and auto-selects it', function () {
     $this->actingAs(User::factory()->create());
 

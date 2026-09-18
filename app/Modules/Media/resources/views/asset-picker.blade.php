@@ -56,7 +56,8 @@
                         type="button"
                         wire:click="toggle({{ $asset->id }})"
                         wire:key="asset-{{ $asset->id }}"
-                        class="relative flex flex-col gap-1 rounded-lg border p-1.5 text-left {{ $this->isSelected($asset->id) ? 'border-blue-500 ring-2 ring-blue-500' : 'border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800' }}"
+                        @unless ($this->isAssetAllowed($asset)) disabled title="{{ __('This file type is not allowed for this field.') }}" @endunless
+                        class="relative flex flex-col gap-1 rounded-lg border p-1.5 text-left {{ $this->isSelected($asset->id) ? 'border-blue-500 ring-2 ring-blue-500' : 'border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800' }} {{ $this->isAssetAllowed($asset) ? '' : 'cursor-not-allowed opacity-40' }}"
                     >
                         <div class="flex aspect-square w-full items-center justify-center overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
                             @include('media::partials._thumbnail', ['asset' => $asset])
