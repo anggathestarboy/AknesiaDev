@@ -18,7 +18,7 @@
                 <flux:table.row wire:key="submission-{{ $submission->id }}">
                     @foreach ($this->fields as $field)
                         @php $value = $submission->data[$field['handle']] ?? null; @endphp
-                        <flux:table.cell>{{ is_array($value) ? implode(', ', $value) : $value }}</flux:table.cell>
+                        <flux:table.cell>@include('forms::partials.submission-value', ['field' => $field, 'value' => $value])</flux:table.cell>
                     @endforeach
                     <flux:table.cell>{{ $submission->created_at?->format('Y-m-d H:i') }}</flux:table.cell>
                     <flux:table.cell class="flex justify-end gap-2">

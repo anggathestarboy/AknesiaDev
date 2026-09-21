@@ -6,6 +6,9 @@ use App\Modules\Forms\Livewire\FormManager;
 use App\Modules\Forms\Livewire\FormSubmissionManager;
 use App\Modules\Forms\Models\Form;
 use App\Modules\Forms\Models\FormSubmission;
+use App\Modules\Media\Models\AssetContainer;
+use App\Modules\Media\Models\AssetMeta;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 function makeContactBlueprint(): Blueprint
@@ -258,4 +261,41 @@ test('submitting a form with a redirect url configured redirects there on succes
     $this->post('/!/forms/contact', [
         'data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com'],
     ])->assertRedirect('https://example.com/thanks');
+});
+
+test('the submissions table links asset field values to the file', function () {
+    $this->actingAs(User::factory()->create());
+
+    Storage::fake('public');
+    AssetContainer::create(['handle' => 'cv', 'title' => 'CV', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'cv', 'folder' => '', 'basename' => 'resume.pdf', 'filename' => 'resume', 'extension' => 'pdf', 'path' => 'resume.pdf', 'meta' => []]);
+
+    Blueprint::create(['handle' => 'career', 'data' => ['fields' => [
+        ['handle' => 'cv_document', 'display' => 'CV Document', 'type' => 'assets'],
+    ]]]);
+    $form = Form::create(['handle' => 'career', 'title' => 'Career', 'settings' => ['blueprint' => 'career']]);
+    FormSubmission::create(['form' => 'career', 'data' => ['cv_document' => $asset->id]]);
+
+    Livewire::test(FormSubmissionManager::class, ['form' => $form])
+        ->assertSee($asset->url, false)
+        ->assertSee('Resume');
+});
+
+test('the submission detail page links asset field values to the file', function () {
+    $this->actingAs(User::factory()->create());
+
+    Storage::fake('public');
+    AssetContainer::create(['handle' => 'cv', 'title' => 'CV', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'cv', 'folder' => '', 'basename' => 'resume.pdf', 'filename' => 'resume', 'extension' => 'pdf', 'path' => 'resume.pdf', 'meta' => []]);
+
+    Blueprint::create(['handle' => 'career', 'data' => ['fields' => [
+        ['handle' => 'cv_document', 'display' => 'CV Document', 'type' => 'assets'],
+    ]]]);
+    $form = Form::create(['handle' => 'career', 'title' => 'Career', 'settings' => ['blueprint' => 'career']]);
+    $submission = FormSubmission::create(['form' => 'career', 'data' => ['cv_document' => $asset->id]]);
+
+    $this->get("/admin-panel/forms/career/submissions/{$submission->id}")
+        ->assertOk()
+        ->assertSee($asset->url, false)
+        ->assertSee('Resume');
 });
