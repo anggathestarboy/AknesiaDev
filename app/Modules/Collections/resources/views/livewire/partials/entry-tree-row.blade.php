@@ -4,7 +4,7 @@
 @endphp
 
 <li wire:key="entry-{{ $entry->id }}" @if ($orderable) wire:sort:item="{{ $entry->id }}" @endif class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
-    <div class="flex flex-wrap items-center gap-3 bg-white p-2 dark:bg-zinc-900">
+    <div class="flex flex-wrap items-center gap-3 bg-white p-1 dark:bg-zinc-900">
         <div class="flex flex-col gap-2 items-center">
             <span class="size-2 shrink-0 rounded-full {{ $color }}"></span>
             @if ($orderable)
@@ -15,7 +15,7 @@
         <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-1.5 group w-max">
                 @if ($entry->order === 1)
-                    <svg class="w-3.5 h-3.5 text-gray-800" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-gray-800 dark:text-zinc-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
                     </svg>
                 @endif

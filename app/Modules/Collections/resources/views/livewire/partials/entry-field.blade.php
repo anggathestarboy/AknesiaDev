@@ -321,7 +321,13 @@
 
         <div class="mt-2 space-y-3">
             @forelse ($rows ?? [] as $rowIndex => $row)
-                <div wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}" class="rounded-xl bg-gray-200 border border-zinc-200 p-1 dark:border-zinc-700 {{ ($row['_enabled'] ?? true) ? '' : 'opacity-60' }}" x-data="{ collapsed: @js($field['collapsed_by_default'] ?? false) }" x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true" x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false">
+                <div
+                    wire:key="replicator-{{ implode('-', $path) }}-{{ $rowIndex }}"
+                    class="rounded-xl bg-gray-200 border border-zinc-200 dark:bg-zinc-900 p-1 dark:border-zinc-700 {{ ($row['_enabled'] ?? true) ? '' : 'opacity-60' }}"
+                    x-data="{ collapsed: @js($field['collapsed_by_default'] ?? false) }"
+                    x-on:replicator-collapse-{{ $replicatorKey }}.window="collapsed = true"
+                    x-on:replicator-expand-{{ $replicatorKey }}.window="collapsed = false"
+                >
                     <div class="">
                         <div class="flex items-center justify-between gap-4 py-1 px-3">
                             <button type="button" class="flex min-w-0 hover:text-orange-700 cursor-pointer items-center gap-1 text-sm font-medium text-zinc-600 dark:text-zinc-300" x-on:click="collapsed = !collapsed">
@@ -336,7 +342,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-1 grid gap-3 bg-white rounded-xl px-2 py-3" x-show="!collapsed" x-cloak>
+                        <div class="mt-1 grid gap-3 rounded-xl bg-white px-2 py-3 dark:bg-zinc-800" x-show="!collapsed" x-cloak>
                             @foreach ($field["replicator_fields"] ?? [] as $sub)
                                 @if ($this->fieldIsVisible($sub, $row))
                                     <div>

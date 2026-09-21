@@ -6,11 +6,13 @@
 
     <form wire:submit="save" class="space-y-6">
         <div class="grid gap-4">
-            <flux:input wire:model="title" :label="__('Title')" placeholder="Editor" required autofocus />
+            <flux:input size="sm" wire:model="title" :label="__('Title')" placeholder="Editor" required autofocus />
 
             <div class="flex items-end gap-2">
-                <flux:input wire:model="handle" :label="__('Handle')" class="flex-1 min-w-full" required />
-                <flux:button size="sm" type="button" icon="arrow-path" class="mt-7" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
+                <div class="flex-1">
+                    <flux:input size="sm" wire:model="handle" :label="__('Handle')" class="flex-1 min-w-full" required />
+                </div>
+                <flux:button size="sm" type="button" icon="arrow-path" wire:click="regenerateHandle" :tooltip="__('Regenerate from title')" />
             </div>
         </div>
 
