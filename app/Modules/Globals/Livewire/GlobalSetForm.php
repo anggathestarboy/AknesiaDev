@@ -2,7 +2,9 @@
 
 namespace App\Modules\Globals\Livewire;
 
+use App\Models\TaxonomyTerm;
 use App\Models\User;
+use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Globals\Models\GlobalSet;
@@ -156,7 +158,54 @@ class GlobalSetForm extends Component
     #[Computed]
     public function blueprintFields(): array
     {
-        return $this->globalSet->effectiveBlueprint()?->data['fields'] ?? [];
+        return $this->expandFieldsetFields($this->globalSet->effectiveBlueprint()?->data['fields'] ?? []);
+    }
+
+    /**
+     * A "fieldset" field is a pure preset reference (see
+     * App\Modules\Blueprints\Livewire\FieldsetManager) — it has no data of
+     * its own, so it's replaced inline by the referenced Fieldset's own
+     * fields (recursively, in case one of those is itself a "fieldset"),
+     * inheriting the reference field's tab/section for grouping. Mirrors
+     * EntryForm::expandFieldsetFields(), and every consumer of
+     * blueprintFields() (form rendering, data seeding, validation rules,
+     * localization overlay) goes through it so none need to know
+     * "fieldset" exists.
+     *
+     * @param  array<int, string>  $seenFieldsetHandles  guards against a
+     *                                                   fieldset (in)directly importing itself
+     */
+    protected function expandFieldsetFields(array $fields, array $seenFieldsetHandles = []): array
+    {
+        $expanded = [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === 'fieldset') {
+                $handle = $field['options'] ?? null;
+
+                if (! $handle || in_array($handle, $seenFieldsetHandles, true)) {
+                    continue;
+                }
+
+                $subFields = Fieldset::where('handle', $handle)->first()?->data['fields'] ?? [];
+
+                foreach ($this->expandFieldsetFields($subFields, [...$seenFieldsetHandles, $handle]) as $subField) {
+                    $subField['tab'] = $field['tab'] ?? 'main';
+                    $subField['section'] = $field['section'] ?? '';
+                    $expanded[] = $subField;
+                }
+
+                continue;
+            }
+
+            if ($field['type'] === 'replicator') {
+                $field['replicator_fields'] = $this->expandFieldsetFields($field['replicator_fields'] ?? [], $seenFieldsetHandles);
+            }
+
+            $expanded[] = $field;
+        }
+
+        return $expanded;
     }
 
     #[Computed]
@@ -189,7 +238,7 @@ class GlobalSetForm extends Component
                 continue;
             }
 
-            if ($field['type'] === 'assets') {
+            if ($field['type'] === 'assets' || $field['type'] === 'taxonomy') {
                 $data[$field['handle']] = $existingData[$field['handle']] ?? [];
 
                 continue;
@@ -268,6 +317,27 @@ class GlobalSetForm extends Component
     public function availableAuthors()
     {
         return User::orderBy('name')->get();
+    }
+
+    /**
+     * Terms a "taxonomy" field may pick from — every term of that taxonomy,
+     * scoped to the active site when the global set is site-localized.
+     * Mirrors EntryForm::taxonomyTerms().
+     *
+     * @return Collection<int, TaxonomyTerm>
+     */
+    public function taxonomyTerms(?string $taxonomyHandle)
+    {
+        if (! $taxonomyHandle) {
+            return collect();
+        }
+
+        // ponytail: single-site globals (activeSite = "") list all sites'
+        // terms unscoped; scope only once the set is site-localized.
+        return TaxonomyTerm::where('taxonomy', $taxonomyHandle)
+            ->when($this->activeSite !== '', fn ($query) => $query->where('site', $this->activeSite))
+            ->orderBy('slug')
+            ->get();
     }
 
     /**
@@ -388,6 +458,37 @@ class GlobalSetForm extends Component
 
                 $rules[$key] = $arrayRules;
                 $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
+
+                continue;
+            }
+
+            if ($field['type'] === 'taxonomy') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+
+                $exists = Rule::exists('taxonomy_terms', 'id')->where('taxonomy', $field['options'] ?? null);
+
+                if ($this->activeSite !== '') {
+                    $exists = $exists->where('site', $this->activeSite);
+                }
+
+                $rules["{$key}.*"] = ['integer', $exists];
 
                 continue;
             }
