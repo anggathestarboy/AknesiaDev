@@ -448,6 +448,10 @@ class GlobalSetForm extends Component
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
 
+                if ($field['required'] ?? false) {
+                    $rules[$key][] = 'required';
+                }
+
                 if (($field['max_items'] ?? null) !== null) {
                     $rules[$key][] = "max:{$field['max_items']}";
                 }

@@ -242,6 +242,43 @@ test('a conditionally hidden required field is not enforced on save', function (
         ->assertHasNoErrors('data.video_url');
 });
 
+test('a required replicator cannot be saved without at least one row', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'replicator_fields' => [
+            ['handle' => 'kind', 'display' => 'Kind', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ]],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'My Post')
+        ->set('slug', 'my-post')
+        ->set('status', 'published')
+        ->call('save')
+        ->assertHasErrors(['data.items']);
+});
+
+test('a required replicator passes once a row is added', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'items', 'display' => 'Items', 'type' => 'replicator', 'required' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'replicator_fields' => [
+            ['handle' => 'kind', 'display' => 'Kind', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+        ]],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'My Post')
+        ->set('slug', 'my-post')
+        ->set('status', 'published')
+        ->call('addReplicatorRow', ['items'])
+        ->call('save')
+        ->assertHasNoErrors('data.items');
+});
+
 test('a replicator sub-field\'s condition is scoped to its own row', function () {
     $this->actingAs(User::factory()->create());
 

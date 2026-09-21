@@ -444,6 +444,11 @@ class NavigationTreeEditor extends Component
 
             if ($field['type'] === 'replicator') {
                 $rules[$key] = ['array'];
+
+                if ($field['required'] ?? false) {
+                    $rules[$key][] = 'required';
+                }
+
                 $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
 
                 continue;
