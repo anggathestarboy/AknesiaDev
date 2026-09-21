@@ -184,7 +184,7 @@
 
                 <div class="flex gap-2">
                     @if ($this->collection->livePreview() && $this->previewUrl)
-                        <flux:button size="sm" icon="eye" wire:click="$toggle('previewOpen')" class="w-full">{{ __("Live Preview") }}</flux:button>
+                        <flux:button size="sm" icon="eye" :href="$this->previewUrl" target="_blank" class="w-full">{{ __("Live Preview") }}</flux:button>
                     @endif
 
                     @if ($this->resolvedUrl)
@@ -305,31 +305,4 @@
     </form>
 
     @livewire ("media::asset-picker")
-
-    @if ($this->collection->livePreview() && $this->previewUrl)
-        <flux:modal name="live-preview" wire:model="previewOpen" class="w-full max-w-[90%]">
-            <div class="space-y-3" x-data="{ device: 'desktop', sizes: { desktop: [1280, 800], tablet: [768, 1024], mobile: [375, 667] } }">
-                <div class="flex flex-col flex-wrap items-center justify-between gap-3">
-                    <div class="flex flex-col items-center gap-3">
-                        <div class="flex gap-1 rounded-lg border border-zinc-200 p-1 dark:border-white/10">
-                            <button type="button" title="{{ __('Desktop') }}" x-on:click="device = 'desktop'" x-bind:class="device === 'desktop' ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'" class="rounded p-1.5 cursor-pointer">
-                                <flux:icon.computer-desktop class="size-4" />
-                            </button>
-                            <button type="button" title="{{ __('Tablet') }}" x-on:click="device = 'tablet'" x-bind:class="device === 'tablet' ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'" class="rounded p-1.5 cursor-pointer">
-                                <flux:icon.device-tablet class="size-4" />
-                            </button>
-                            <button type="button" title="{{ __('Mobile') }}" x-on:click="device = 'mobile'" x-bind:class="device === 'mobile' ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-white'" class="rounded p-1.5 cursor-pointer">
-                                <flux:icon.device-phone-mobile class="size-4" />
-                            </button>
-                        </div>
-                        <span class="text-xs text-zinc-500 dark:text-zinc-400" x-text="`${sizes[device][0]} × ${sizes[device][1]}px`"></span>
-                    </div>
-                </div>
-
-                <div class="max-h-[75vh] overflow-auto rounded-lg bg-zinc-100 p-4 dark:bg-zinc-900">
-                    <iframe src="{{ $this->previewUrl }}?v={{ $previewRefreshCount }}" x-bind:style="`width: ${sizes[device][0]}px; height: ${sizes[device][1]}px;`" class="mx-auto max-w-full rounded-lg border border-zinc-200 bg-white dark:border-white/10"></iframe>
-                </div>
-            </div>
-        </flux:modal>
-    @endif
 </section>

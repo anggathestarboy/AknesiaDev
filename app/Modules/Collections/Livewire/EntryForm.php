@@ -136,12 +136,6 @@ class EntryForm extends Component
     public array $seo = [];
 
     /**
-     * Whether the live preview pane is currently shown — see
-     * Collection::livePreview() and refreshPreviewCache().
-     */
-    public bool $previewOpen = false;
-
-    /**
      * Identifies this editing session's cached preview payload
      * (see refreshPreviewCache()) — stable for the lifetime of this page
      * load, regenerated on the next full page load.
@@ -235,10 +229,13 @@ class EntryForm extends Component
      */
     protected function refreshPreviewCache(): void
     {
+        $this->previewRefreshCount++;
+
         Cache::put(
             "entry-preview:{$this->previewToken}",
             [
                 'collection' => $this->collection->handle,
+                'version' => $this->previewRefreshCount,
                 'blueprint' => $this->blueprintHandle,
                 'site' => $this->site,
                 'attributes' => [
@@ -256,8 +253,6 @@ class EntryForm extends Component
             ],
             now()->addHour(),
         );
-
-        $this->previewRefreshCount++;
     }
 
     /**
@@ -799,7 +794,7 @@ class EntryForm extends Component
             $this->activeTab = 'main';
         }
 
-        if ($this->collection->livePreview() && $name !== 'previewOpen') {
+        if ($this->collection->livePreview()) {
             $this->refreshPreviewCache();
         }
     }
