@@ -2,6 +2,7 @@
 
 namespace App\Modules\Navigation\Livewire;
 
+use App\Models\TaxonomyTerm;
 use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
@@ -209,7 +210,7 @@ class NavigationTreeEditor extends Component
                 continue;
             }
 
-            if ($field['type'] === 'assets') {
+            if ($field['type'] === 'assets' || $field['type'] === 'taxonomy') {
                 $data[$field['handle']] = $existingData[$field['handle']] ?? [];
 
                 continue;
@@ -349,6 +350,27 @@ class NavigationTreeEditor extends Component
         return collect($ids)->map(fn ($id) => $assets->get((int) $id))->filter()->values();
     }
 
+    /**
+     * Terms a "taxonomy" field may pick from — every term of that taxonomy,
+     * scoped to the active site when the navigation is site-localized.
+     * Mirrors GlobalSetForm::taxonomyTerms().
+     *
+     * @return Collection<int, TaxonomyTerm>
+     */
+    public function taxonomyTerms(?string $taxonomyHandle)
+    {
+        if (! $taxonomyHandle) {
+            return collect();
+        }
+
+        // ponytail: single-site navigations (activeSite = "") list all
+        // sites' terms unscoped; scope only once the nav is site-localized.
+        return TaxonomyTerm::where('taxonomy', $taxonomyHandle)
+            ->when($this->activeSite !== '', fn ($query) => $query->where('site', $this->activeSite))
+            ->orderBy('slug')
+            ->get();
+    }
+
     protected function replicatorFieldAt(array $path): ?array
     {
         $fields = $this->blueprintFields();
@@ -453,6 +475,37 @@ class NavigationTreeEditor extends Component
 
                 $rules[$key] = $arrayRules;
                 $rules["{$key}.*"] = ['integer', Rule::exists('assets_meta', 'id')->where('container', $field['options'] ?? null)];
+
+                continue;
+            }
+
+            if ($field['type'] === 'taxonomy') {
+                $arrayRules = [];
+
+                if ($field['validate_sometimes'] ?? false) {
+                    $arrayRules[] = 'sometimes';
+                }
+
+                $arrayRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+                $arrayRules[] = 'array';
+
+                if (($field['min_items'] ?? null) !== null) {
+                    $arrayRules[] = "min:{$field['min_items']}";
+                }
+
+                if (($field['max_items'] ?? null) !== null) {
+                    $arrayRules[] = "max:{$field['max_items']}";
+                }
+
+                $rules[$key] = $arrayRules;
+
+                $exists = Rule::exists('taxonomy_terms', 'id')->where('taxonomy', $field['options'] ?? null);
+
+                if ($this->activeSite !== '') {
+                    $exists = $exists->where('site', $this->activeSite);
+                }
+
+                $rules["{$key}.*"] = ['integer', $exists];
 
                 continue;
             }

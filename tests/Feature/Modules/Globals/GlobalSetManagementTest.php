@@ -416,6 +416,42 @@ test('a taxonomy field renders its terms and saves selections in the global set 
     expect($variable->data)->toBe(['featured_categories' => [$news->id, $sports->id]]);
 });
 
+test('replicator rows in the global set form are enabled by default, can be toggled off, and can be duplicated', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'faqs', 'display' => 'FAQs', 'type' => 'replicator', 'required' => false, 'placeholder' => null, 'instructions' => null, 'replicator_fields' => [
+            ['handle' => 'question', 'display' => 'Question', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+        ]],
+    ]]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+    GlobalSetVariable::create(['handle' => 'site_settings', 'locale' => null, 'data' => ['faqs' => [
+        ['question' => 'First'],
+    ]]]);
+
+    $component = Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet]);
+
+    expect($component->get('data.faqs')[0]['_enabled'])->toBeTrue();
+
+    $component->call('duplicateReplicatorRow', ['faqs'], 0);
+
+    $rows = $component->get('data.faqs');
+    expect($rows)->toHaveCount(2);
+    expect($rows[1]['question'])->toBe('First');
+    expect($rows[1]['_enabled'])->toBeTrue();
+
+    $component->set('data.faqs.1._enabled', false)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $variable = GlobalSetVariable::where('handle', 'site_settings')->sole();
+    expect($variable->data)->toBe(['faqs' => [
+        ['_enabled' => true, 'question' => 'First'],
+        ['_enabled' => false, 'question' => 'First'],
+    ]]);
+});
+
 test('creating a global set requires the configure globals permission', function () {
     $user = User::factory()->create();
     $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
