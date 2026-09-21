@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Taxonomy;
+use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Globals\Livewire\GlobalSetForm;
 use App\Modules\Globals\Livewire\GlobalSetManager;
 use App\Modules\Globals\Models\GlobalSet;
@@ -369,6 +372,48 @@ test('a blueprint tab with handle "sidebar" renders its fields in the global set
     Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
         ->assertSee('Site name')
         ->assertSee('Seo Title');
+});
+
+test('a fieldset field renders its referenced fields in the global set form', function () {
+    $this->actingAs(User::factory()->create());
+
+    Fieldset::create(['handle' => 'socials', 'data' => ['fields' => [
+        ['handle' => 'twitter_url', 'display' => 'Twitter URL', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+        ['handle' => 'linkedin_url', 'display' => 'LinkedIn URL', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+    ]]]);
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'socials', 'display' => 'Socials', 'type' => 'fieldset', 'options' => 'socials'],
+    ]]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->assertSee('Twitter URL')
+        ->assertSee('LinkedIn URL');
+});
+
+test('a taxonomy field renders its terms and saves selections in the global set form', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    $news = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'news', 'uri' => '/categories/news', 'taxonomy' => 'categories', 'data' => ['title' => 'News']]);
+    $sports = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'sports', 'uri' => '/categories/sports', 'taxonomy' => 'categories', 'data' => ['title' => 'Sports']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'featured_categories', 'display' => 'Featured Categories', 'type' => 'taxonomy', 'options' => 'categories'],
+    ]]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->assertSee('News')
+        ->assertSee('Sports')
+        ->set('data.featured_categories', [$news->id, $sports->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $variable = GlobalSetVariable::where('handle', 'site_settings')->sole();
+    expect($variable->data)->toBe(['featured_categories' => [$news->id, $sports->id]]);
 });
 
 test('creating a global set requires the configure globals permission', function () {

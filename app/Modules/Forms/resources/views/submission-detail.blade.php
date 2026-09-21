@@ -22,7 +22,7 @@
                 @php $value = $submission->data[$field['handle']] ?? null; @endphp
                 <div>
                     <flux:text class="text-xs font-medium text-zinc-500">{{ $field['display'] ?: $field['handle'] }}</flux:text>
-                    <flux:text class="block whitespace-pre-wrap">{{ is_array($value) ? implode(', ', $value) : ($value ?? '—') }}</flux:text>
+                    <flux:text class="block whitespace-pre-wrap">@include('forms::partials.submission-value', ['field' => $field, 'value' => $value])</flux:text>
                 </div>
             @empty
                 <flux:text class="text-zinc-500">{{ __('This form has no fields.') }}</flux:text>
