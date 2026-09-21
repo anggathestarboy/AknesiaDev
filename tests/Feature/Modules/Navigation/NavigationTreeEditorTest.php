@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Taxonomy;
+use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
@@ -598,6 +600,33 @@ test('replicator rows can be duplicated and drag-reordered, and never leak their
     $data = app(NavigationTreeService::class)->load($navigation->fresh());
     expect($data['links'])->toHaveCount(3);
     expect($data['links'][0])->not->toHaveKey('_uid');
+});
+
+test('a taxonomy field in a navigation blueprint renders its terms and saves selections', function () {
+    $this->actingAs(User::factory()->create());
+
+    Taxonomy::create(['handle' => 'categories', 'title' => 'Categories', 'sites' => []]);
+    $news = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'news', 'uri' => '/categories/news', 'taxonomy' => 'categories', 'data' => ['title' => 'News']]);
+    $sports = TaxonomyTerm::create(['site' => 'indonesia', 'slug' => 'sports', 'uri' => '/categories/sports', 'taxonomy' => 'categories', 'data' => ['title' => 'Sports']]);
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'featured_categories', 'display' => 'Featured Categories', 'type' => 'taxonomy', 'options' => 'categories', 'required' => false, 'placeholder' => null, 'instructions' => null],
+        ]],
+    ]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->assertSee('News')
+        ->assertSee('Sports')
+        ->set('data.featured_categories', [$news->id, $sports->id])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(app(NavigationTreeService::class)->load($navigation->fresh()))
+        ->toBe(['featured_categories' => [$news->id, $sports->id]]);
 });
 
 test('page-type items resolve their URL dynamically from the entry slug', function () {

@@ -85,6 +85,7 @@
                                                 "assetIds" => $field["type"] === "assets" ? $data[$field["handle"]] ?? [] : null,
                                                 "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
                                                 "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
+                                                "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
                                                 "forceLive" => in_array($field["handle"], $conditionTargets, true)
                                             ])
                                     @endif
