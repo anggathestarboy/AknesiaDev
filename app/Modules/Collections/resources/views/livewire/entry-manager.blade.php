@@ -91,9 +91,9 @@
         </ul>
     @else
         <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
-            <div class="bg-white rounded-xl px-2">
+            <div class="bg-white rounded-xl dark:bg-zinc-800">
                 <flux:table>
-                    <flux:table.columns>
+                    <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
                         <flux:table.column class="w-8">
                             @if ($this->bulkActionsAvailable() && $this->entries->isNotEmpty())
                                 <input type="checkbox" wire:click="toggleSelectAll" :checked="count(array_intersect($selected, $this->entries->pluck('id')->all())) === $this->entries->count()" />
@@ -134,20 +134,18 @@
                                     </div>
                                 </flux:table.cell>
                                 <flux:table.cell>
-                                    <div class="flex items-center gap-2" style="padding-inline-start: {{ ($entry->depth ?? 0) * 0.2 }}rem">
+                                    <div class="flex items-center gap-1" style="padding-inline-start: {{ ($entry->depth ?? 0) * 0.2 }}rem">
                                         @if (($entry->depth ?? 0) > 0)
                                             <flux:icon.arrow-turn-down-right class="size-3.5 shrink-0 text-zinc-400" />
                                         @endif
 
-                                        <span>{{ $entry->data["title"] ?? "—" }}</span>
-
                                         @if ($entry->order === 1)
-                                            <flux:badge size="sm">
-                                                <svg class="w-5 h-5 text-gray-800" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
-                                                </svg>
-                                            </flux:badge>
+                                            <svg class="w-4 h-4 text-gray-800 -mt-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
+                                            </svg>
                                         @endif
+
+                                        <span>{{ $entry->data["title"] ?? "—" }}</span>
 
                                         @if ($entry->parentTitle ?? null)
                                             <flux:badge size="sm" color="zinc">{{ __("Parent: :title", ["title" => $entry->parentTitle]) }}</flux:badge>

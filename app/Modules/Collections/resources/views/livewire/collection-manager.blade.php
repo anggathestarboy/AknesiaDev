@@ -12,9 +12,9 @@
     </div>
 
     <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
-        <div class="bg-white rounded-xl px-2">
+        <div class="bg-white rounded-xl dark:bg-zinc-800">
             <flux:table>
-                <flux:table.columns>
+                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
                     <flux:table.column>{{ __("Title") }}</flux:table.column>
                     <flux:table.column>{{ __("Handle") }}</flux:table.column>
                     <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
