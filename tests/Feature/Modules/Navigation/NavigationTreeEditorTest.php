@@ -556,6 +556,33 @@ test('menu links are a replicator field the admin can add rows to directly, with
     expect($data['links'][0]['title'])->toBe('About');
 });
 
+test('link fields on a navigation only offer entries of the active language', function () {
+    $this->actingAs(User::factory()->create());
+    makeNavigationSite('indonesian', 0);
+    makeNavigationSite('english', 1);
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => []]);
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
+        ]],
+    ]);
+
+    $indonesian = Entry::create(['site' => 'indonesian', 'collection' => 'pages', 'data' => ['title' => 'Beranda']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'pages', 'data' => ['title' => 'Home']]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'indonesian'])
+        ->call('linkableEntries', [])
+        ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$indonesian->id]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'english'])
+        ->call('linkableEntries', [])
+        ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$english->id]);
+});
+
 test('replicator rows can be duplicated and drag-reordered, and never leak their internal _uid into storage', function () {
     $this->actingAs(User::factory()->create());
 

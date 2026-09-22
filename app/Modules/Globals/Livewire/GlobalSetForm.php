@@ -324,6 +324,9 @@ class GlobalSetForm extends Component
     public function linkableEntries(array $allowedCollectionHandles)
     {
         return Entry::when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+            // ponytail: single-site globals (activeSite = "") list all sites'
+            // entries unscoped; scope only once the set is site-localized.
+            ->when($this->activeSite !== '', fn ($query) => $query->where('site', $this->activeSite))
             ->orderBy('collection')
             ->orderBy('slug')
             ->get();

@@ -396,7 +396,8 @@ class TermForm extends Component
      */
     public function linkableEntries(array $allowedCollectionHandles)
     {
-        return Entry::when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+        return Entry::where('site', $this->site)
+            ->when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
             ->orderBy('collection')
             ->orderBy('slug')
             ->get();

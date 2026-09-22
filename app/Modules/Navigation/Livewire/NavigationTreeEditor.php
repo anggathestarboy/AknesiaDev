@@ -331,6 +331,10 @@ class NavigationTreeEditor extends Component
     public function linkableEntries(array $allowedCollectionHandles)
     {
         return Entry::when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+            // ponytail: single-site navigations (activeSite = "") list all
+            // sites' entries unscoped; scope only when the nav is
+            // site-localized.
+            ->when($this->activeSite !== '', fn ($query) => $query->where('site', $this->activeSite))
             ->orderBy('collection')
             ->orderBy('slug')
             ->get();
