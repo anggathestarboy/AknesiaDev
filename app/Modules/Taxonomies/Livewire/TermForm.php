@@ -90,6 +90,11 @@ class TermForm extends Component
         if (! $this->isOriginLocale()) {
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originTerm()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
+
+            // A link pointing at the default language's term/entry shows
+            // that same content's version on this site, so the picker is
+            // pre-selected on the translation instead of the first option.
+            $this->data = Entry::localizeLinkValues($this->data, $this->blueprintFields(), $this->site);
         }
     }
 

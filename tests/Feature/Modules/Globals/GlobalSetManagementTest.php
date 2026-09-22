@@ -337,6 +337,38 @@ test('link fields on a global set only offer entries of the active language', fu
         ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$english->id]);
 });
 
+test('a link field on a non-default language shows the default language\'s entry as its translated sibling', function () {
+    $this->actingAs(User::factory()->create());
+    makeSite('indonesia', 0);
+    makeSite('english', 1);
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'footer', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'localizable' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'options' => []],
+    ]]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Footer', 'handle' => 'footer', 'settings' => ['blueprint' => 'footer', 'sites' => ['indonesia', 'english']]]);
+
+    $indonesia = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'data' => ['title' => 'Beranda']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'pages', 'origin_id' => $indonesia->id, 'data' => ['title' => 'Home']]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->set('data.cta', "entry::{$indonesia->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // English shows the same content as its translated entry, not the raw
+    // default-language reference; saving it untouched keeps the shared
+    // value following the default language.
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet, 'activeSite' => 'english'])
+        ->assertSet('data.cta', "entry::{$english->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $englishVariable = GlobalSetVariable::where('handle', 'footer')->where('locale', 'english')->sole();
+    expect($englishVariable->data)->toBe(['cta' => "entry::{$indonesia->id}"]);
+});
+
 test('global set can be deleted along with its values', function () {
     $this->actingAs(User::factory()->create());
 

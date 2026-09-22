@@ -76,6 +76,12 @@ class GlobalSetForm extends Component
             $originData = $this->fillFieldsData($this->blueprintFields(), $originVariable->data);
 
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
+
+            // A link pointing at the default language's entry shows
+            // that same content's entry on this site, so the picker is
+            // pre-selected on the translation instead of the first
+            // option.
+            $this->data = Entry::localizeLinkValues($this->data, $this->blueprintFields(), $this->activeSite);
         }
     }
 
