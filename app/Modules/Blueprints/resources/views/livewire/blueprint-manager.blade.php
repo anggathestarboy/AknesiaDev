@@ -37,10 +37,10 @@
                     <div class="space-y-3 bg-white px-3 py-1 rounded-xl">
                         <flux:table>
                             <flux:table.columns>
-                                <flux:table.column class="">{{ __("Namespace") }}</flux:table.column>
-                                <flux:table.column class="w-[400px]">{{ __("Handle") }}</flux:table.column>
-                                <flux:table.column class="w-[100px]">{{ __("Fields") }}</flux:table.column>
-                                <flux:table.column class="w-[150px]"></flux:table.column>
+                                <flux:table.column :border="true" class="">{{ __("Namespace") }}</flux:table.column>
+                                <flux:table.column :border="true" class="w-[400px]">{{ __("Handle") }}</flux:table.column>
+                                <flux:table.column :border="true" class="w-[100px]">{{ __("Fields") }}</flux:table.column>
+                                <flux:table.column :border="true" class="w-[150px]"></flux:table.column>
                             </flux:table.columns>
 
                             <flux:table.rows>
