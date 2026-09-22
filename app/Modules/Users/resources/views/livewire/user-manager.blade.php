@@ -33,18 +33,18 @@
     </div>
 
     <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
-        <div class="bg-white rounded-xl px-2">
+        <div class="bg-white dark:bg-zinc-800 rounded-xl overflow-hidden">
             <flux:table>
-                <flux:table.columns>
-                    <flux:table.column class="w-8">
-                        <input type="checkbox" wire:click="toggleSelectAll" :checked="count($selected) > 0 && count($selected) === $this->users->count()" class="rounded border-zinc-300 dark:border-zinc-600" />
+                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                    <flux:table.column class="w-10" :border="false">
+                        <input type="checkbox" wire:click="toggleSelectAll" :checked="count($selected) > 0 && count($selected) === $this->users->count()" class="rounded w-max border-zinc-300 dark:border-zinc-600" />
                     </flux:table.column>
-                    <flux:table.column>{{ __("Name") }}</flux:table.column>
-                    <flux:table.column>{{ __("Email") }}</flux:table.column>
-                    <flux:table.column>{{ __("Status") }}</flux:table.column>
-                    <flux:table.column>{{ __("Roles") }}</flux:table.column>
-                    <flux:table.column>{{ __("Groups") }}</flux:table.column>
-                    <flux:table.column class="w-32"></flux:table.column>
+                    <flux:table.column :border="false" class="w-[15%]">{{ __("Name") }}</flux:table.column>
+                    <flux:table.column :border="false">{{ __("Email") }}</flux:table.column>
+                    <flux:table.column :border="false">{{ __("Status") }}</flux:table.column>
+                    <flux:table.column :border="false">{{ __("Roles") }}</flux:table.column>
+                    <flux:table.column :border="false">{{ __("Groups") }}</flux:table.column>
+                    <flux:table.column :border="false" class="w-32"></flux:table.column>
                 </flux:table.columns>
 
                 <flux:table.rows>
@@ -57,7 +57,7 @@
                                     <input type="checkbox" wire:model.live="selected" value="{{ $user->id }}" class="rounded border-zinc-300 dark:border-zinc-600" />
                                 @endif
                             </flux:table.cell>
-                            <flux:table.cell>{{ $user->name }}</flux:table.cell>
+                            <flux:table.cell class="w-[15%]">{{ $user->name }}</flux:table.cell>
                             <flux:table.cell>{{ $user->email }}</flux:table.cell>
                             <flux:table.cell>
                                 @if ($user->isBanned())
@@ -84,7 +84,7 @@
                                     @endforelse
                                 </div>
                             </flux:table.cell>
-                            <flux:table.cell class="flex justify-end gap-2 w-32">
+                            <flux:table.cell class="flex justify-end gap-2 w-full">
                                 <flux:button size="sm" :href="route('users.edit', ['user' => $user->id])" wire:navigate>{{ __("Edit") }}</flux:button>
                                 @if ($user->id !== auth()->id())
                                     @if (auth()->user()->hasPermission("ban users"))

@@ -1,4 +1,4 @@
-<section class="w-full space-y-6" x-data="{ deleteRedirectId: null }">
+<section class="w-full" x-data="{ deleteRedirectId: null }">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -11,46 +11,50 @@
         <flux:button variant="primary" size="sm" wire:click="create">{{ __("New redirect") }}</flux:button>
     </div>
 
-    <div class="max-w-sm">
-        <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')" placeholder="{{ __('Search by source or target…') }}" icon="magnifying-glass" size="sm" />
+    <div class="max-w-sm mt-3 mb-7">
+        <flux:input wire:model.live.debounce.300ms="search" placeholder="{{ __('Search by source or target…') }}" icon="magnifying-glass" size="sm" />
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Source") }}</flux:table.column>
-            <flux:table.column>{{ __("Target") }}</flux:table.column>
-            <flux:table.column>{{ __("Status") }}</flux:table.column>
-            <flux:table.column>{{ __("Match type") }}</flux:table.column>
-            <flux:table.column>{{ __("Active") }}</flux:table.column>
-            <flux:table.column>{{ __("Hits") }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
+    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-white rounded-xl dark:bg-zinc-800">
+            <flux:table>
+                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                    <flux:table.column>{{ __("Source") }}</flux:table.column>
+                    <flux:table.column>{{ __("Target") }}</flux:table.column>
+                    <flux:table.column>{{ __("Status") }}</flux:table.column>
+                    <flux:table.column>{{ __("Match type") }}</flux:table.column>
+                    <flux:table.column>{{ __("Active") }}</flux:table.column>
+                    <flux:table.column>{{ __("Hits") }}</flux:table.column>
+                    <flux:table.column></flux:table.column>
+                </flux:table.columns>
 
-        <flux:table.rows>
-            @forelse ($this->redirects as $redirect)
-                <flux:table.row wire:key="redirect-{{ $redirect->id }}">
-                    <flux:table.cell>{{ $redirect->source }}</flux:table.cell>
-                    <flux:table.cell>{{ $redirect->target }}</flux:table.cell>
-                    <flux:table.cell>{{ $redirect->status_code }}</flux:table.cell>
-                    <flux:table.cell>{{ $redirect->match_type }}</flux:table.cell>
-                    <flux:table.cell>
-                        <flux:badge size="sm" :color="$redirect->is_active ? 'green' : 'zinc'">{{ $redirect->is_active ? __("Active") : __("Inactive") }}</flux:badge>
-                    </flux:table.cell>
-                    <flux:table.cell>{{ $redirect->hits }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-1">
-                        <flux:button size="sm" wire:click="view({{ $redirect->id }})">{{ __("View") }}</flux:button>
-                        <flux:modal.trigger name="confirm-delete-redirect">
-                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteRedirectId = {{ $redirect->id }}">{{ __("Delete") }}</flux:button>
-                        </flux:modal.trigger>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="7">{{ $search !== "" ? __("No redirects match your search.") : __("No redirects yet.") }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+                <flux:table.rows>
+                    @forelse ($this->redirects as $redirect)
+                        <flux:table.row wire:key="redirect-{{ $redirect->id }}">
+                            <flux:table.cell>{{ $redirect->source }}</flux:table.cell>
+                            <flux:table.cell>{{ $redirect->target }}</flux:table.cell>
+                            <flux:table.cell>{{ $redirect->status_code }}</flux:table.cell>
+                            <flux:table.cell>{{ $redirect->match_type }}</flux:table.cell>
+                            <flux:table.cell>
+                                <flux:badge size="sm" :color="$redirect->is_active ? 'green' : 'zinc'">{{ $redirect->is_active ? __("Active") : __("Inactive") }}</flux:badge>
+                            </flux:table.cell>
+                            <flux:table.cell>{{ $redirect->hits }}</flux:table.cell>
+                            <flux:table.cell class="flex justify-end gap-1">
+                                <flux:button size="sm" wire:click="view({{ $redirect->id }})">{{ __("View") }}</flux:button>
+                                <flux:modal.trigger name="confirm-delete-redirect">
+                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteRedirectId = {{ $redirect->id }}">{{ __("Delete") }}</flux:button>
+                                </flux:modal.trigger>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="7">{{ $search !== "" ? __("No redirects match your search.") : __("No redirects yet.") }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </div>
 
     <flux:modal name="redirect-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">
