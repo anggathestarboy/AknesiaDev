@@ -287,10 +287,89 @@ class Entry extends Model
                 continue;
             }
 
-            $linkedEntry = static::find(substr($value, 7));
+            // Resolve the link against this entry's own site: an "entry::"
+            // value referencing the default language should render the same
+            // content's version on this site (its origin_id-linked sibling),
+            // and only when that version is actually published — otherwise
+            // a template gets "#" instead of pointing at a still-draft
+            // translation (or a dead reference).
+            $linkedEntry = static::entryForSite(substr($value, 7), $this->site);
             $collection = $linkedEntry ? Collection::where('handle', $linkedEntry->collection)->first() : null;
 
-            $data[$handle] = ($linkedEntry && $collection) ? $resolver->url($collection, $linkedEntry) : null;
+            $data[$handle] = ($linkedEntry && $collection && $linkedEntry->published) ? $resolver->url($collection, $linkedEntry) : '#';
+        }
+
+        return $data;
+    }
+
+    /**
+     * The entry on $site representing the same content as $entryId — the
+     * entry itself when it already lives on that site, otherwise its
+     * localized sibling (the origin_id-linked translation) for that site.
+     * Null when the reference is stale or no translation exists there yet.
+     */
+    public static function entryForSite(string $entryId, string $site): ?self
+    {
+        $entry = static::find($entryId);
+
+        if (! $entry || $entry->site === $site) {
+            return $entry;
+        }
+
+        return static::where('origin_id', $entry->origin_id ?? $entry->id)
+            ->where('site', $site)
+            ->first();
+    }
+
+    /**
+     * Translates a stored "entry::{id}" link value so it points at that
+     * content's entry on $site (its localized sibling), so an editor on a
+     * translation site sees the link picker pre-selected on the right entry
+     * instead of falling back to the first option. Any non-entry value
+     * (plain url, empty) and any link with no translation on $site is left
+     * unchanged.
+     */
+    public static function linkValueForSite(string $value, string $site): string
+    {
+        if (! str_starts_with($value, 'entry::')) {
+            return $value;
+        }
+
+        $target = static::entryForSite(substr($value, 7), $site);
+
+        return $target ? "entry::{$target->id}" : $value;
+    }
+
+    /**
+     * Recursively rewrites every "link" field value in $data via
+     * linkValueForSite(), walking into a "replicator" field's own rows to
+     * any depth — mirrors resolveLinkFields().
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<string, mixed>
+     */
+    public static function localizeLinkValues(array $data, array $fields, string $site): array
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator') {
+                $data[$field['handle']] = array_map(
+                    fn (array $row): array => static::localizeLinkValues($row, $field['replicator_fields'] ?? [], $site),
+                    $data[$field['handle']] ?? []
+                );
+
+                continue;
+            }
+
+            if ($field['type'] !== 'link') {
+                continue;
+            }
+
+            $value = $data[$field['handle']] ?? null;
+
+            if (is_string($value)) {
+                $data[$field['handle']] = static::linkValueForSite($value, $site);
+            }
         }
 
         return $data;

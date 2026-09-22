@@ -2857,6 +2857,29 @@ test('creating a new translation prefills a localizable field with the origin lo
         ->assertSee('Selamat datang', false);
 });
 
+test('creating a new translation shows a link to the default language\'s entry as its translated sibling, not the raw default-language entry', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeBlogCollection(null);
+    makeSites();
+
+    Blueprint::create([
+        'namespace' => 'collections.blog',
+        'handle' => 'post',
+        'data' => ['fields' => [
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'localizable' => true, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null, 'options' => []],
+        ]],
+    ]);
+
+    $indonesia = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Berita ID']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'origin_id' => $indonesia->id, 'data' => ['title' => 'Berita EN']]);
+
+    $original = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'data' => ['title' => 'Halo', 'cta' => "entry::{$indonesia->id}"]]);
+
+    Livewire::withQueryParams(['origin' => $original->id])
+        ->test(EntryForm::class, ['collection' => $collection, 'site' => 'english'])
+        ->assertSet('data.cta', "entry::{$english->id}");
+});
+
 test('editing an already-saved translation does not overwrite its own (possibly still blank) localizable field with the origin\'s value', function () {
     $this->actingAs(User::factory()->create());
     $collection = makeBlogCollection(null);

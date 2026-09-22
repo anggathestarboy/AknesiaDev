@@ -64,9 +64,14 @@
                                     "taxonomyIds" => $field["type"] === "taxonomy" ? $data[$field["handle"]] ?? [] : null,
                                     "linkValue" => $field["type"] === "link" ? $data[$field["handle"]] ?? "" : null,
                                     "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
-                                    "forceLive" => in_array($field["handle"], $conditionTargets, true)
+"forceLive" => in_array($field["handle"], $conditionTargets, true)
                                 ])
-                        @endif
+                                @if ($field["type"] === "replicator")
+                                    @error ("data." . $field["handle"])
+                                        <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                                    @enderror
+                                @endif
+                            @endif
                     </div>
                 @endif
             @empty
@@ -127,6 +132,11 @@
                                                     "bardValue" => $field["type"] === "bard" ? $data[$field["handle"]] ?? "" : null,
                                                     "forceLive" => in_array($field["handle"], $conditionTargets, true)
                                                 ])
+                                                @if ($field["type"] === "replicator")
+                                                    @error ("data." . $field["handle"])
+                                                        <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                                                    @enderror
+                                                @endif
                                         @endif
                                     </div>
                                 @endif

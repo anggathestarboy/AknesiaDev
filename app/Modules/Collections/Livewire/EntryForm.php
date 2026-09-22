@@ -206,6 +206,11 @@ class EntryForm extends Component
                     }
                 }
             }
+
+            // A link pointing at the default language's entry shows that
+            // same content's entry on this site, so the picker is
+            // pre-selected on the translation instead of the first option.
+            $this->data = Entry::localizeLinkValues($this->data, $this->blueprintFields(), $this->site);
         }
 
         if ($this->collection->livePreview()) {

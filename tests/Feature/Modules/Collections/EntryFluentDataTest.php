@@ -5,6 +5,7 @@ use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Media\Models\AssetMeta;
+use App\Modules\Sites\Models\Site;
 
 function makeFluentDataAsset(string $basename = 'photo.webp'): AssetMeta
 {
@@ -195,4 +196,41 @@ test('a disabled row nested inside another replicator is dropped too', function 
 
     expect($resolved)->toHaveCount(1);
     expect($resolved[0]->label)->toBe('Kept');
+});
+
+test('a link to the default language\'s entry resolves to that entry\'s translation on this site, and to "#" while that translation is unpublished', function () {
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://id.local', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'http://en.local', 'locale' => 'en_GB', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'options' => []],
+    ]]]);
+
+    $indonesia = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'published' => true, 'slug' => 'berita', 'uri' => 'berita', 'data' => ['title' => 'Berita ID']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'origin_id' => $indonesia->id, 'published' => false, 'slug' => 'news', 'uri' => 'news', 'data' => ['title' => 'News EN']]);
+
+    $entry = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'cta' => "entry::{$indonesia->id}"]]);
+
+    expect($entry->fluentData()->cta)->toBe('#');
+
+    $english->update(['published' => true, 'status' => 'published']);
+
+    expect($entry->fresh()->fluentData()->cta)->toBe('http://en.local/news');
+});
+
+test('a link pointing at an entry with no translation on this site resolves to "#"', function () {
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => ['route_mode' => 'single', 'route' => '{slug}']]);
+    Site::create(['handle' => 'indonesia', 'name' => 'Indonesia', 'url' => 'http://id.local', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 0]);
+    Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'http://en.local', 'locale' => 'en_GB', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'options' => []],
+    ]]]);
+
+    $indonesia = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'published' => true, 'slug' => 'berita', 'uri' => 'berita', 'data' => ['title' => 'Berita ID']]);
+
+    $entry = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'cta' => "entry::{$indonesia->id}"]]);
+
+    expect($entry->fluentData()->cta)->toBe('#');
 });

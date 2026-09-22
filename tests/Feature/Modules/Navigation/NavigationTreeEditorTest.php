@@ -556,6 +556,80 @@ test('menu links are a replicator field the admin can add rows to directly, with
     expect($data['links'][0]['title'])->toBe('About');
 });
 
+test('link fields on a navigation only offer entries of the active language', function () {
+    $this->actingAs(User::factory()->create());
+    makeNavigationSite('indonesian', 0);
+    makeNavigationSite('english', 1);
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => []]);
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
+        ]],
+    ]);
+
+    $indonesian = Entry::create(['site' => 'indonesian', 'collection' => 'pages', 'data' => ['title' => 'Beranda']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'pages', 'data' => ['title' => 'Home']]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'indonesian'])
+        ->call('linkableEntries', [])
+        ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$indonesian->id]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'english'])
+        ->call('linkableEntries', [])
+        ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$english->id]);
+});
+
+test('a link to the default language\'s entry shows its translated sibling in another language, and saving it untouched keeps following the default', function () {
+    $this->actingAs(User::factory()->create());
+    makeNavigationSite('indonesian', 0);
+    makeNavigationSite('english', 1);
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => []]);
+
+    $navigation = makeNavigation();
+    Blueprint::create([
+        'namespace' => 'navigations.main',
+        'handle' => 'main',
+        'data' => ['tabs' => [], 'fields' => [
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
+        ]],
+    ]);
+
+    $indonesian = Entry::create(['site' => 'indonesian', 'collection' => 'pages', 'data' => ['title' => 'Berita ID']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'pages', 'origin_id' => $indonesian->id, 'data' => ['title' => 'Berita EN']]);
+
+    // Default language links to its own entry.
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->set('data.cta', "entry::{$indonesian->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // English shows the same content as its translated entry, not the raw
+    // default-language reference.
+    $component = Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'english'])
+        ->assertSet('data.cta', "entry::{$english->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Leaving it untouched stores no override, so it keeps live-following
+    // the default language.
+    $service = app(NavigationTreeService::class);
+    expect($service->load($navigation->fresh(), 'english'))->toBe([]);
+
+    // Linking to a genuinely different english entry is a real override.
+    $otherEnglish = Entry::create(['site' => 'english', 'collection' => 'pages', 'data' => ['title' => 'Other']]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation, 'activeSite' => 'english'])
+        ->set('data.cta', "entry::{$otherEnglish->id}")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($service->load($navigation->fresh(), 'english'))->toBe(['cta' => "entry::{$otherEnglish->id}"]);
+});
+
 test('replicator rows can be duplicated and drag-reordered, and never leak their internal _uid into storage', function () {
     $this->actingAs(User::factory()->create());
 

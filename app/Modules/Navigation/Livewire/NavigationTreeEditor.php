@@ -124,6 +124,11 @@ class NavigationTreeEditor extends Component
 
         $originData = $this->treeService()->load($this->navigation, $this->originLocale());
         $this->data = $this->fillFieldsData($this->blueprintFields(), array_merge($originData, $ownData));
+
+        // A link pointing at the default language's entry shows that same
+        // content's entry on this site, so the picker is pre-selected on
+        // the translation instead of the first option.
+        $this->data = Entry::localizeLinkValues($this->data, $this->blueprintFields(), $this->activeSite);
     }
 
     #[Computed]
@@ -331,6 +336,10 @@ class NavigationTreeEditor extends Component
     public function linkableEntries(array $allowedCollectionHandles)
     {
         return Entry::when($allowedCollectionHandles !== [], fn ($query) => $query->whereIn('collection', $allowedCollectionHandles))
+            // ponytail: single-site navigations (activeSite = "") list all
+            // sites' entries unscoped; scope only when the nav is
+            // site-localized.
+            ->when($this->activeSite !== '', fn ($query) => $query->where('site', $this->activeSite))
             ->orderBy('collection')
             ->orderBy('slug')
             ->get();
@@ -818,6 +827,12 @@ class NavigationTreeEditor extends Component
 
             if (! $this->isOriginLocale()) {
                 $originData = $this->treeService()->load($this->navigation, $this->originLocale());
+                // Compare against the origin's links translated to this
+                // site, so an untouched picker (which shows the origin's
+                // entry as this site's sibling) doesn't get stored as a
+                // locale override and keeps live-following the default
+                // language. A genuinely different entry still overrides.
+                $originData = Entry::localizeLinkValues($originData, $this->blueprintFields(), $this->activeSite);
                 $data = $this->overridesFrom($data, $originData);
             }
 

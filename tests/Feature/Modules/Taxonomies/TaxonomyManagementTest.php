@@ -4,6 +4,8 @@ use App\Models\Taxonomy;
 use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Collections\Models\Collection;
+use App\Modules\Collections\Models\Entry;
 use App\Modules\Sites\Models\Site;
 use App\Modules\Taxonomies\Livewire\TaxonomyManager;
 use App\Modules\Taxonomies\Livewire\TermForm;
@@ -210,6 +212,28 @@ test('non-localizable term fields share one value from the taxonomy default site
     expect($translation->data['color'])->toBe('red');
     expect($translation->data['description'])->toBe('Updated political news');
     expect($original->fresh()->data['color'])->toBe('red');
+});
+
+test('link fields on a term only offer entries of the term\'s language', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => []]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'news_categories', 'data' => ['fields' => [
+        ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null, 'options' => []],
+    ]]]);
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    $indonesia = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'data' => ['title' => 'Beranda']]);
+    $english = Entry::create(['site' => 'english', 'collection' => 'pages', 'data' => ['title' => 'Home']]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'indonesia'])
+        ->call('linkableEntries', [])
+        ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$indonesia->id]);
+
+    Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'site' => 'english'])
+        ->call('linkableEntries', [])
+        ->assertReturned(fn ($entries) => array_column($entries, 'id') === [$english->id]);
 });
 
 test('a blueprint tab with handle "sidebar" renders its fields in the term form\'s right-hand sidebar column', function () {
