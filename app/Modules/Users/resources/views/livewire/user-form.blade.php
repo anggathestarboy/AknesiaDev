@@ -1,7 +1,11 @@
 <section class="w-full max-w-3xl space-y-6">
-    <div>
-        <flux:link :href="route('users.index')" variant="subtle" wire:navigate class="text-sm">{{ __("← Users") }}</flux:link>
-        <flux:heading size="lg" class="mt-5">{{ $editingId ? __("Edit user") : __("Add user") }}</flux:heading>
+    <div class="flex items-center justify-start gap-2 border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <flux:link :href="route('users.index')" variant="subtle" wire:navigate class="text-sm">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="square" stroke-linejoin="round" stroke-width="2" d="M10 19H5a1 1 0 0 1-1-1v-1a3 3 0 0 1 3-3h2m10 1a3 3 0 0 1-3 3m3-3a3 3 0 0 0-3-3m3 3h1m-4 3a3 3 0 0 1-3-3m3 3v1m-3-4a3 3 0 0 1 3-3m-3 3h-1m4-3v-1m-2.121 1.879-.707-.707m5.656 5.656-.707-.707m-4.242 0-.707.707m5.656-5.656-.707.707M12 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+        </flux:link>
+        <flux:heading size="xl">{{ $editingId ? __("Edit user") : __("Add user") }}</flux:heading>
     </div>
 
     <form wire:submit="save" class="space-y-6">

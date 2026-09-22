@@ -1,42 +1,49 @@
 <section class="w-full space-y-6" x-data="{ deleteCollectionId: null }">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="lg">{{ __("Collections") }}</flux:heading>
-            <flux:subheading>{{ __("Content types (e.g. blog, pages).") }}</flux:subheading>
+    <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <div class="flex gap-2 items-center">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.03v13m0-13c-2.819-.831-4.715-1.076-8.029-1.023A.99.99 0 0 0 3 6v11c0 .563.466 1.014 1.03 1.007 3.122-.043 5.018.212 7.97 1.023m0-13c2.819-.831 4.715-1.076 8.029-1.023A.99.99 0 0 1 21 6v11c0 .563-.466 1.014-1.03 1.007-3.122-.043-5.018.212-7.97 1.023" />
+            </svg>
+
+            <flux:heading size="xl">{{ __("Collections") }}</flux:heading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __("New collection") }}</flux:button>
+        <flux:button variant="primary" size="sm" wire:click="create">{{ __("New collection") }}</flux:button>
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Title") }}</flux:table.column>
-            <flux:table.column>{{ __("Handle") }}</flux:table.column>
-            <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
+    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-white rounded-xl px-2">
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>{{ __("Title") }}</flux:table.column>
+                    <flux:table.column>{{ __("Handle") }}</flux:table.column>
+                    <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
+                    <flux:table.column></flux:table.column>
+                </flux:table.columns>
 
-        <flux:table.rows>
-            @forelse ($this->collections as $collection)
-                <flux:table.row wire:key="collection-{{ $collection->id }}">
-                    <flux:table.cell>{{ $collection->title }}</flux:table.cell>
-                    <flux:table.cell>{{ $collection->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ $collection->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-2">
-                        <flux:button size="sm" :href="route('collections.entries', $collection->handle)" wire:navigate>{{ __("Entries") }}</flux:button>
-                        <flux:button size="sm" wire:click="edit({{ $collection->id }})">{{ __("Settings") }}</flux:button>
-                        <flux:modal.trigger name="confirm-delete-collection">
-                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteCollectionId = {{ $collection->id }}">{{ __("Delete") }}</flux:button>
-                        </flux:modal.trigger>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="4">{{ __("No collections yet.") }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+                <flux:table.rows>
+                    @forelse ($this->collections as $collection)
+                        <flux:table.row wire:key="collection-{{ $collection->id }}">
+                            <flux:table.cell>{{ $collection->title }}</flux:table.cell>
+                            <flux:table.cell>{{ $collection->handle }}</flux:table.cell>
+                            <flux:table.cell>{{ $collection->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
+                            <flux:table.cell class="flex justify-end gap-2">
+                                <flux:button size="sm" :href="route('collections.entries', $collection->handle)" wire:navigate>{{ __("Entries") }}</flux:button>
+                                <flux:button size="sm" wire:click="edit({{ $collection->id }})">{{ __("Settings") }}</flux:button>
+                                <flux:modal.trigger name="confirm-delete-collection">
+                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteCollectionId = {{ $collection->id }}">{{ __("Delete") }}</flux:button>
+                                </flux:modal.trigger>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="4">{{ __("No collections yet.") }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </div>
 
     <flux:modal name="collection-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">

@@ -1,7 +1,10 @@
-<section class="w-full max-w-4xl space-y-6">
-    <div>
-        <flux:heading size="lg">{{ __("Site Settings") }}</flux:heading>
-        <flux:subheading>{{ __("Global, not per-site: robots.txt, llms.txt, and the site-wide schema.org markup.") }}</flux:subheading>
+<section class="w-full max-w-7xl space-y-6">
+    <div class="flex items-center justify-start gap-2 border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1M5 12h14M5 12a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1m-2 3h.01M14 15h.01M17 9h.01M14 9h.01" />
+        </svg>
+
+        <flux:heading size="xl">{{ __("Site Settings") }}</flux:heading>
     </div>
 
     <div class="flex gap-1 border-b border-zinc-200 dark:border-zinc-700">

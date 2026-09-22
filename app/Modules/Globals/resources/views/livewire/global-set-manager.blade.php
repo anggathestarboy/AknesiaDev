@@ -1,42 +1,48 @@
 <section class="w-full space-y-6" x-data="{ deleteGlobalSetId: null }">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="lg">{{ __("Globals") }}</flux:heading>
-            <flux:subheading>{{ __("Site-wide values, e.g. footer text or contact info.") }}</flux:subheading>
+    <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <div class="flex gap-2 items-center">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M4.37 7.657c2.063.528 2.396 2.806 3.202 3.87 1.07 1.413 2.075 1.228 3.192 2.644 1.805 2.289 1.312 5.705 1.312 6.705M20 15h-1a4 4 0 0 0-4 4v1M8.587 3.992c0 .822.112 1.886 1.515 2.58 1.402.693 2.918.351 2.918 2.334 0 .276 0 2.008 1.972 2.008 2.026.031 2.026-1.678 2.026-2.008 0-.65.527-.9 1.177-.9H20M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+
+            <flux:heading size="xl">{{ __("Globals") }}</flux:heading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __("New global set") }}</flux:button>
+        <flux:button variant="primary" size="sm" wire:click="create">{{ __("New global set") }}</flux:button>
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Title") }}</flux:table.column>
-            <flux:table.column>{{ __("Handle") }}</flux:table.column>
-            <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
-
-        <flux:table.rows>
-            @forelse ($this->globalSets as $globalSet)
-                <flux:table.row wire:key="global-set-{{ $globalSet->id }}">
-                    <flux:table.cell>{{ $globalSet->title }}</flux:table.cell>
-                    <flux:table.cell>{{ $globalSet->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ $globalSet->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-2">
-                        <flux:button size="sm" :href="route('globals.edit', $globalSet->handle)" wire:navigate>{{ __("Edit values") }}</flux:button>
-                        <flux:button size="sm" wire:click="edit({{ $globalSet->id }})">{{ __("Settings") }}</flux:button>
-                        <flux:modal.trigger name="confirm-delete-global-set">
-                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}">{{ __("Delete") }}</flux:button>
-                        </flux:modal.trigger>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="4">{{ __("No global sets yet.") }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-white rounded-xl px-2">
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>{{ __("Title") }}</flux:table.column>
+                    <flux:table.column>{{ __("Handle") }}</flux:table.column>
+                    <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
+                    <flux:table.column></flux:table.column>
+                </flux:table.columns>
+                <flux:table.rows>
+                    @forelse ($this->globalSets as $globalSet)
+                        <flux:table.row wire:key="global-set-{{ $globalSet->id }}">
+                            <flux:table.cell>{{ $globalSet->title }}</flux:table.cell>
+                            <flux:table.cell>{{ $globalSet->handle }}</flux:table.cell>
+                            <flux:table.cell>{{ $globalSet->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
+                            <flux:table.cell class="flex justify-end gap-2">
+                                <flux:button size="sm" :href="route('globals.edit', $globalSet->handle)" wire:navigate>{{ __("Edit values") }}</flux:button>
+                                <flux:button size="sm" wire:click="edit({{ $globalSet->id }})">{{ __("Settings") }}</flux:button>
+                                <flux:modal.trigger name="confirm-delete-global-set">
+                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}">{{ __("Delete") }}</flux:button>
+                                </flux:modal.trigger>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="4">{{ __("No global sets yet.") }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </div>
 
     <flux:modal name="global-set-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">

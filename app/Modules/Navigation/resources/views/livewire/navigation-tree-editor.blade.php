@@ -1,17 +1,20 @@
-<div class="space-y-6 p-4 sm:p-6" x-data="{ contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()" @click="contextMenu = null">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <flux:heading size="lg">{{ $navigation->title }}</flux:heading>
-            <flux:subheading>{{ __("Drag items to reorder, or move them in/out of a submenu. Click a row to edit it.") }}</flux:subheading>
+<div class="space-y-6" x-data="{ contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()" @click="contextMenu = null">
+    <div class="flex items-center justify-between gap-2 border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <div class="flex gap-2 items-center">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M6 4v10m0 0a2 2 0 1 0 0 4m0-4a2 2 0 1 1 0 4m0 0v2m6-16v2m0 0a2 2 0 1 0 0 4m0-4a2 2 0 1 1 0 4m0 0v10m6-16v10m0 0a2 2 0 1 0 0 4m0-4a2 2 0 1 1 0 4m0 0v2" />
+            </svg>
+
+            <flux:heading size="xl">{{ $navigation->title }}</flux:heading>
         </div>
 
         <div class="flex gap-2">
-            <flux:button wire:click="addRoot">{{ __("Add item") }}</flux:button>
-            <flux:button variant="primary" wire:click="save">{{ __("Save") }}</flux:button>
+            <flux:button size="sm" wire:click="addRoot">{{ __("Add item") }}</flux:button>
+            <flux:button size="sm" variant="primary" wire:click="save">{{ __("Save") }}</flux:button>
         </div>
     </div>
 
-    <section class="mx-auto mt-17 w-full max-w-6xl space-y-4 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-zinc-900">
+    <section class="mx-auto mt-3 w-full space-y-4 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-zinc-900">
         <ul wire:sort="sortRoot" class="space-y-2">
             @forelse ($tree as $i => $item)
                 <li wire:key="item-{{ $item['id'] }}-{{ $i }}" wire:sort:item="{{ $item['id'] }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
