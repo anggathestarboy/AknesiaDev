@@ -1,47 +1,54 @@
 <section class="w-full space-y-6" x-data="{ deleteSiteId: null }">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="lg">{{ __("Sites") }}</flux:heading>
-            <flux:subheading>{{ __("Multi-site configuration.") }}</flux:subheading>
+    <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <div class="flex gap-2 items-center">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15v3c0 .5523.44772 1 1 1h4v-4m-5 0v-4m0 4h5m-5-4V6c0-.55228.44772-1 1-1h16c.5523 0 1 .44772 1 1v1.98935M3 11h5v4m9.4708 4.1718-.8696-1.4388-2.8164-.235-2.573-4.2573 1.4873-2.8362 1.4441 2.3893c.3865.6396 1.2183.8447 1.8579.4582.6396-.3866.8447-1.2184.4582-1.858l-1.444-2.38925h3.1353l2.6101 4.27715-1.0713 2.5847.8695 1.4388" />
+            </svg>
+
+            <flux:heading size="xl">{{ __("Sites Manager") }}</flux:heading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __("Add site") }}</flux:button>
+        <flux:button variant="primary" size="sm" wire:click="create">{{ __("Add site") }}</flux:button>
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Name") }}</flux:table.column>
-            <flux:table.column>{{ __("Handle") }}</flux:table.column>
-            <flux:table.column>{{ __("URL") }}</flux:table.column>
-            <flux:table.column>{{ __("Locale") }}</flux:table.column>
-            <flux:table.column>{{ __("Language") }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
+    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-white rounded-xl px-2">
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>{{ __("Name") }}</flux:table.column>
+                    <flux:table.column>{{ __("Handle") }}</flux:table.column>
+                    <flux:table.column>{{ __("URL") }}</flux:table.column>
+                    <flux:table.column>{{ __("Locale") }}</flux:table.column>
+                    <flux:table.column>{{ __("Language") }}</flux:table.column>
+                    <flux:table.column></flux:table.column>
+                </flux:table.columns>
 
-        <flux:table.rows>
-            @forelse ($this->sites as $index => $site)
-                <flux:table.row wire:key="site-{{ $site->id }}">
-                    <flux:table.cell>{{ $site->name }}</flux:table.cell>
-                    <flux:table.cell>{{ $site->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ $site->url }}</flux:table.cell>
-                    <flux:table.cell>{{ $site->locale }}</flux:table.cell>
-                    <flux:table.cell>{{ $site->lang }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-1">
-                        <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="moveUp({{ $site->id }})" :disabled="$index === 0" />
-                        <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="moveDown({{ $site->id }})" :disabled="$index === $this->sites->count() - 1" />
-                        <flux:button size="sm" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:button>
-                        <flux:modal.trigger name="confirm-delete-site">
-                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteSiteId = {{ $site->id }}">{{ __("Delete") }}</flux:button>
-                        </flux:modal.trigger>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="6">{{ __("No sites yet.") }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+                <flux:table.rows>
+                    @forelse ($this->sites as $index => $site)
+                        <flux:table.row wire:key="site-{{ $site->id }}">
+                            <flux:table.cell>{{ $site->name }}</flux:table.cell>
+                            <flux:table.cell>{{ $site->handle }}</flux:table.cell>
+                            <flux:table.cell>{{ $site->url }}</flux:table.cell>
+                            <flux:table.cell>{{ $site->locale }}</flux:table.cell>
+                            <flux:table.cell>{{ $site->lang }}</flux:table.cell>
+                            <flux:table.cell class="flex justify-end gap-1">
+                                <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="moveUp({{ $site->id }})" :disabled="$index === 0" />
+                                <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="moveDown({{ $site->id }})" :disabled="$index === $this->sites->count() - 1" />
+                                <flux:button size="sm" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:button>
+                                <flux:modal.trigger name="confirm-delete-site">
+                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteSiteId = {{ $site->id }}">{{ __("Delete") }}</flux:button>
+                                </flux:modal.trigger>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="6">{{ __("No sites yet.") }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </div>
 
     <flux:modal name="site-form" class="max-w-2xl" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">

@@ -43,5 +43,31 @@
     <x-layouts::site.header :site="$site" />
     <main class="">{{ $slot }}</main>
     <x-layouts::site.footer :site="$site" />
+
+    @if (request()->route()?->named('collections.preview'))
+        <script>
+            (() => {
+                const url = "{{ request()->url() }}";
+                let version = @js((int) ($cms_preview_version ?? 0));
+                setInterval(() => {
+                    fetch(url + "?version=1", { headers: { accept: "application/json" } })
+                        .then((r) => (r.ok ? r.json() : null))
+                        .then((p) => {
+                            if (!p || p.version === version) return;
+                            version = p.version;
+                            fetch(url, { headers: { accept: "text/html" } })
+                                .then((r) => r.text())
+                                .then((html) => {
+                                    const main = new DOMParser().parseFromString(html, "text/html").querySelector("main");
+                                    const target = document.querySelector("main");
+                                    if (main && target) target.innerHTML = main.innerHTML;
+                                })
+                                .catch(() => {});
+                        })
+                        .catch(() => {});
+                }, 2000);
+            })();
+        </script>
+    @endif
 </body>
 </html>

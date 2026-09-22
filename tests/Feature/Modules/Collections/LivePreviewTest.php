@@ -99,23 +99,38 @@ test('the preview route 404s for an unknown token', function () {
     $this->get(route('collections.preview', ['token' => 'does-not-exist']))->assertNotFound();
 });
 
-test('the live preview panel shows a desktop/tablet/mobile switcher and pixel sizes', function () {
+test('the live preview opens in a new browser tab', function () {
     $this->actingAs(User::factory()->create());
     $collection = makeLivePreviewCollection(livePreview: true);
 
-    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
-        ->assertSeeHtml("device = 'desktop'")
-        ->assertSeeHtml("device = 'tablet'")
-        ->assertSeeHtml("device = 'mobile'")
-        ->assertSee('1280, 800', escape: false)
-        ->assertSee('768, 1024', escape: false)
-        ->assertSee('375, 667', escape: false);
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia']);
+
+    $component->assertSee('Live Preview')
+        ->assertSeeHtml('target="_blank"')
+        ->assertSee($component->instance()->previewUrl, escape: false);
 });
 
-test('the live preview panel is not shown when live preview is off', function () {
+test('the preview route reports the cached version for live reload polling', function () {
+    $this->actingAs(User::factory()->create());
+    $collection = makeLivePreviewCollection(livePreview: true);
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia']);
+    $token = $component->instance()->previewToken;
+
+    $this->get(route('collections.preview', ['token' => $token, 'version' => 1]))
+        ->assertOk()
+        ->assertExactJson(['version' => 1]);
+
+    $component->set('title', 'Edited title');
+
+    $this->get(route('collections.preview', ['token' => $token, 'version' => 1]))
+        ->assertExactJson(['version' => 2]);
+});
+
+test('the live preview button is not shown when live preview is off', function () {
     $this->actingAs(User::factory()->create());
     $collection = makeLivePreviewCollection(livePreview: false);
 
     Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
-        ->assertDontSeeHtml("device = 'desktop'");
+        ->assertDontSee('Live Preview');
 });

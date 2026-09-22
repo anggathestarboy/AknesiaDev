@@ -1,58 +1,65 @@
 <section class="w-full space-y-6" x-data="{ deleteNavigationId: null }">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="lg">{{ __("Navigation") }}</flux:heading>
-            <flux:subheading>{{ __("Menus shown around the site.") }}</flux:subheading>
+    <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <div class="flex gap-2 items-center">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 6.5h2M11 18h2m-7-5v-2m12 2v-2M5 8h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1Zm0 12h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1Zm12 0h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1Zm0-12h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1Z" />
+            </svg>
+
+            <flux:heading size="xl">{{ __("Navigation") }}</flux:heading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __("Add navigation") }}</flux:button>
+        <flux:button variant="primary" size="sm" wire:click="create">{{ __("Add navigation") }}</flux:button>
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Title") }}</flux:table.column>
-            <flux:table.column>{{ __("Handle") }}</flux:table.column>
-            <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
+    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-white rounded-xl px-2">
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>{{ __("Title") }}</flux:table.column>
+                    <flux:table.column>{{ __("Handle") }}</flux:table.column>
+                    <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
+                    <flux:table.column></flux:table.column>
+                </flux:table.columns>
 
-        <flux:table.rows>
-            @forelse ($this->navigations as $navigation)
-                <flux:table.row wire:key="navigation-{{ $navigation->id }}">
-                    <flux:table.cell>{{ $navigation->title }}</flux:table.cell>
-                    <flux:table.cell>{{ $navigation->handle }}</flux:table.cell>
-                    <flux:table.cell>{{ $navigation->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-1">
-                        @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0)
-                            <flux:button size="sm" variant="primary" disabled tooltip="{{ __('Add fields to this navigation\'s blueprint first.') }}">{{ __("Edit content") }}</flux:button>
-                        @else
-                            <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __("Edit tree") : __("Edit content") }}</flux:button>
-                        @endif
-                        @if ($this->isProtected($navigation))
-                            <flux:button size="sm" disabled tooltip="{{ __('This navigation is protected and cannot be edited.') }}">{{ __("Edit") }}</flux:button>
-                        @else
-                            <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __("Edit") }}</flux:button>
-                        @endif
-                        @if ($this->isProtected($navigation))
-                            <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __("Delete") }}</flux:button>
-                        @else
-                            <flux:modal.trigger name="confirm-delete-navigation">
-                                <flux:button size="sm" variant="danger" type="button" x-on:click="deleteNavigationId = {{ $navigation->id }}">{{ __("Delete") }}</flux:button>
-                            </flux:modal.trigger>
-                        @endif
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="4">
-                        {{ __("No navigations yet. Run") }}
-                        <code class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"> php artisan admin:sidebar </code>
-                        {{ __("to create the default admin navigation.") }}
-                    </flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+                <flux:table.rows>
+                    @forelse ($this->navigations as $navigation)
+                        <flux:table.row wire:key="navigation-{{ $navigation->id }}">
+                            <flux:table.cell>{{ $navigation->title }}</flux:table.cell>
+                            <flux:table.cell>{{ $navigation->handle }}</flux:table.cell>
+                            <flux:table.cell>{{ $navigation->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
+                            <flux:table.cell class="flex justify-end gap-1">
+                                @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0)
+                                    <flux:button size="sm" variant="primary" disabled tooltip="{{ __('Add fields to this navigation\'s blueprint first.') }}">{{ __("Edit content") }}</flux:button>
+                                @else
+                                    <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __("Edit tree") : __("Edit content") }}</flux:button>
+                                @endif
+                                @if ($this->isProtected($navigation))
+                                    <flux:button size="sm" disabled tooltip="{{ __('This navigation is protected and cannot be edited.') }}">{{ __("Edit") }}</flux:button>
+                                @else
+                                    <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __("Edit") }}</flux:button>
+                                @endif
+                                @if ($this->isProtected($navigation))
+                                    <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __("Delete") }}</flux:button>
+                                @else
+                                    <flux:modal.trigger name="confirm-delete-navigation">
+                                        <flux:button size="sm" variant="danger" type="button" x-on:click="deleteNavigationId = {{ $navigation->id }}">{{ __("Delete") }}</flux:button>
+                                    </flux:modal.trigger>
+                                @endif
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="4">
+                                {{ __("No navigations yet. Run") }}
+                                <code class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"> php artisan admin:sidebar </code>
+                                {{ __("to create the default admin navigation.") }}
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </div>
 
     <flux:modal name="navigation-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">

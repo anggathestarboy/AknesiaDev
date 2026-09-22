@@ -1,51 +1,58 @@
 <section class="w-full space-y-6" x-data="{ deleteGroupId: null }">
-    <div class="flex items-start justify-between">
-        <div>
-            <flux:heading size="lg">{{ __("User Groups") }}</flux:heading>
-            <flux:subheading>{{ __("Group users together and grant them roles all at once.") }}</flux:subheading>
+    <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
+        <div class="flex gap-2 items-center">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M4.5 17H4a1 1 0 0 1-1-1 3 3 0 0 1 3-3h1m0-3.05A2.5 2.5 0 1 1 9 5.5M19.5 17h.5a1 1 0 0 0 1-1 3 3 0 0 0-3-3h-1m0-3.05a2.5 2.5 0 1 0-2-4.45m.5 13.5h-7a1 1 0 0 1-1-1 3 3 0 0 1 3-3h3a3 3 0 0 1 3 3 1 1 0 0 1-1 1Zm-1-9.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z" />
+            </svg>
+
+            <flux:heading size="xl">{{ __("User Groups") }}</flux:heading>
         </div>
 
-        <flux:button variant="primary" wire:click="create">{{ __("Add group") }}</flux:button>
+        <flux:button variant="primary" size="sm" wire:click="create">{{ __("Add group") }}</flux:button>
     </div>
 
-    <flux:table>
-        <flux:table.columns>
-            <flux:table.column>{{ __("Title") }}</flux:table.column>
-            <flux:table.column>{{ __("Handle") }}</flux:table.column>
-            <flux:table.column>{{ __("Roles") }}</flux:table.column>
-            <flux:table.column>{{ __("Users") }}</flux:table.column>
-            <flux:table.column class="w-32"></flux:table.column>
-        </flux:table.columns>
+    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-white rounded-xl px-2">
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>{{ __("Title") }}</flux:table.column>
+                    <flux:table.column>{{ __("Handle") }}</flux:table.column>
+                    <flux:table.column>{{ __("Roles") }}</flux:table.column>
+                    <flux:table.column>{{ __("Users") }}</flux:table.column>
+                    <flux:table.column class="w-32"></flux:table.column>
+                </flux:table.columns>
 
-        <flux:table.rows>
-            @forelse ($this->groups as $group)
-                <flux:table.row wire:key="group-{{ $group->id }}">
-                    <flux:table.cell>{{ $group->title }}</flux:table.cell>
-                    <flux:table.cell>{{ $group->handle }}</flux:table.cell>
-                    <flux:table.cell>
-                        <div class="flex flex-wrap gap-1">
-                            @forelse ($group->roles as $role)
-                                <flux:badge size="sm">{{ $role->title }}</flux:badge>
-                            @empty
-                                <span class="text-zinc-400">—</span>
-                            @endforelse
-                        </div>
-                    </flux:table.cell>
-                    <flux:table.cell>{{ $group->users_count }}</flux:table.cell>
-                    <flux:table.cell class="flex justify-end gap-2 w-32">
-                        <flux:button size="sm" wire:click="edit({{ $group->id }})">{{ __("Edit") }}</flux:button>
-                        <flux:modal.trigger name="confirm-delete-group">
-                            <flux:button size="sm" variant="danger" type="button" x-on:click="deleteGroupId = {{ $group->id }}">{{ __("Delete") }}</flux:button>
-                        </flux:modal.trigger>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="5">{{ __("No user groups yet.") }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+                <flux:table.rows>
+                    @forelse ($this->groups as $group)
+                        <flux:table.row wire:key="group-{{ $group->id }}">
+                            <flux:table.cell>{{ $group->title }}</flux:table.cell>
+                            <flux:table.cell>{{ $group->handle }}</flux:table.cell>
+                            <flux:table.cell>
+                                <div class="flex flex-wrap gap-1">
+                                    @forelse ($group->roles as $role)
+                                        <flux:badge size="sm">{{ $role->title }}</flux:badge>
+                                    @empty
+                                        <span class="text-zinc-400">—</span>
+                                    @endforelse
+                                </div>
+                            </flux:table.cell>
+                            <flux:table.cell>{{ $group->users_count }}</flux:table.cell>
+                            <flux:table.cell class="flex justify-end gap-2 w-32">
+                                <flux:button size="sm" wire:click="edit({{ $group->id }})">{{ __("Edit") }}</flux:button>
+                                <flux:modal.trigger name="confirm-delete-group">
+                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteGroupId = {{ $group->id }}">{{ __("Delete") }}</flux:button>
+                                </flux:modal.trigger>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="5">{{ __("No user groups yet.") }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
+        </div>
+    </div>
 
     <flux:modal name="user-group-form" class="max-w-lg" :show="$errors->isNotEmpty()">
         <form wire:submit="save" class="space-y-6">
