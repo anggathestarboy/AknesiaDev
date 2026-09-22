@@ -452,6 +452,23 @@ test('replicator rows in the global set form are enabled by default, can be togg
     ]]);
 });
 
+test('a required replicator with no rows shows a validation error on save', function () {
+    $this->actingAs(User::factory()->create());
+
+    Blueprint::create(['namespace' => null, 'handle' => 'site_settings', 'data' => ['fields' => [
+        ['handle' => 'faqs', 'display' => 'FAQs', 'type' => 'replicator', 'required' => true, 'placeholder' => null, 'instructions' => null, 'replicator_fields' => [
+            ['handle' => 'question', 'display' => 'Question', 'type' => 'text', 'required' => false, 'placeholder' => null, 'default' => null, 'instructions' => null],
+        ]],
+    ]]]);
+
+    $globalSet = GlobalSet::create(['title' => 'Site Settings', 'handle' => 'site_settings', 'settings' => ['blueprint' => 'site_settings']]);
+
+    Livewire::test(GlobalSetForm::class, ['globalSet' => $globalSet])
+        ->call('save')
+        ->assertHasErrors(['data.faqs'])
+        ->assertSee('The FAQs field is required.');
+});
+
 test('creating a global set requires the configure globals permission', function () {
     $user = User::factory()->create();
     $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
