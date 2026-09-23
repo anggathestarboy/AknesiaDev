@@ -147,7 +147,7 @@
             @endforeach
         </div>
 
-        <div class="w-full lg:w-[40%] xl:w-[30%] space-y-6 border border-zinc-200 p-4 rounded-xl h-max">
+        <div class="w-full lg:w-[40%] xl:w-[30%] space-y-6 border border-zinc-200 p-4 rounded-xl h-max dark:border-zinc-600">
             <div class="flex justify-end gap-2 dark:border-zinc-700 mb-6">
                 <flux:button variant="primary" class="w-full" type="submit">{{ __("Save") }}</flux:button>
                 <flux:button :href="route('globals.index')" wire:navigate variant="filled">{{ __("Cancel") }}</flux:button>

@@ -28,8 +28,8 @@
     $fieldTabSections = collect($tabs ?? [])->firstWhere("handle", $field["tab"])["sections"] ?? [];
 @endphp
 
-<div wire:key="field-{{ implode('-', $path) }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 px-1.5 py-1 dark:border-zinc-700 bg-gray-100" x-data="{ collapsed: @js($fieldsCollapsedByDefault ?? false) }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
-    <div class="flex items-center justify-between bg-gray-100 rounded-lg w-full">
+<div wire:key="field-{{ implode('-', $path) }}" wire:sort:item="{{ $field['_uid'] }}" class="rounded-lg border border-gray-200 dark:bg-zinc-800 px-1.5 py-1 dark:border-zinc-600 bg-gray-100" x-data="{ collapsed: @js($fieldsCollapsedByDefault ?? false) }" x-on:collapse-all-fields.window="collapsed = true" x-on:expand-all-fields.window="collapsed = false">
+    <div class="flex items-center justify-between bg-gray-100 dark:bg-zinc-800 rounded-lg w-full">
         <span wire:sort:handle class="flex h-full cursor-grab items-center px-1 text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-300" title="{{ __('Drag to reorder') }}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
                 <circle cx="5" cy="3" r="1.3" />
@@ -307,7 +307,7 @@
                 <flux:input wire:model="{{ $prefix }}.instructions" :label="__('Instructions')" placeholder="{{ __('Help text shown to editors') }}" size="sm" />
             </div>
 
-            <div class="mt-3 flex gap-3 items-center rounded-md bg-gray-100 border border-gray-300 p-2 dark:bg-zinc-800/50">
+            <div class="mt-3 flex gap-3 items-center rounded-md bg-gray-100 border border-gray-300 p-2 dark:bg-zinc-800/50 dark:border-zinc-600">
                 <flux:select wire:model.live="{{ $prefix }}.condition_mode" :label="__('Condition')" size="sm">
                     <flux:select.option value="always">{{ __("Always show") }}</flux:select.option>
                     <flux:select.option value="show">{{ __("Show when") }}</flux:select.option>

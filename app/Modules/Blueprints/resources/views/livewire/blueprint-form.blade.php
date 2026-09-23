@@ -36,7 +36,7 @@
         </div>
 
         <div class="space-y-3">
-            <div class="flex items-center justify-between bg-white z-999 sticky top-0 p-2 border rounded-b-xl">
+            <div class="flex items-center justify-between bg-white z-999 sticky top-0 p-2 border rounded-b-xl dark:bg-zinc-900 dark:border-zinc-700">
                 <flux:switch wire:model.live="fieldsCollapsedByDefault" size="sm" :label="__('Collapse fields by default')" />
                 <div class="flex gap-2">
                     <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('collapse-all-fields')">{{ __("Collapse all") }}</flux:button>
@@ -54,8 +54,8 @@
                     $ungroupedFieldIndexes = collect($fields)->keys()->filter(fn($i) => ($fields[$i]["tab"] ?? "main") === $tab["handle"] && ($fields[$i]["section"] ?? "") === "")->values();
                 @endphp
 
-                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200">
-                    <div class="bg-white p-3 rounded-xl">
+                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200 dark:bg-zinc-950">
+                    <div class="bg-white p-3 rounded-xl dark:bg-zinc-800">
                         @if ($tabIndex !== 0 && $editingTabIndex === $tabIndex)
                             <div class="flex items-center gap-3 mb-3">
                                 <flux:input wire:model="tabs.{{ $tabIndex }}.display" placeholder="{{ __('Label') }}" size="sm" class="w-28" x-ref="tabLabelInput" />
@@ -238,8 +238,8 @@
             @endforeach
 
             @if ($this->schemaTabVisible)
-                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200">
-                    <div class="bg-white p-3 rounded-xl">
+                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200 dark:bg-zinc-950">
+                    <div class="bg-white p-3 rounded-xl dark:bg-zinc-800">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-1">
                                 <span class="text-[10px] bg-indigo-300 py-0.5 px-2 rounded-2xl inline-flex items-center gap-0.5"><flux:icon.code-bracket class="size-3" /> {{ __("Code-managed") }}</span>
@@ -252,8 +252,8 @@
             @endif
 
             @if ($this->seoTabVisible)
-                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200">
-                    <div class="bg-white p-3 rounded-xl">
+                <div class="space-y-3 rounded-xl border border-gray-200 p-2 dark:border-gray-700 bg-gray-200 dark:bg-zinc-950">
+                    <div class="bg-white p-3 rounded-xl dark:bg-zinc-800">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-1">
                                 <span class="text-[10px] bg-indigo-300 py-0.5 px-2 rounded-2xl inline-flex items-center gap-0.5"><flux:icon.code-bracket class="size-3" /> {{ __("Code-managed") }}</span>

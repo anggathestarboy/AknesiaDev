@@ -32,9 +32,9 @@
         @foreach ($categories as $categoryKey => $categoryLabel)
             @php $group = $this->blueprintGroups->get($categoryKey, collect()); @endphp
             @if ($group->isNotEmpty())
-                <div class="bg-gray-200/80 px-2 py-2 rounded-2xl">
+                <div class="bg-gray-200/80 px-2 py-2 rounded-2xl dark:bg-zinc-950">
                     <flux:heading size="md" class="pt-1 px-2 pb-2">{{ $categoryLabel }}</flux:heading>
-                    <div class="space-y-3 bg-white px-3 py-1 rounded-xl">
+                    <div class="space-y-3 bg-white dark:bg-zinc-800 px-3 py-1 rounded-xl">
                         <flux:table>
                             <flux:table.columns>
                                 <flux:table.column :border="true" class="">{{ __("Namespace") }}</flux:table.column>
