@@ -1,4 +1,4 @@
-<section class="w-full" x-data="{ deleteUserId: null }">
+<section class="w-full" x-data="{ deleteUserId: null, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@
 
                 <flux:table.rows>
                     @forelse ($this->users as $user)
-                        <flux:table.row wire:key="user-{{ $user->id }}">
+                        <flux:table.row wire:key="user-{{ $user->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'user-{{ $user->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
                             <flux:table.cell>
                                 @if ($user->id === auth()->id())
                                     <input type="checkbox" disabled title="{{ __("You can't select your own account.") }}" class="rounded border-zinc-300 dark:border-zinc-600" />
@@ -84,20 +84,41 @@
                                     @endforelse
                                 </div>
                             </flux:table.cell>
-                            <flux:table.cell class="flex justify-end gap-2 w-full">
-                                <flux:button size="sm" :href="route('users.edit', ['user' => $user->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-                                @if ($user->id !== auth()->id())
-                                    @if (auth()->user()->hasPermission("ban users"))
-                                        @if ($user->isBanned())
-                                            <flux:button size="sm" wire:click="unban('{{ $user->id }}')">{{ __("Unban") }}</flux:button>
-                                        @else
-                                            <flux:button size="sm" wire:click="ban('{{ $user->id }}')">{{ __("Ban") }}</flux:button>
+                            <flux:table.cell class="flex justify-end w-full">
+                                <flux:dropdown>
+                                    <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                    <flux:menu>
+                                        <flux:menu.item icon="pencil" :href="route('users.edit', ['user' => $user->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                        @if ($user->id !== auth()->id())
+                                            @if (auth()->user()->hasPermission("ban users"))
+                                                @if ($user->isBanned())
+                                                    <flux:menu.item icon="arrow-path" wire:click="unban('{{ $user->id }}')">{{ __("Unban") }}</flux:menu.item>
+                                                @else
+                                                    <flux:menu.item icon="hand-raised" wire:click="ban('{{ $user->id }}')">{{ __("Ban") }}</flux:menu.item>
+                                                @endif
+                                            @endif
+                                            <flux:modal.trigger name="confirm-delete-user">
+                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteUserId = '{{ $user->id }}'">{{ __("Delete") }}</flux:menu.item>
+                                            </flux:modal.trigger>
                                         @endif
+                                    </flux:menu>
+                                </flux:dropdown>
+
+                                <div x-show="contextMenu === 'user-{{ $user->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                    <a href="{{ route('users.edit', ['user' => $user->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                                    @if ($user->id !== auth()->id())
+                                        @if (auth()->user()->hasPermission("ban users"))
+                                            @if ($user->isBanned())
+                                                <button type="button" wire:click.stop="unban('{{ $user->id }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Unban") }}</button>
+                                            @else
+                                                <button type="button" wire:click.stop="ban('{{ $user->id }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Ban") }}</button>
+                                            @endif
+                                        @endif
+                                        <flux:modal.trigger name="confirm-delete-user">
+                                            <button type="button" x-on:click="deleteUserId = '{{ $user->id }}'; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                        </flux:modal.trigger>
                                     @endif
-                                    <flux:modal.trigger name="confirm-delete-user">
-                                        <flux:button size="sm" variant="danger" type="button" x-on:click="deleteUserId = '{{ $user->id }}'">{{ __("Delete") }}</flux:button>
-                                    </flux:modal.trigger>
-                                @endif
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

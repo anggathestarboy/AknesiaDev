@@ -136,7 +136,15 @@ class SiteManager extends Component
     {
         auth()->user()->authorizePermission('configure sites');
 
-        Site::findOrFail($id)->delete();
+        $site = Site::findOrFail($id);
+
+        if ($site->id === Site::orderBy('order')->first()?->id) {
+            Flux::toast(variant: 'danger', text: __('The origin site cannot be deleted.'));
+
+            return;
+        }
+
+        $site->delete();
 
         Flux::toast(variant: 'success', text: __('Site deleted.'));
 

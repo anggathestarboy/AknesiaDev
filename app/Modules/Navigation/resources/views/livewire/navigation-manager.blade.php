@@ -1,4 +1,4 @@
-<section class="w-full space-y-6" x-data="{ deleteNavigationId: null }">
+<section class="w-full space-y-6" x-data="{ deleteNavigationId: null, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -23,8 +23,10 @@
 
                 <flux:table.rows>
                     @forelse ($this->navigations as $navigation)
-                        <flux:table.row wire:key="navigation-{{ $navigation->id }}">
-                            <flux:table.cell>{{ $navigation->title }}</flux:table.cell>
+                        <flux:table.row wire:key="navigation-{{ $navigation->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'navigation-{{ $navigation->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                            <flux:table.cell>
+                                <a @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0) @else class="hover:text-orange-700" href="{{route('navigation.edit', $navigation->handle)}}" wire:navigate @endif>{{ $navigation->title }} </a>
+                            </flux:table.cell>
                             <flux:table.cell>{{ $navigation->handle }}</flux:table.cell>
                             <flux:table.cell>{{ $navigation->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
                             <flux:table.cell class="flex justify-end gap-1">
@@ -33,18 +35,39 @@
                                 @else
                                     <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __("Edit tree") : __("Edit content") }}</flux:button>
                                 @endif
-                                @if ($this->isProtected($navigation))
-                                    <flux:button size="sm" disabled tooltip="{{ __('This navigation is protected and cannot be edited.') }}">{{ __("Edit") }}</flux:button>
-                                @else
-                                    <flux:button size="sm" wire:click="edit({{ $navigation->id }})">{{ __("Edit") }}</flux:button>
-                                @endif
-                                @if ($this->isProtected($navigation))
-                                    <flux:button size="sm" variant="danger" disabled tooltip="{{ __('This navigation is protected and cannot be deleted.') }}">{{ __("Delete") }}</flux:button>
-                                @else
-                                    <flux:modal.trigger name="confirm-delete-navigation">
-                                        <flux:button size="sm" variant="danger" type="button" x-on:click="deleteNavigationId = {{ $navigation->id }}">{{ __("Delete") }}</flux:button>
-                                    </flux:modal.trigger>
-                                @endif
+
+                                <flux:dropdown>
+                                    <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                    <flux:menu>
+                                        @if ($this->isProtected($navigation))
+                                            <flux:menu.item icon="pencil" disabled>{{ __("Edit") }}</flux:menu.item>
+                                        @else
+                                            <flux:menu.item icon="pencil" wire:click="edit({{ $navigation->id }})">{{ __("Edit") }}</flux:menu.item>
+                                        @endif
+                                        @if ($this->isProtected($navigation))
+                                            <flux:menu.item icon="trash" variant="danger" disabled>{{ __("Delete") }}</flux:menu.item>
+                                        @else
+                                            <flux:modal.trigger name="confirm-delete-navigation">
+                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteNavigationId = {{ $navigation->id }}">{{ __("Delete") }}</flux:menu.item>
+                                            </flux:modal.trigger>
+                                        @endif
+                                    </flux:menu>
+                                </flux:dropdown>
+
+                                <div x-show="contextMenu === 'navigation-{{ $navigation->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                    @if ($this->isProtected($navigation))
+                                        <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm opacity-50">{{ __("Edit") }}</button>
+                                    @else
+                                        <button type="button" wire:click.stop="edit({{ $navigation->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</button>
+                                    @endif
+                                    @if ($this->isProtected($navigation))
+                                        <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm text-red-600 opacity-50">{{ __("Delete") }}</button>
+                                    @else
+                                        <flux:modal.trigger name="confirm-delete-navigation">
+                                            <button type="button" x-on:click="deleteNavigationId = {{ $navigation->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                        </flux:modal.trigger>
+                                    @endif
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

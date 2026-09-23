@@ -1,4 +1,4 @@
-<section class="w-full space-y-6" x-data="{ deleteFieldsetId: null }">
+<section class="w-full space-y-6" x-data="{ deleteFieldsetId: null, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -22,14 +22,26 @@
 
                 <flux:table.rows>
                     @forelse ($this->fieldsets as $fieldset)
-                        <flux:table.row wire:key="fieldset-{{ $fieldset->id }}">
+                        <flux:table.row wire:key="fieldset-{{ $fieldset->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'fieldset-{{ $fieldset->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
                             <flux:table.cell>{{ $fieldset->handle }}</flux:table.cell>
                             <flux:table.cell>{{ count($fieldset->data["fields"] ?? []) }}</flux:table.cell>
                             <flux:table.cell class="flex justify-end gap-2">
-                                <flux:button size="sm" :href="route('blueprints.fieldsets.edit', $fieldset)" wire:navigate>{{ __("Edit") }}</flux:button>
-                                <flux:modal.trigger name="confirm-delete-fieldset">
-                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteFieldsetId = {{ $fieldset->id }}">{{ __("Delete") }}</flux:button>
-                                </flux:modal.trigger>
+                                <flux:dropdown>
+                                    <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                    <flux:menu>
+                                        <flux:menu.item icon="pencil" :href="route('blueprints.fieldsets.edit', $fieldset)" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                        <flux:modal.trigger name="confirm-delete-fieldset">
+                                            <flux:menu.item icon="trash" variant="danger" x-on:click="deleteFieldsetId = {{ $fieldset->id }}">{{ __("Delete") }}</flux:menu.item>
+                                        </flux:modal.trigger>
+                                    </flux:menu>
+                                </flux:dropdown>
+
+                                <div x-show="contextMenu === 'fieldset-{{ $fieldset->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                    <a href="{{ route('blueprints.fieldsets.edit', $fieldset) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                                    <flux:modal.trigger name="confirm-delete-fieldset">
+                                        <button type="button" x-on:click="deleteFieldsetId = {{ $fieldset->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                    </flux:modal.trigger>
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

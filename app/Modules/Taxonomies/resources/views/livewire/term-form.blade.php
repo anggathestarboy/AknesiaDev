@@ -77,12 +77,12 @@
             @foreach ($tabSections as $section)
                 @php $sectionFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === $section["handle"]); @endphp
                 @if ($sectionFields->isNotEmpty())
-                    <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80">
+                    <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80 dark:bg-zinc-950">
                         <div class="font-semibold text-black px-2">
                             <flux:subheading>{{ $section["display"] }}</flux:subheading>
                         </div>
 
-                        <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
+                        <div class="space-y-6 bg-white dark:bg-zinc-800 p-3 rounded-lg mt-3">
                             @foreach ($sectionFields as $field)
                                 @if ($this->fieldIsVisible($field, $data))
                                     <div>
@@ -134,7 +134,7 @@
             </div>
 
             @if (count($this->siteLinks) > 1)
-                <div class="border border-gray-300 p-2 rounded-xl">
+                <div class="border border-gray-300 p-2 rounded-xl dark:border-zinc-500">
                     <div class="grid gap-1">
                         @foreach ($this->siteLinks as $siteLink)
                             @if ($siteLink["active"])

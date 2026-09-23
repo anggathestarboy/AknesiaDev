@@ -1,4 +1,4 @@
-<section class="w-full space-y-6" x-data="{ deleteSiteId: null }">
+<section class="w-full space-y-6" x-data="{ deleteSiteId: null, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -25,8 +25,15 @@
 
                 <flux:table.rows>
                     @forelse ($this->sites as $index => $site)
-                        <flux:table.row wire:key="site-{{ $site->id }}">
-                            <flux:table.cell>{{ $site->name }}</flux:table.cell>
+                        <flux:table.row wire:key="site-{{ $site->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'site-{{ $site->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                            <flux:table.cell>
+                                <div class="flex items-center gap-2">
+                                    <span>{{ $site->name }}</span>
+                                    @if ($index === 0)
+                                        <flux:badge size="sm" color="orange">{{ __("Origin") }}</flux:badge>
+                                    @endif
+                                </div>
+                            </flux:table.cell>
                             <flux:table.cell>{{ $site->handle }}</flux:table.cell>
                             <flux:table.cell>{{ $site->url }}</flux:table.cell>
                             <flux:table.cell>{{ $site->locale }}</flux:table.cell>
@@ -34,10 +41,31 @@
                             <flux:table.cell class="flex justify-end gap-1">
                                 <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="moveUp({{ $site->id }})" :disabled="$index === 0" />
                                 <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="moveDown({{ $site->id }})" :disabled="$index === $this->sites->count() - 1" />
-                                <flux:button size="sm" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:button>
-                                <flux:modal.trigger name="confirm-delete-site">
-                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteSiteId = {{ $site->id }}">{{ __("Delete") }}</flux:button>
-                                </flux:modal.trigger>
+
+                                <flux:dropdown>
+                                    <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                    <flux:menu>
+                                        <flux:menu.item icon="cog-6-tooth" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:menu.item>
+                                        @if ($index === 0)
+                                            <flux:menu.item icon="trash" variant="danger" disabled>{{ __("Delete") }}</flux:menu.item>
+                                        @else
+                                            <flux:modal.trigger name="confirm-delete-site">
+                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteSiteId = {{ $site->id }}">{{ __("Delete") }}</flux:menu.item>
+                                            </flux:modal.trigger>
+                                        @endif
+                                    </flux:menu>
+                                </flux:dropdown>
+
+                                <div x-show="contextMenu === 'site-{{ $site->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                    <button type="button" wire:click.stop="edit({{ $site->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Settings") }}</button>
+                                    @if ($index === 0)
+                                        <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm text-red-600 opacity-50">{{ __("Delete") }}</button>
+                                    @else
+                                        <flux:modal.trigger name="confirm-delete-site">
+                                            <button type="button" x-on:click="deleteSiteId = {{ $site->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                        </flux:modal.trigger>
+                                    @endif
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

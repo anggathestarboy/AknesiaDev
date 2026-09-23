@@ -93,11 +93,23 @@ test('site can be updated and attributes round-trip through edit', function () {
 test('site can be deleted', function () {
     $this->actingAs(User::factory()->create());
 
-    $site = Site::create(['name' => 'English', 'handle' => 'english', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+    Site::create(['name' => 'English', 'handle' => 'english', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+    $site = Site::create(['name' => 'German', 'handle' => 'german', 'url' => 'https://example.de', 'locale' => 'de_DE', 'lang' => 'de', 'attributes' => [], 'order' => 2]);
 
     Livewire::test(SiteManager::class)->call('delete', $site->id);
 
     expect(Site::find($site->id))->toBeNull();
+});
+
+test('origin site cannot be deleted', function () {
+    $this->actingAs(User::factory()->create());
+
+    $origin = Site::create(['name' => 'English', 'handle' => 'english', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+    Site::create(['name' => 'German', 'handle' => 'german', 'url' => 'https://example.de', 'locale' => 'de_DE', 'lang' => 'de', 'attributes' => [], 'order' => 2]);
+
+    Livewire::test(SiteManager::class)->call('delete', $origin->id);
+
+    expect(Site::find($origin->id))->not->toBeNull();
 });
 
 test('sites can be reordered', function () {

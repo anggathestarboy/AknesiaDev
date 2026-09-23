@@ -61,12 +61,12 @@
         @foreach ($tabSections as $section)
             @php $sectionFields = $tabFields->filter(fn($field) => ($field["section"] ?? "") === $section["handle"]); @endphp
             @if ($sectionFields->isNotEmpty())
-                <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80">
+                <div class="px-2 py-2.5 rounded-2xl bg-gray-200/80 dark:bg-zinc-950">
                     <div class="font-semibold text-black px-2">
                         <flux:subheading>{{ $section["display"] }}</flux:subheading>
                     </div>
 
-                    <div class="space-y-6 bg-white p-3 rounded-lg mt-3">
+                    <div class="space-y-6 bg-white dark:bg-zinc-800 p-3 rounded-lg mt-3">
                         @foreach ($sectionFields as $field)
                             @if ($this->fieldIsVisible($field, $data))
                                 <div>

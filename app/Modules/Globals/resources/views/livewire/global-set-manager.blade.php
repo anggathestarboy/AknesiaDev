@@ -1,4 +1,4 @@
-<section class="w-full space-y-6" x-data="{ deleteGlobalSetId: null }">
+<section class="w-full space-y-6" x-data="{ deleteGlobalSetId: null, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -17,21 +17,36 @@
                 <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
                     <flux:table.column>{{ __("Title") }}</flux:table.column>
                     <flux:table.column>{{ __("Handle") }}</flux:table.column>
-                    <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
+                    {{-- <flux:table.column>{{ __("Blueprint") }}</flux:table.column> --}}
                     <flux:table.column></flux:table.column>
                 </flux:table.columns>
                 <flux:table.rows>
                     @forelse ($this->globalSets as $globalSet)
-                        <flux:table.row wire:key="global-set-{{ $globalSet->id }}">
-                            <flux:table.cell>{{ $globalSet->title }}</flux:table.cell>
+                        <flux:table.row wire:key="global-set-{{ $globalSet->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'global-set-{{ $globalSet->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                            <flux:table.cell>
+                                <a href="{{ route('globals.edit', $globalSet->handle) }}" class="hover:text-orange-700" wire:navigate>{{ $globalSet->title }}</a>
+                            </flux:table.cell>
                             <flux:table.cell>{{ $globalSet->handle }}</flux:table.cell>
-                            <flux:table.cell>{{ $globalSet->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
+                            {{-- <flux:table.cell>{{ $globalSet->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell> --}}
                             <flux:table.cell class="flex justify-end gap-2">
-                                <flux:button size="sm" :href="route('globals.edit', $globalSet->handle)" wire:navigate>{{ __("Edit values") }}</flux:button>
-                                <flux:button size="sm" wire:click="edit({{ $globalSet->id }})">{{ __("Settings") }}</flux:button>
-                                <flux:modal.trigger name="confirm-delete-global-set">
-                                    <flux:button size="sm" variant="danger" type="button" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}">{{ __("Delete") }}</flux:button>
-                                </flux:modal.trigger>
+                                <flux:dropdown>
+                                    <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                    <flux:menu>
+                                        <flux:menu.item icon="pencil" :href="route('globals.edit', $globalSet->handle)" wire:navigate>{{ __("Edit values") }}</flux:menu.item>
+                                        <flux:menu.item icon="cog-6-tooth" wire:click="edit({{ $globalSet->id }})">{{ __("Settings") }}</flux:menu.item>
+                                        <flux:modal.trigger name="confirm-delete-global-set">
+                                            <flux:menu.item icon="trash" variant="danger" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}">{{ __("Delete") }}</flux:menu.item>
+                                        </flux:modal.trigger>
+                                    </flux:menu>
+                                </flux:dropdown>
+
+                                <div x-show="contextMenu === 'global-set-{{ $globalSet->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                    <a href="{{ route('globals.edit', $globalSet->handle) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit values") }}</a>
+                                    <button type="button" wire:click.stop="edit({{ $globalSet->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Settings") }}</button>
+                                    <flux:modal.trigger name="confirm-delete-global-set">
+                                        <button type="button" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                    </flux:modal.trigger>
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

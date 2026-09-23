@@ -1,4 +1,4 @@
-<section class="w-full" x-data="{ deleteEntryId: null, deleteSiblingCount: 0, deleteAllLocales: true }">
+<section class="w-full" x-data="{ deleteEntryId: null, deleteSiblingCount: 0, deleteAllLocales: true, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
     <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
         <div class="flex gap-2 items-center">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -102,15 +102,15 @@
                         <flux:table.column class="w-25">{{ __("Site") }}</flux:table.column>
                         <flux:table.column>{{ __("Title") }}</flux:table.column>
                         <flux:table.column>{{ __("Slug") }}</flux:table.column>
-                        <flux:table.column>{{ __("Blueprint") }}</flux:table.column>
+                        {{-- <flux:table.column>{{ __("Blueprint") }}</flux:table.column> --}}
                         <flux:table.column>{{ __("Updated") }}</flux:table.column>
-                        <flux:table.column class="w-28">{{ __("Status") }}</flux:table.column>
+                        <flux:table.column>{{ __("Status") }}</flux:table.column>
                         <flux:table.column class="w-32"></flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows :wire:sort="$orderable ? 'reorderRoot' : null">
                         @forelse ($this->entries as $entry)
-                            <flux:table.row wire:key="entry-{{ $entry->id }}" :wire:sort:item="$orderable ? $entry->id : null">
+                            <flux:table.row wire:key="entry-{{ $entry->id }}" :wire:sort:item="$orderable ? $entry->id : null" x-on:contextmenu.prevent.stop="contextMenu = 'entry-{{ $entry->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
                                 <flux:table.cell>
                                     @if ($orderable)
                                         <flux:icon.bars-3 wire:sort:handle class="size-4 shrink-0 cursor-grab text-zinc-400" />
@@ -145,7 +145,7 @@
                                             </svg>
                                         @endif
 
-                                        <span>{{ $entry->data["title"] ?? "—" }}</span>
+                                        <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate class="hover:text-orange-700">{{ $entry->data["title"] ?? "—" }}</a>
 
                                         @if ($entry->parentTitle ?? null)
                                             <flux:badge size="sm" color="zinc">{{ __("Parent: :title", ["title" => $entry->parentTitle]) }}</flux:badge>
@@ -153,9 +153,9 @@
                                     </div>
                                 </flux:table.cell>
                                 <flux:table.cell>{{ $entry->slug ?? "—" }}</flux:table.cell>
-                                <flux:table.cell>{{ $entry->blueprint ?? "—" }}</flux:table.cell>
-                                <flux:table.cell>{{ $entry->updated_at?->diffForHumans() }}</flux:table.cell>
-                                <flux:table.cell class="w-28">
+                                {{-- <flux:table.cell>{{ $entry->blueprint ?? "—" }}</flux:table.cell> --}}
+                                <flux:table.cell class="w-[13%]">{{ $entry->updated_at?->diffForHumans() }}</flux:table.cell>
+                                <flux:table.cell class="w-[10%]">
                                     <flux:badge :color="match ($entry->status) {
         'published' => 'green',
         'scheduled' => 'blue',
@@ -164,10 +164,22 @@
     }"> {{ $statuses[$entry->status] ?? $entry->status }} </flux:badge>
                                 </flux:table.cell>
                                 <flux:table.cell class="flex justify-end gap-2 w-32">
-                                    <flux:button size="sm" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:button>
-                                    <flux:modal.trigger name="confirm-delete-entry">
-                                        <flux:button size="sm" variant="danger" type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:button>
-                                    </flux:modal.trigger>
+                                    <flux:dropdown>
+                                        <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                        <flux:menu>
+                                            <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                            <flux:modal.trigger name="confirm-delete-entry">
+                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
+                                            </flux:modal.trigger>
+                                        </flux:menu>
+                                    </flux:dropdown>
+
+                                    <div x-show="contextMenu === 'entry-{{ $entry->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                        <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                                        <flux:modal.trigger name="confirm-delete-entry">
+                                            <button type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                        </flux:modal.trigger>
+                                    </div>
                                 </flux:table.cell>
                             </flux:table.row>
                         @empty
