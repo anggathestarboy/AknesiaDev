@@ -57,8 +57,15 @@ class GlobalSetForm extends Component
 
         $configuredSites = $globalSet->settings['sites'] ?? [];
 
-        if ($configuredSites !== [] && ! in_array($this->activeSite, $configuredSites, true)) {
-            $this->activeSite = $configuredSites[0];
+        if ($configuredSites !== []) {
+            $firstAccessible = collect($configuredSites)
+                ->first(fn (string $handle): bool => auth()->user()->canAccessSite($handle));
+
+            abort_unless($firstAccessible, 403);
+
+            if (! in_array($this->activeSite, $configuredSites, true) || ! auth()->user()->canAccessSite($this->activeSite)) {
+                $this->activeSite = $firstAccessible;
+            }
         }
 
         $variable = GlobalSetVariable::firstOrCreate(
@@ -152,6 +159,7 @@ class GlobalSetForm extends Component
         return Site::whereIn('handle', $configuredSites)
             ->orderBy('order')
             ->get()
+            ->filter(fn (Site $site): bool => auth()->user()->canAccessSite($site->handle))
             ->map(fn (Site $site): array => [
                 'handle' => $site->handle,
                 'name' => $site->name,

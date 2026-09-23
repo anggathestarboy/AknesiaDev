@@ -2496,6 +2496,219 @@ test('a user with "publish X entries" permission can save an entry as published'
     expect(Entry::sole()->status)->toBe('published');
 });
 
+test('an entry without an SEO meta author is shared content, editable with just the base permission', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'draft', 'data' => ['title' => 'Hello']]);
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])->assertOk();
+});
+
+test('editing someone else\'s entry requires the "edit other authors" permission', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $author = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'draft', 'seo' => ['meta_author' => (string) $author->id], 'data' => ['title' => 'Hello']]);
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])->assertForbidden();
+
+    $other = User::factory()->create();
+    $role = Role::create(['handle' => 'editor-2', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'edit other authors blog entries']]);
+    $other->roles()->attach($role);
+    $this->actingAs($other);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])->assertOk();
+});
+
+test('editing your own entry needs no "other authors" permission', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $editor = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'draft', 'seo' => ['meta_author' => (string) $editor->id], 'data' => ['title' => 'Hello']]);
+
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])->assertOk();
+});
+
+test('deleting someone else\'s entry requires the "delete other authors" permission', function () {
+    makeSites();
+    $collection = makeBlogCollection(null);
+    $author = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'status' => 'draft', 'seo' => ['meta_author' => (string) $author->id], 'data' => ['title' => 'Hello']]);
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'delete blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $entry->id)->assertForbidden();
+
+    $other = User::factory()->create();
+    $role = Role::create(['handle' => 'editor-2', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'delete blog entries', 'delete other authors blog entries']]);
+    $other->roles()->attach($role);
+    $this->actingAs($other);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('delete', $entry->id)->assertOk();
+
+    expect(Entry::find($entry->id))->toBeNull();
+});
+
+test('publishing another author\'s draft requires the "publish other authors" permission', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $author = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'draft', 'date' => '2024-01-01 00:00:00', 'seo' => ['meta_author' => (string) $author->id], 'data' => ['title' => 'Hello', 'status' => 'draft']]);
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'edit other authors blog entries', 'publish blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->set('status', 'published')
+        ->call('save')
+        ->assertForbidden();
+
+    $other = User::factory()->create();
+    $role = Role::create(['handle' => 'editor-2', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'edit other authors blog entries', 'publish blog entries', 'publish other authors blog entries']]);
+    $other->roles()->attach($role);
+    $this->actingAs($other);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->set('status', 'published')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($entry->fresh()->status)->toBe('published');
+});
+
+test('an editor without the publish permission can save an unchanged published entry without losing its status', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $author = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'published', 'date' => '2024-01-01 00:00:00', 'published' => true, 'seo' => ['meta_author' => (string) $author->id], 'data' => ['title' => 'Hello', 'status' => 'published']]);
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'edit other authors blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->set('title', 'Hello updated')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($entry->fresh()->status)->toBe('published');
+    expect($entry->fresh()->data['title'])->toBe('Hello updated');
+});
+
+test('a non-publisher sees all four statuses but cannot pick a different one', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertOk()
+        ->assertSee('Published')
+        ->assertSee('Scheduled')
+        ->assertSee('Need Review')
+        ->assertSee('Draft')
+        ->assertSet('canEditStatus', false);
+});
+
+test('a publisher can pick any status on their own entry, but not on another author\'s entry', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $author = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'draft', 'seo' => ['meta_author' => (string) $author->id], 'data' => ['title' => 'Hello']]);
+
+    $publisher = User::factory()->create();
+    $role = Role::create(['handle' => 'publisher', 'title' => 'Publisher', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'publish blog entries']]);
+    $publisher->roles()->attach($role);
+    $this->actingAs($publisher);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->assertSet('canEditStatus', false);
+
+    $own = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'own', 'status' => 'draft', 'seo' => ['meta_author' => (string) $publisher->id], 'data' => ['title' => 'Own']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $own])
+        ->assertSet('canEditStatus', true);
+});
+
+test('site walls are opt-in and only bite once an "access ... site" permission exists', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries', 'publish blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])->assertOk();
+
+    $component = Livewire::test(EntryManager::class, ['collection' => $collection]);
+    expect($component->instance()->createSite())->toBe('indonesia');
+});
+
+test('an "access english site" user cannot open an indonesia entry form, and the manager defaults to english', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries', 'publish blog entries', 'access english site']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])->assertForbidden();
+
+    $component = Livewire::test(EntryManager::class, ['collection' => $collection]);
+    $component->assertSet('siteFilter', 'english');
+    expect($component->instance()->createSite())->toBe('english');
+});
+
+test('granting the matching site access permission unlocks that site\'s entry form', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries', 'publish blog entries', 'access english site', 'access indonesia site']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])->assertOk();
+});
+
 test('deleting an entry requires the "delete X entries" permission', function () {
     makeSites();
     $collection = makeBlogCollection(null);

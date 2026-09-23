@@ -7,8 +7,8 @@
             <flux:heading size="xl">{{ __(":taxonomy", ["taxonomy" => $taxonomy->title]) }}</flux:heading>
         </div>
 
-        @if ($this->availableBlueprints->isNotEmpty())
-            <flux:button size="sm" variant="primary" :href="route('taxonomies.terms.create', ['taxonomy' => $taxonomy->handle, 'site' => $defaultSite, 'blueprint' => $taxonomy->effectiveBlueprint()?->handle])" wire:navigate>{{ __("New term") }}</flux:button>
+        @if ($this->availableBlueprints->isNotEmpty() && auth()->user()->hasPermission("create {$taxonomy->handle} terms") && $this->createSite() !== '')
+            <flux:button size="sm" variant="primary" :href="route('taxonomies.terms.create', ['taxonomy' => $taxonomy->handle, 'site' => $this->createSite(), 'blueprint' => $taxonomy->effectiveBlueprint()?->handle])" wire:navigate>{{ __("New term") }}</flux:button>
         @else
             <flux:button variant="primary" size="sm" disabled>{{ __("New term") }}</flux:button>
         @endif
@@ -49,7 +49,12 @@
 
                 <flux:table.rows>
                     @forelse ($this->terms as $term)
-                        <flux:table.row wire:key="term-{{ $term->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'term-{{ $term->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                        @php
+                            $canEdit = auth()->user()->hasPermission("edit {$taxonomy->handle} terms");
+                            $canDelete = auth()->user()->hasPermission("delete {$taxonomy->handle} terms");
+                            $canOperate = $canEdit || $canDelete;
+                        @endphp
+                        <flux:table.row wire:key="term-{{ $term->id }}" x-on:contextmenu.prevent.stop="{{ $canOperate ? 'contextMenu = \'term-' . $term->id . '\'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10' : '' }}">
                             <flux:table.cell class="w-[13%]">
                                 @php
                                     $siteColors = [
@@ -66,28 +71,44 @@
                                 </div>
                             </flux:table.cell>
                             <flux:table.cell>
-                                <a href="{{ route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id]) }}" class="hover:text-orange-700" wire:navigate>{{ $term->data["title"] ?? "—" }}</a>
+                                @if ($canEdit)
+                                    <a href="{{ route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id]) }}" class="hover:text-orange-700" wire:navigate>{{ $term->data["title"] ?? "—" }}</a>
+                                @else
+                                    <span>{{ $term->data["title"] ?? "—" }}</span>
+                                @endif
                             </flux:table.cell>
                             <flux:table.cell>{{ $term->slug ?? "—" }}</flux:table.cell>
                             {{-- <flux:table.cell>{{ $term->blueprint ?? "—" }}</flux:table.cell> --}}
                             <flux:table.cell class="w-[10%]">{{ $term->updated_at?->diffForHumans() }}</flux:table.cell>
                             <flux:table.cell class="flex w-32 justify-end gap-2">
+                                @if ($canOperate)
                                 <flux:dropdown>
                                     <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
                                     <flux:menu>
-                                        <flux:menu.item icon="pencil" :href="route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
-                                        <flux:modal.trigger name="confirm-delete-term">
-                                            <flux:menu.item icon="trash" variant="danger" x-on:click="deleteTermId = {{ $term->id }}">{{ __("Delete") }}</flux:menu.item>
-                                        </flux:modal.trigger>
+                                        @if ($canEdit)
+                                            <flux:menu.item icon="pencil" :href="route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                        @endif
+                                        @if ($canDelete)
+                                            <flux:modal.trigger name="confirm-delete-term">
+                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteTermId = {{ $term->id }}">{{ __("Delete") }}</flux:menu.item>
+                                            </flux:modal.trigger>
+                                        @endif
                                     </flux:menu>
                                 </flux:dropdown>
+                            @endif
 
+                            @if ($canOperate)
                                 <div x-show="contextMenu === 'term-{{ $term->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                                    <a href="{{ route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
-                                    <flux:modal.trigger name="confirm-delete-term">
-                                        <button type="button" x-on:click="deleteTermId = {{ $term->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
-                                    </flux:modal.trigger>
+                                    @if ($canEdit)
+                                        <a href="{{ route('taxonomies.terms.edit', ['taxonomy' => $taxonomy->handle, 'term' => $term->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                                    @endif
+                                    @if ($canDelete)
+                                        <flux:modal.trigger name="confirm-delete-term">
+                                            <button type="button" x-on:click="deleteTermId = {{ $term->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                        </flux:modal.trigger>
+                                    @endif
                                 </div>
+                            @endif
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

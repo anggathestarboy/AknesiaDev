@@ -9,8 +9,10 @@
         </div>
 
         <div class="flex gap-2">
-            <flux:button size="sm" wire:click="addRoot">{{ __("Add item") }}</flux:button>
-            <flux:button size="sm" variant="primary" wire:click="save">{{ __("Save") }}</flux:button>
+            @if ($this->canEdit())
+                <flux:button size="sm" wire:click="addRoot">{{ __("Add item") }}</flux:button>
+                <flux:button size="sm" variant="primary" wire:click="save">{{ __("Save") }}</flux:button>
+            @endif
         </div>
     </div>
 
@@ -30,19 +32,21 @@
                             @endif
                         </button>
 
-                        <div class="relative flex flex-wrap items-center gap-1">
-                            <flux:button size="xs" wire:click="addChild('{{ $item['id'] }}')">{{ __("Add child") }}</flux:button>
+                        @if ($this->canEdit())
+                            <div class="relative flex flex-wrap items-center gap-1">
+                                <flux:button size="xs" wire:click="addChild('{{ $item['id'] }}')">{{ __("Add child") }}</flux:button>
 
-                            <button type="button" x-on:click.stop="contextMenu = contextMenu === 'item-{{ $item['id'] }}' ? null : 'item-{{ $item['id'] }}'; contextMenuX = $event.clientX - 170; contextMenuY = $event.clientY + 10" class="rounded p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700">
-                                <flux:icon.ellipsis-horizontal class="size-4" />
-                            </button>
+                                <button type="button" x-on:click.stop="contextMenu = contextMenu === 'item-{{ $item['id'] }}' ? null : 'item-{{ $item['id'] }}'; contextMenuX = $event.clientX - 170; contextMenuY = $event.clientY + 10" class="rounded p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700">
+                                    <flux:icon.ellipsis-horizontal class="size-4" />
+                                </button>
 
-                            <div x-show="contextMenu === 'item-{{ $item['id'] }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                <div x-show="contextMenu === 'item-{{ $item['id'] }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                                 <button type="button" wire:click.stop="duplicateItem('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Duplicate item") }}</button>
                                 <button type="button" wire:click.stop="askMove('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Move to...") }}</button>
                                 <button type="button" wire:click.stop="askDelete('{{ $item['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete item") }}</button>
                             </div>
                         </div>
+                        @endif
                     </div>
 
                     @if (in_array($item["id"], $expanded))
@@ -100,6 +104,7 @@
                                                 @endif
                                             </button>
 
+                                            @if ($this->canEdit())
                                             <div class="relative flex flex-wrap items-center gap-1">
                                                 <button type="button" x-on:click.stop="contextMenu = contextMenu === 'item-{{ $child['id'] }}' ? null : 'item-{{ $child['id'] }}'; contextMenuX = $event.clientX - 170; contextMenuY = $event.clientY + 10" class="rounded p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-700">
                                                     <flux:icon.ellipsis-horizontal class="size-4" />
@@ -111,6 +116,7 @@
                                                     <button type="button" wire:click.stop="askDelete('{{ $child['id'] }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete item") }}</button>
                                                 </div>
                                             </div>
+                                            @endif
                                         </div>
 
                                         @if (in_array($child["id"], $expanded))

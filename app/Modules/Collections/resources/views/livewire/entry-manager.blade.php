@@ -10,8 +10,8 @@
             {{-- <flux:subheading>{{ __("Handle: :handle", ["handle" => $collection->handle]) }}</flux:subheading> --}}
         </div>
 
-        @if ($this->availableBlueprints->isNotEmpty())
-            <form method="GET" class="flex gap-2 items-center" action="{{ route('collections.entries.create', ['collection' => $collection->handle, 'site' => $defaultSite]) }}" class="flex flex-col items-end gap-2">
+        @if ($this->availableBlueprints->isNotEmpty() && auth()->user()->hasPermission("create {$collection->handle} entries") && $this->createSite() !== '')
+            <form method="GET" class="flex gap-2 items-center" action="{{ route('collections.entries.create', ['collection' => $collection->handle, 'site' => $this->createSite()]) }}" class="flex flex-col items-end gap-2">
                 <flux:select name="blueprint" size="sm">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
                         <option value="{{ $availableBlueprint->handle }}" @selected ($availableBlueprint->handle === $collection->effectiveBlueprint()?->handle)>{{ $availableBlueprint->handle }}</option>
@@ -68,12 +68,14 @@
                     "
                 >
                     @foreach ($statuses as $value => $label)
-                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
+                        @if ($this->canBulkUpdateStatus($value))
+                            <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
+                        @endif
                     @endforeach
                 </flux:select>
             @endif
 
-            @if (auth() ->user() ->hasPermission("delete {$collection->handle} entries"))
+            @if ($this->canBulkDelete())
                 <flux:modal.trigger name="confirm-bulk-delete-entries">
                     <flux:button size="sm" variant="danger" type="button">{{ __("Delete") }}</flux:button>
                 </flux:modal.trigger>
@@ -110,7 +112,12 @@
 
                     <flux:table.rows :wire:sort="$orderable ? 'reorderRoot' : null">
                         @forelse ($this->entries as $entry)
-                            <flux:table.row wire:key="entry-{{ $entry->id }}" :wire:sort:item="$orderable ? $entry->id : null" x-on:contextmenu.prevent.stop="contextMenu = 'entry-{{ $entry->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                            @php
+                                $canEdit = $entry->canBeEditedBy(auth()->user());
+                                $canDelete = $entry->canBeDeletedBy(auth()->user());
+                                $canOperate = $canEdit || $canDelete;
+                            @endphp
+                            <flux:table.row wire:key="entry-{{ $entry->id }}" :wire:sort:item="$orderable ? $entry->id : null" x-on:contextmenu.prevent.stop="{{ $canOperate ? 'contextMenu = \'entry-' . $entry->id . '\'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10' : '' }}">
                                 <flux:table.cell>
                                     @if ($orderable)
                                         <flux:icon.bars-3 wire:sort:handle class="size-4 shrink-0 cursor-grab text-zinc-400" />
@@ -145,7 +152,11 @@
                                             </svg>
                                         @endif
 
-                                        <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate class="hover:text-orange-700">{{ $entry->data["title"] ?? "—" }}</a>
+                                        @if ($canEdit)
+                                            <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate class="hover:text-orange-700">{{ $entry->data["title"] ?? "—" }}</a>
+                                        @else
+                                            <span>{{ $entry->data["title"] ?? "—" }}</span>
+                                        @endif
 
                                         @if ($entry->parentTitle ?? null)
                                             <flux:badge size="sm" color="zinc">{{ __("Parent: :title", ["title" => $entry->parentTitle]) }}</flux:badge>
@@ -164,22 +175,34 @@
     }"> {{ $statuses[$entry->status] ?? $entry->status }} </flux:badge>
                                 </flux:table.cell>
                                 <flux:table.cell class="flex justify-end gap-2 w-32">
+                                    @if ($canOperate)
                                     <flux:dropdown>
                                         <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
                                         <flux:menu>
-                                            <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
-                                            <flux:modal.trigger name="confirm-delete-entry">
-                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
-                                            </flux:modal.trigger>
+                                            @if ($canEdit)
+                                                <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                            @endif
+                                            @if ($canDelete)
+                                                <flux:modal.trigger name="confirm-delete-entry">
+                                                    <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
+                                                </flux:modal.trigger>
+                                            @endif
                                         </flux:menu>
                                     </flux:dropdown>
+                                @endif
 
+                                @if ($canOperate)
                                     <div x-show="contextMenu === 'entry-{{ $entry->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                                        <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
-                                        <flux:modal.trigger name="confirm-delete-entry">
-                                            <button type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
-                                        </flux:modal.trigger>
+                                        @if ($canEdit)
+                                            <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                                        @endif
+                                        @if ($canDelete)
+                                            <flux:modal.trigger name="confirm-delete-entry">
+                                                <button type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                            </flux:modal.trigger>
+                                        @endif
                                     </div>
+                                @endif
                                 </flux:table.cell>
                             </flux:table.row>
                         @empty

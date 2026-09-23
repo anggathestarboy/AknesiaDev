@@ -288,13 +288,13 @@
                 @if ($preview)
                     <flux:radio.group wire:model.live="status" class="">
                         @foreach ($statuses as $value => $label)
-                            <flux:radio value="{{ $value }}" label="{{ $label }}" />
+                            <flux:radio value="{{ $value }}" label="{{ $label }}" :disabled="! $canEditStatus" />
                         @endforeach
                     </flux:radio.group>
                 @else
                     <flux:radio.group wire:model="status" class="">
                         @foreach ($statuses as $value => $label)
-                            <flux:radio value="{{ $value }}" label="{{ $label }}" />
+                            <flux:radio value="{{ $value }}" label="{{ $label }}" :disabled="! $canEditStatus" />
                         @endforeach
                     </flux:radio.group>
                 @endif

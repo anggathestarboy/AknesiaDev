@@ -160,6 +160,10 @@ class EntryForm extends Component
                 throw new NotFoundHttpException;
             }
 
+            if (! $entry->canBeEditedBy(auth()->user())) {
+                abort(403);
+            }
+
             $this->editingId = $entry->id;
             $this->site = $entry->site;
             $this->title = (string) ($entry->data['title'] ?? '');
@@ -173,6 +177,10 @@ class EntryForm extends Component
             $this->site = $site ?: self::DEFAULT_SITE;
             $this->blueprintHandle = request()->string('blueprint')->toString() ?: $this->defaultBlueprintHandle();
             $this->originId = request()->string('origin')->toString() ?: null;
+        }
+
+        if (! auth()->user()->canAccessSite($this->site)) {
+            abort(403);
         }
 
         if ($entry && $this->collection->structured()) {
@@ -294,6 +302,14 @@ class EntryForm extends Component
     }
 
     /**
+     * The entry currently being edited, or null on create.
+     */
+    protected function entry(): ?Entry
+    {
+        return $this->editingId ? Entry::find($this->editingId) : null;
+    }
+
+    /**
      * The sibling entry (or this entry itself) on the default/origin site —
      * authoritative source for non-localizable field values.
      */
@@ -359,6 +375,7 @@ class EntryForm extends Component
         return Site::orderBy('order')
             ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
             ->get()
+            ->filter(fn (Site $availableSite): bool => auth()->user()->canAccessSite($availableSite->handle))
             ->map(function (Site $availableSite): array {
                 $active = $availableSite->handle === $this->site;
 
@@ -1117,8 +1134,17 @@ class EntryForm extends Component
             $validated['status'] = Carbon::parse($validated['entryDate'])->isFuture() ? 'scheduled' : 'published';
         }
 
-        if (in_array($validated['status'], ['published', 'scheduled'], true)) {
-            auth()->user()->authorizePermission("publish {$this->collection->handle} entries");
+        // The status picker is disabled for anyone who can't manage this
+        // entry's publish state (see canEditStatusOf()): changing it in ANY
+        // direction — into published/scheduled or between draft/need_review —
+        // needs the collection's "publish {handle} entries" permission, and
+        // editing someone else's entry additionally "publish other authors
+        // {handle} entries". Saving with the status unchanged never needs a
+        // publish right (a reviewer editing content keeps editing without one).
+        $entry = $this->entry();
+
+        if ($validated['status'] !== ($entry?->status ?? 'draft') && ! $this->canEditStatusOf($entry)) {
+            abort(403);
         }
 
         $data = $validated['data'] ?? [];
@@ -1220,6 +1246,37 @@ class EntryForm extends Component
     {
         return view('collections::livewire.entry-form', [
             'statuses' => self::STATUSES,
+            'canEditStatus' => $this->canEditStatus,
         ])->title($this->editingId ? __('Edit entry') : __('New entry'));
+    }
+
+    /**
+     * Whether the status picker is enabled for the entry being edited —
+     * see canEditStatusOf().
+     */
+    #[Computed]
+    public function canEditStatus(): bool
+    {
+        return $this->canEditStatusOf($this->entry());
+    }
+
+    /**
+     * Whether the user may change the status picker for the given entry.
+     * Moving the workflow state in any direction (Published / Scheduled /
+     * Need Review / Draft) requires the collection's base "publish {handle}
+     * entries" permission; editing someone else's entry (decided by the SEO
+     * Meta Author field, see Entry::ownedBy()) additionally requires
+     * "publish other authors {handle} entries".
+     */
+    protected function canEditStatusOf(?Entry $entry): bool
+    {
+        $user = auth()->user();
+
+        if (! $user->hasPermission("publish {$this->collection->handle} entries")) {
+            return false;
+        }
+
+        return $entry === null || $entry->ownedBy($user)
+            || $user->hasPermission("publish other authors {$this->collection->handle} entries");
     }
 }

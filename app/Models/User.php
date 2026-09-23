@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Modules\Sites\Models\Site;
 use App\Modules\Users\Models\Role;
 use App\Modules\Users\Models\UserGroup;
 use Database\Factories\UserFactory;
@@ -113,6 +114,35 @@ class User extends Authenticatable implements PasskeyUser
     public function hasPermission(string $permission): bool
     {
         return $this->isSuper() || in_array($permission, $this->permissions(), true);
+    }
+
+    /**
+     * Whether this user may operate on the given site. Single-site installs
+     * short-circuit — there is nowhere else to lock down — so everyone gets
+     * access. On multi-site installs, site walls are opt-in: if no user
+     * anywhere grants "access {handle} site" permissions, everyone passes
+     * (site scoping simply isn't enforced, matching how roles are typically
+     * provisioned in tests and small installs). Only once at least one
+     * "access ... site" permission exists does the wall come up, and then
+     * each user must hold "access {handle} site" for every site they touch
+     * (supers bypass via hasPermission).
+     */
+    public function canAccessSite(string $handle): bool
+    {
+        if (Site::count() <= 1 || $this->isSuper()) {
+            return true;
+        }
+
+        $siteAccessPermissions = array_filter(
+            $this->permissions(),
+            fn (string $permission): bool => str_starts_with($permission, 'access ') && str_ends_with($permission, ' site'),
+        );
+
+        if ($siteAccessPermissions === []) {
+            return true;
+        }
+
+        return $this->hasPermission("access {$handle} site");
     }
 
     /**

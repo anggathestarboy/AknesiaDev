@@ -1,18 +1,25 @@
 @if ($type === 'folder')
+    @php
+        $canMove = auth()->user()->hasPermission("move {$this->container} assets");
+    @endphp
     <div
         wire:key="folder-{{ $path }}"
         class="group flex items-center gap-3 px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 {{ $this->isSelected('folder', $path) ? 'bg-blue-50 dark:bg-blue-950/40' : '' }}"
         x-data="{ dragOver: false }"
-        draggable="true"
+        @if ($canMove)
+            draggable="true"
+        @endif
         wire:click="toggleSelect('folder', '{{ $path }}')"
         wire:dblclick="goToPath('{{ $path }}')"
         x-on:contextmenu.prevent.stop="contextMenu = 'folder-{{ $path }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
-        x-on:dragstart="$event.dataTransfer.setData('text/plain', 'folder|{{ $path }}')"
-        x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = true"
-        x-on:dragleave="$event.stopPropagation(); dragOver = false"
-        x-on:drop="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = false; const raw = $event.dataTransfer.getData('text/plain'); const i = raw.indexOf('|'); $wire.dropOnFolder(raw.slice(0, i), raw.slice(i + 1), '{{ $path }}')"
-        x-on:dragend.window="dragOver = false"
-        x-on:drop.window="dragOver = false"
+        @if ($canMove)
+            x-on:dragstart="$event.dataTransfer.setData('text/plain', 'folder|{{ $path }}')"
+            x-on:dragover="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = true"
+            x-on:dragleave="$event.stopPropagation(); dragOver = false"
+            x-on:drop="if ($event.dataTransfer.types.includes('Files')) return; $event.preventDefault(); $event.stopPropagation(); dragOver = false; const raw = $event.dataTransfer.getData('text/plain'); const i = raw.indexOf('|'); $wire.dropOnFolder(raw.slice(0, i), raw.slice(i + 1), '{{ $path }}')"
+            x-on:dragend.window="dragOver = false"
+            x-on:drop.window="dragOver = false"
+        @endif
         :class="dragOver ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950' : ''"
     >
         <div class="flex size-8 shrink-0 items-center justify-center">
@@ -33,11 +40,17 @@
                 :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
                 class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
             >
-                <button type="button" wire:click.stop="startRenameFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
-                <button type="button" wire:click.stop="duplicateFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
-                <button type="button" wire:click.stop="cutFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
+                @if (auth()->user()->hasPermission("edit folders {$this->container} assets"))
+                    <button type="button" wire:click.stop="startRenameFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
+                    <button type="button" wire:click.stop="duplicateFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
+                @endif
+                @if (auth()->user()->hasPermission("move {$this->container} assets"))
+                    <button type="button" wire:click.stop="cutFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
+                @endif
                 <button type="button" wire:click.stop="downloadFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Download') }}</button>
-                <button type="button" wire:click.stop="askDeleteFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
+                @if (auth()->user()->hasPermission("edit folders {$this->container} assets"))
+                    <button type="button" wire:click.stop="askDeleteFolder('{{ $path }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
+                @endif
             </div>
 
             <button
@@ -53,11 +66,13 @@
     <div
         wire:key="file-{{ $asset->id }}"
         class="group flex items-center gap-3 px-2 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 {{ $this->isSelected('file', (string) $asset->id) ? 'bg-blue-50 dark:bg-blue-950/40' : '' }}"
-        draggable="true"
+        @if (auth()->user()->hasPermission("move {$this->container} assets"))
+            draggable="true"
+            x-on:dragstart="$event.dataTransfer.setData('text/plain', 'file|{{ $asset->id }}')"
+        @endif
         wire:click="toggleSelect('file', '{{ $asset->id }}')"
         wire:dblclick="openPreview({{ $asset->id }})"
         x-on:contextmenu.prevent.stop="contextMenu = 'file-{{ $asset->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10"
-        x-on:dragstart="$event.dataTransfer.setData('text/plain', 'file|{{ $asset->id }}')"
     >
         <div class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-zinc-100 dark:bg-zinc-800">
             @include('media::partials._thumbnail', ['asset' => $asset])
@@ -75,12 +90,20 @@
                 :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
                 class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
             >
-                <button type="button" wire:click.stop="openPreview({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('View / Edit') }}</button>
-                <button type="button" wire:click.stop="startRenameFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
-                <button type="button" wire:click.stop="duplicateFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
-                <button type="button" wire:click.stop="cutFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
+                <button type="button" wire:click.stop="openPreview({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('View') }}</button>
+                @if (auth()->user()->hasPermission("rename {$this->container} assets"))
+                    <button type="button" wire:click.stop="startRenameFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Rename') }}</button>
+                @endif
+                @if (auth()->user()->hasPermission("edit {$this->container} assets"))
+                    <button type="button" wire:click.stop="duplicateFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Duplicate') }}</button>
+                @endif
+                @if (auth()->user()->hasPermission("move {$this->container} assets"))
+                    <button type="button" wire:click.stop="cutFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Cut') }}</button>
+                @endif
                 <button type="button" wire:click.stop="downloadFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Download') }}</button>
-                <button type="button" wire:click.stop="askDeleteFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
+                @if (auth()->user()->hasPermission("delete {$this->container} assets"))
+                    <button type="button" wire:click.stop="askDeleteFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __('Delete') }}</button>
+                @endif
             </div>
 
             <button

@@ -26,12 +26,17 @@
             </flux:button.group>
 
             @if ($this->containers->isNotEmpty())
-                @if (!empty($clipboard))
+                @if ($this->canPaste())
                     <flux:button class="cursor-pointer" size="sm" variant="filled" icon="clipboard-document" wire:click="paste">{{ __("Paste") }}</flux:button>
                 @endif
 
-                <flux:button class="cursor-pointer" size="sm" icon="folder-plus" wire:click="startCreateFolder">{{ __("New Folder") }}</flux:button>
-                <flux:button class="cursor-pointer" size="sm" variant="primary" icon="arrow-up-tray" x-on:click="$refs.fileInput.click()">{{ __("Upload") }}</flux:button>
+                @if ($this->can("edit folders {$this->container} assets"))
+                    <flux:button class="cursor-pointer" size="sm" icon="folder-plus" wire:click="startCreateFolder">{{ __("New Folder") }}</flux:button>
+                @endif
+
+                @if ($this->can("upload {$this->container} assets"))
+                    <flux:button class="cursor-pointer" size="sm" variant="primary" icon="arrow-up-tray" x-on:click="$refs.fileInput.click()">{{ __("Upload") }}</flux:button>
+                @endif
             @endif
         </div>
     </div>
@@ -77,13 +82,15 @@
                 <div
                     class="rounded-b-lg border border-t-0 border-dashed border-zinc-300 p-6 dark:border-zinc-700"
                     x-data="{ dragging: false }"
-                    x-on:dragover.prevent="dragging = true"
-                    x-on:dragleave.prevent="dragging = false"
-                    x-on:drop.prevent="
-                        dragging = false;
-                        $refs.fileInput.files = $event.dataTransfer.files;
-                        $refs.fileInput.dispatchEvent(new Event('change'));
-                    "
+                    @if ($this->can("upload {$this->container} assets"))
+                        x-on:dragover.prevent="dragging = true"
+                        x-on:dragleave.prevent="dragging = false"
+                        x-on:drop.prevent="
+                            dragging = false;
+                            $refs.fileInput.files = $event.dataTransfer.files;
+                            $refs.fileInput.dispatchEvent(new Event('change'));
+                        "
+                    @endif
                     :class="dragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : ''"
                 >
                     @if ($viewMode === "grid")
@@ -144,14 +151,22 @@
                 <div class="flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                     <flux:text>{{ count($selected) }} {{ __("selected") }}</flux:text>
 
-                    @if (count($selected) === 1)
+                    @if (count($selected) === 1 && $this->canSelected("rename {$this->container} assets", "edit folders {$this->container} assets"))
                         <flux:button class="cursor-pointer" size="sm" icon="pencil" wire:click="renameSelected">{{ __("Rename") }}</flux:button>
                     @endif
 
-                    <flux:button class="cursor-pointer" size="sm" icon="clipboard-document" wire:click="copySelected">{{ __("Copy") }}</flux:button>
-                    <flux:button class="cursor-pointer" size="sm" icon="scissors" wire:click="cutSelected">{{ __("Cut") }}</flux:button>
-                    <flux:button class="cursor-pointer" size="sm" icon="document-duplicate" wire:click="duplicateSelected">{{ __("Duplicate") }}</flux:button>
-                    <flux:button class="cursor-pointer" size="sm" variant="danger" icon="trash" wire:click="askDeleteSelected">{{ __("Delete") }}</flux:button>
+                    @if ($this->canSelected("edit {$this->container} assets", "edit folders {$this->container} assets"))
+                        <flux:button class="cursor-pointer" size="sm" icon="clipboard-document" wire:click="copySelected">{{ __("Copy") }}</flux:button>
+                        <flux:button class="cursor-pointer" size="sm" icon="document-duplicate" wire:click="duplicateSelected">{{ __("Duplicate") }}</flux:button>
+                    @endif
+
+                    @if ($this->canSelected("move {$this->container} assets", "move {$this->container} assets"))
+                        <flux:button class="cursor-pointer" size="sm" icon="scissors" wire:click="cutSelected">{{ __("Cut") }}</flux:button>
+                    @endif
+
+                    @if ($this->canSelected("delete {$this->container} assets", "edit folders {$this->container} assets"))
+                        <flux:button class="cursor-pointer" size="sm" variant="danger" icon="trash" wire:click="askDeleteSelected">{{ __("Delete") }}</flux:button>
+                    @endif
                     <flux:button class="cursor-pointer" size="sm" variant="ghost" icon="x-mark" wire:click="clearSelection" />
                 </div>
             </div>
@@ -232,18 +247,24 @@
                         <flux:button class="cursor-pointer" size="sm" icon="arrow-top-right-on-square" href="{{ $this->previewAsset->url }}" target="_blank">{{ __("Open in new tab") }}</flux:button>
                     @endif
 
-                    <flux:input wire:model="previewTitle" wire:keydown.enter="savePreviewMeta" :label="__('Title')" />
-                    <flux:input wire:model="previewAlt" wire:keydown.enter="savePreviewMeta" :label="__('Alt text')" />
+                    @if ($this->can("edit {$this->container} assets"))
+                        <flux:input wire:model="previewTitle" wire:keydown.enter="savePreviewMeta" :label="__('Title')" />
+                        <flux:input wire:model="previewAlt" wire:keydown.enter="savePreviewMeta" :label="__('Alt text')" />
 
-                    <flux:select class="cursor-pointer" wire:model="previewLoading" :label="__('Loading')">
-                        <flux:select.option value="lazy">{{ __("Lazy") }}</flux:select.option>
-                        <flux:select.option value="eager">{{ __("Eager") }}</flux:select.option>
-                    </flux:select>
+                        <flux:select class="cursor-pointer" wire:model="previewLoading" :label="__('Loading')">
+                            <flux:select.option value="lazy">{{ __("Lazy") }}</flux:select.option>
+                            <flux:select.option value="eager">{{ __("Eager") }}</flux:select.option>
+                        </flux:select>
 
-                    <div class="flex justify-end gap-2">
-                        <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showPreview', false)">{{ __("Close") }}</flux:button>
-                        <flux:button class="cursor-pointer" variant="primary" wire:click="savePreviewMeta">{{ __("Save") }}</flux:button>
-                    </div>
+                        <div class="flex justify-end gap-2">
+                            <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showPreview', false)">{{ __("Close") }}</flux:button>
+                            <flux:button class="cursor-pointer" variant="primary" wire:click="savePreviewMeta">{{ __("Save") }}</flux:button>
+                        </div>
+                    @else
+                        <div class="flex justify-end gap-2">
+                            <flux:button class="cursor-pointer" variant="ghost" wire:click="$set('showPreview', false)">{{ __("Close") }}</flux:button>
+                        </div>
+                    @endif
                 </div>
             </div>
         @endif

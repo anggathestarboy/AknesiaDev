@@ -1,9 +1,12 @@
 @php
     $siteColors = ["indonesia" => "bg-red-500", "english" => "bg-blue-500"];
     $color = $siteColors[strtolower($entry->site)] ?? "bg-gray-400";
+    $canEdit = $entry->canBeEditedBy(auth()->user());
+    $canDelete = $entry->canBeDeletedBy(auth()->user());
+    $canOperate = $canEdit || $canDelete;
 @endphp
 
-<li wire:key="entry-{{ $entry->id }}" @if ($orderable) wire:sort:item="{{ $entry->id }}" @endif x-on:contextmenu.prevent.stop="contextMenu = 'entry-{{ $entry->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+<li wire:key="entry-{{ $entry->id }}" @if ($orderable) wire:sort:item="{{ $entry->id }}" @endif x-on:contextmenu.prevent.stop="{{ $canOperate ? 'contextMenu = \'entry-' . $entry->id . '\'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10' : '' }}" class="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
     <div class="flex flex-wrap items-center gap-3 bg-white p-1 dark:bg-zinc-900">
         <div class="flex flex-col gap-2 items-center">
             <span class="size-2 shrink-0 rounded-full {{ $color }}"></span>
@@ -19,7 +22,11 @@
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m4 12 8-8 8 8M6 10.5V19a1 1 0 0 0 1 1h3v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h3a1 1 0 0 0 1-1v-8.5" />
                     </svg>
                 @endif
+                @if ($canEdit)
                 <a href="{{route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])}}" class="font-medium text-md w-max group-hover:text-orange-700" wire:navigate>{{ $entry->data["title"] ?? "—" }}</a>
+            @else
+                <span class="font-medium text-md w-max">{{ $entry->data["title"] ?? "—" }}</span>
+            @endif
             </div>
             <div class="text-xs text-zinc-500">{{ $entry->slug ?? "—" }} · {{ $entry->blueprint ?? "—" }} · {{ $entry->updated_at?->diffForHumans() }}</div>
         </div>
@@ -31,23 +38,35 @@
         'need_review' => 'amber',
         default => 'zinc',
     }">{{ $statuses[$entry->status] ?? $entry->status }}</flux:badge>
+            @if ($canOperate)
             <flux:dropdown>
                 <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
                 <flux:menu>
-                    <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
-                    <flux:modal.trigger name="confirm-delete-entry">
-                        <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
-                    </flux:modal.trigger>
+                    @if ($canEdit)
+                        <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                    @endif
+                    @if ($canDelete)
+                        <flux:modal.trigger name="confirm-delete-entry">
+                            <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
+                        </flux:modal.trigger>
+                    @endif
                 </flux:menu>
             </flux:dropdown>
+        @endif
         </div>
 
+        @if ($canOperate)
         <div x-show="contextMenu === 'entry-{{ $entry->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+            @if ($canEdit)
             <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+        @endif
+        @if ($canDelete)
             <flux:modal.trigger name="confirm-delete-entry">
                 <button type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
             </flux:modal.trigger>
+        @endif
         </div>
+        @endif
     </div>
 
     @if ($entry->children->isNotEmpty())

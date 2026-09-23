@@ -1,4 +1,4 @@
-<section class="w-full max-w-4xl space-y-6">
+<section class="w-full max-w-4xl space-y-6" x-on:keydown.window.ctrl.s.prevent="$wire.save()" x-on:keydown.window.meta.s.prevent="$wire.save()">
     <div class="flex items-center justify-start gap-2 border py-2 px-4 rounded-xl dark:border-zinc-500">
         <flux:link :href="route('users.roles.index')" variant="subtle" wire:navigate class="text-sm">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">

@@ -52,11 +52,42 @@ class NavigationManager extends Component
         Flux::modal('navigation-form')->show();
     }
 
+    /**
+     * Whether this user may edit a navigation's settings or content — the
+     * umbrella "configure navigation" permission works for every navigation
+     * (its children are granted by the role UI alongside it), or the
+     * per-navigation "edit {handle} navigation" permission. Mirrors the
+     * NavigationTreeEditor save/add actions.
+     */
+    protected function canEdit(Navigation $navigation): bool
+    {
+        $user = auth()->user();
+
+        return $user->hasPermission('configure navigation')
+            || $user->hasPermission("edit {$navigation->handle} navigation");
+    }
+
+    /**
+     * Whether this user may delete a navigation. Same shape as canEdit():
+     * the umbrella "configure navigation" permission or the per-navigation
+     * "delete {handle} navigation" permission.
+     */
+    protected function canDelete(Navigation $navigation): bool
+    {
+        $user = auth()->user();
+
+        return $user->hasPermission('configure navigation')
+            || $user->hasPermission("delete {$navigation->handle} navigation");
+    }
+
     public function edit(int $id): void
     {
-        auth()->user()->authorizePermission('configure navigation');
-
+        $user = auth()->user();
         $navigation = Navigation::findOrFail($id);
+
+        if (! $this->canEdit($navigation)) {
+            abort(403);
+        }
 
         if ($this->isProtected($navigation)) {
             Flux::toast(variant: 'danger', text: __('This navigation is protected and cannot be edited.'));
@@ -80,7 +111,17 @@ class NavigationManager extends Component
 
     public function save(): void
     {
-        auth()->user()->authorizePermission('configure navigation');
+        $user = auth()->user();
+
+        if ($this->editingId) {
+            $navigation = Navigation::findOrFail($this->editingId);
+
+            if (! $this->canEdit($navigation)) {
+                abort(403);
+            }
+        } else {
+            $user->authorizePermission('configure navigation');
+        }
 
         $validated = $this->validate([
             'handle' => ['required', 'string', 'max:255', Rule::unique('navigations', 'handle')->ignore($this->editingId)],
@@ -119,9 +160,11 @@ class NavigationManager extends Component
 
     public function delete(int $id): void
     {
-        auth()->user()->authorizePermission('configure navigation');
-
         $navigation = Navigation::findOrFail($id);
+
+        if (! $this->canDelete($navigation)) {
+            abort(403);
+        }
 
         if ($this->isProtected($navigation)) {
             Flux::toast(variant: 'danger', text: __('This navigation is protected and cannot be deleted.'));

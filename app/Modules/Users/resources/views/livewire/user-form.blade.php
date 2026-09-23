@@ -14,7 +14,9 @@
             <flux:input wire:model="email" type="email" :label="__('Email')" placeholder="jane@example.com" required />
         </div>
 
-        <flux:input wire:model="password" type="password" :label="__('Password')" :description="$editingId ? __('Leave blank to keep the current password.') : null" placeholder="••••••••" :required="!$editingId" />
+        @if (! $editingId || auth()->user()->hasPermission("change passwords"))
+            <flux:input wire:model="password" type="password" :label="__('Password')" :description="$editingId ? __('Leave blank to keep the current password.') : null" placeholder="••••••••" :required="!$editingId" />
+        @endif
 
         <flux:field>
             <flux:label>{{ __("Roles") }}</flux:label>
