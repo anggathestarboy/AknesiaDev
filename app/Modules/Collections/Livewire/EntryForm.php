@@ -160,6 +160,10 @@ class EntryForm extends Component
                 throw new NotFoundHttpException;
             }
 
+            if (! $entry->canBeEditedBy(auth()->user())) {
+                abort(403);
+            }
+
             $this->editingId = $entry->id;
             $this->site = $entry->site;
             $this->title = (string) ($entry->data['title'] ?? '');
@@ -173,6 +177,10 @@ class EntryForm extends Component
             $this->site = $site ?: self::DEFAULT_SITE;
             $this->blueprintHandle = request()->string('blueprint')->toString() ?: $this->defaultBlueprintHandle();
             $this->originId = request()->string('origin')->toString() ?: null;
+        }
+
+        if (! auth()->user()->canAccessSite($this->site)) {
+            abort(403);
         }
 
         if ($entry && $this->collection->structured()) {
@@ -359,6 +367,7 @@ class EntryForm extends Component
         return Site::orderBy('order')
             ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
             ->get()
+            ->filter(fn (Site $availableSite): bool => auth()->user()->canAccessSite($availableSite->handle))
             ->map(function (Site $availableSite): array {
                 $active = $availableSite->handle === $this->site;
 
@@ -1117,8 +1126,26 @@ class EntryForm extends Component
             $validated['status'] = Carbon::parse($validated['entryDate'])->isFuture() ? 'scheduled' : 'published';
         }
 
-        if (in_array($validated['status'], ['published', 'scheduled'], true)) {
-            auth()->user()->authorizePermission("publish {$this->collection->handle} entries");
+        // Publishing is a transition INTO a published/scheduled state — it is
+        // only checked on create and when an entry leaves
+        // draft/need_review, never when saving an entry that is already
+        // published/scheduled (a reviewer editing content keeps editing
+        // without needing a publish right). Publishing someone else's entry
+        // additionally needs "publish other authors {handle} entries".
+        $user = auth()->user();
+        $transitionsToPublishState = in_array($validated['status'], ['published', 'scheduled'], true)
+            && ! ($this->editingId && in_array(Entry::where('id', $this->editingId)->value('status'), ['published', 'scheduled'], true));
+
+        if ($transitionsToPublishState) {
+            if ($this->editingId) {
+                $entry = Entry::find($this->editingId);
+
+                if ($entry && ! $entry->ownedBy($user)) {
+                    $user->authorizePermission("publish other authors {$this->collection->handle} entries");
+                }
+            }
+
+            $user->authorizePermission("publish {$this->collection->handle} entries");
         }
 
         $data = $validated['data'] ?? [];
@@ -1218,8 +1245,21 @@ class EntryForm extends Component
 
     public function render(): View
     {
+        $statuses = self::STATUSES;
+
+        // Without the publish permission the published/scheduled states are
+        // hidden from the picker — but an entry that is already published
+        // or scheduled keeps its current state listed (as the locked,
+        // selected value), so a reviewer can still save content edits.
+        if (! auth()->user()->hasPermission("publish {$this->collection->handle} entries")) {
+            $statuses = collect($statuses)
+                ->reject(fn (string $label, string $handle): bool => in_array($handle, ['published', 'scheduled'], true))
+                ->put($this->status, self::STATUSES[$this->status] ?? $this->status)
+                ->all();
+        }
+
         return view('collections::livewire.entry-form', [
-            'statuses' => self::STATUSES,
+            'statuses' => $statuses,
         ])->title($this->editingId ? __('Edit entry') : __('New entry'));
     }
 }

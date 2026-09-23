@@ -85,6 +85,8 @@ class TermForm extends Component
             $this->originId = request()->integer('origin') ?: null;
         }
 
+        abort_unless(auth()->user()->canAccessSite($this->site), 403);
+
         $this->fillData($term);
 
         if (! $this->isOriginLocale()) {
@@ -181,7 +183,9 @@ class TermForm extends Component
 
         $sites = Site::orderBy('order')
             ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
-            ->get();
+            ->get()
+            ->filter(fn (Site $site): bool => auth()->user()->canAccessSite($site->handle))
+            ->values();
 
         if ($sites->count() <= 1) {
             return [];

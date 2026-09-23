@@ -329,3 +329,11 @@ test('a user with edit folders permission can duplicate a folder', function () {
 
     Storage::disk('public')->assertExists('photos/gallery (1)');
 });
+
+test('mounting the index with no container defaults to the first viewable container', function () {
+    AssetContainer::create(['handle' => 'docs', 'title' => 'Docs', 'disk' => 'public']);
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $this->actingAs(restrictedMediaUser(['view photos assets']));
+
+    Livewire::test(Index::class)->assertSet('container', 'photos');
+});

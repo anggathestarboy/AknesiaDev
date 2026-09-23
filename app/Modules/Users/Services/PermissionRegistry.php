@@ -117,11 +117,12 @@ class PermissionRegistry
                 $children[] = $this->permission("reorder {$collection->handle} entries", 'Reorder entries', 'Enables drag and drop reordering');
             }
 
-            // Statamic-style "other authors'" permissions — not yet backed
-            // by an author/owner column on Entry, so granting these has no
-            // effect yet. Kept for structural parity with the reference
-            // permission tree; wiring them up needs an entries.created_by
-            // (or similar) column plus the enforcement check itself.
+            // Statamic-style "other authors'" permissions, backed by the SEO
+            // tab's Meta Author field on Entry (see Entry::ownedBy()) — a
+            // recorded Meta Author names the entry's owner, and everyone
+            // else needs these variants to edit/delete/publish it. Entries
+            // without a Meta Author are shared content open to any holder
+            // of the base permission.
             $children[] = $this->permission("edit other authors {$collection->handle} entries", "Edit other authors' entries");
             $children[] = $this->permission("publish other authors {$collection->handle} entries", "Manage publish state of other authors' entries");
             $children[] = $this->permission("delete other authors {$collection->handle} entries", "Delete other authors' entries");

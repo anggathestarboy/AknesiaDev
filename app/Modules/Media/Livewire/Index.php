@@ -78,7 +78,10 @@ class Index extends Component
     public function mount(): void
     {
         if ($this->container === '' || ! AssetContainer::where('handle', $this->container)->exists()) {
-            $this->container = AssetContainer::orderBy('title')->value('handle') ?? '';
+            // Default to the first container this user may view — a user
+            // with no view rights anywhere gets an empty (no containers yet)
+            // screen instead of a 403 on a container they can't open.
+            $this->container = $this->viewableContainerHandles()[0] ?? '';
         }
 
         if ($this->container !== '') {
@@ -101,7 +104,31 @@ class Index extends Component
     #[Computed]
     public function containers(): Collection
     {
-        return AssetContainer::orderBy('title')->get();
+        return AssetContainer::orderBy('title')
+            ->get()
+            ->filter(fn (AssetContainer $container): bool => $this->can("view {$container->handle} assets"))
+            ->values();
+    }
+
+    /**
+     * Handles of every container this user may view, in title order — the
+     * mount() default and the container switcher both draw from it.
+     *
+     * @return array<int, string>
+     */
+    protected function viewableContainerHandles(): array
+    {
+        return $this->containers->pluck('handle')->all();
+    }
+
+    /**
+     * Whether the current user has $permission — a thin wrapper for this
+     * component's own use in blades (gate checks are per-container strings,
+     * not fixed permission names).
+     */
+    public function can(string $permission): bool
+    {
+        return auth()->user()->hasPermission($permission);
     }
 
     #[Computed]
@@ -553,6 +580,57 @@ class Index extends Component
                 return ['type' => $type, 'key' => $type === 'file' ? (int) $key : $key];
             })
             ->all();
+    }
+
+    /**
+     * Whether the current clipboard can be pasted by this user: a cut needs
+     * the move permission, a copy needs the edit perms for whatever item
+     * types it holds (files and/or folders).
+     */
+    public function canPaste(): bool
+    {
+        if (empty($this->clipboard) || $this->container === '') {
+            return false;
+        }
+
+        $user = auth()->user();
+
+        if (($this->clipboard['mode'] ?? 'cut') === 'cut') {
+            return $user->hasPermission("move {$this->container} assets");
+        }
+
+        $hasFile = collect($this->clipboard['items'] ?? [])->contains('type', 'file');
+        $hasFolder = collect($this->clipboard['items'] ?? [])->contains('type', 'folder');
+
+        return (! $hasFile || $user->hasPermission("edit {$this->container} assets"))
+            && (! $hasFolder || $user->hasPermission("edit folders {$this->container} assets"));
+    }
+
+    /**
+     * Whether every currently selected item is within reach of $filePermission
+     * and $folderPermission (a folder item is checked against the folder
+     * permission, a file against the file one) — the boolean counterpart of
+     * authorizeItemTypes(), for gating the selection-bar buttons.
+     */
+    public function canSelected(string $filePermission, string $folderPermission): bool
+    {
+        $items = $this->selectedItems();
+
+        if ($items === []) {
+            return false;
+        }
+
+        $user = auth()->user();
+
+        foreach ($items as $item) {
+            $permission = $item['type'] === 'folder' ? $folderPermission : $filePermission;
+
+            if (! $user->hasPermission($permission)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected function cutItems(array $items): void

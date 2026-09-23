@@ -40,7 +40,8 @@ class EntryManager extends Component
 
         auth()->user()->authorizePermission("view {$this->collection->handle} entries");
 
-        $this->siteFilter = Site::orderBy('order')->value('handle') ?? '';
+        $this->siteFilter = Site::orderBy('order')->get()
+            ->first(fn (Site $site): bool => auth()->user()->canAccessSite($site->handle))?->handle ?? '';
     }
 
     public function bulkActionsAvailable(): bool
@@ -246,7 +247,20 @@ class EntryManager extends Component
     #[Computed]
     public function availableSites()
     {
-        return Site::orderBy('order')->get();
+        return Site::orderBy('order')
+            ->get()
+            ->filter(fn (Site $site): bool => auth()->user()->canAccessSite($site->handle))
+            ->values();
+    }
+
+    /**
+     * The first site this user may access — used as the target for the
+     * "New entry" button, which always needs a concrete site. Empty when the
+     * user has no site access at all (then the button is hidden).
+     */
+    public function createSite(): string
+    {
+        return $this->availableSites->first()?->handle ?? '';
     }
 
     /**
@@ -291,12 +305,21 @@ class EntryManager extends Component
 
     public function delete(string $id, bool $deleteLocaleSiblings = true): void
     {
-        auth()->user()->authorizePermission("delete {$this->collection->handle} entries");
+        $user = auth()->user();
+        $user->authorizePermission("delete {$this->collection->handle} entries");
 
         $entry = Entry::where('collection', $this->collection->handle)->findOrFail($id);
 
+        if (! $entry->canBeDeletedBy($user)) {
+            abort(403);
+        }
+
+        $siblings = $this->localeSiblings($entry);
+
         if ($deleteLocaleSiblings) {
-            foreach ($this->localeSiblings($entry) as $sibling) {
+            abort_unless($siblings->every(fn (Entry $sibling): bool => $sibling->canBeDeletedBy($user)), 403);
+
+            foreach ($siblings as $sibling) {
                 if ($this->collection->structured()) {
                     app(CollectionTreeService::class)->removeEntry($this->collection->handle, $sibling->site, $sibling->id);
                 }
@@ -323,7 +346,8 @@ class EntryManager extends Component
      */
     public function bulkDelete(): void
     {
-        auth()->user()->authorizePermission("delete {$this->collection->handle} entries");
+        $user = auth()->user();
+        $user->authorizePermission("delete {$this->collection->handle} entries");
 
         if (! $this->bulkActionsAvailable()) {
             return;
@@ -335,6 +359,9 @@ class EntryManager extends Component
             if (! $entry) {
                 continue;
             }
+
+            abort_unless($entry->canBeDeletedBy($user), 403);
+            abort_unless($this->localeSiblings($entry)->every(fn (Entry $sibling): bool => $sibling->canBeDeletedBy($user)), 403);
 
             foreach ($this->localeSiblings($entry) as $sibling) {
                 $sibling->delete();
@@ -348,6 +375,27 @@ class EntryManager extends Component
         unset($this->entries);
 
         Flux::toast(variant: 'success', text: trans_choice(':count entry deleted.|:count entries deleted.', $count, ['count' => $count]));
+    }
+
+    /**
+     * Whether the currently selected entries (with their locale siblings)
+     * can all be deleted by this user — gates the bulk Delete button, so a
+     * selection mixing one's own and someone else's entries shows the
+     * button only when deletion is actually possible for every one of them.
+     */
+    public function canBulkDelete(): bool
+    {
+        $user = auth()->user();
+
+        if (! $user->hasPermission("delete {$this->collection->handle} entries")) {
+            return false;
+        }
+
+        return Entry::where('collection', $this->collection->handle)
+            ->whereIn('id', $this->selected)
+            ->get()
+            ->every(fn (Entry $entry): bool => $entry->canBeDeletedBy($user)
+                && $this->localeSiblings($entry)->every(fn (Entry $sibling): bool => $sibling->canBeDeletedBy($user)));
     }
 
     /**
@@ -367,7 +415,19 @@ class EntryManager extends Component
         }
 
         if (in_array($status, ['published', 'scheduled'], true)) {
-            auth()->user()->authorizePermission("publish {$this->collection->handle} entries");
+            $user = auth()->user();
+            $user->authorizePermission("publish {$this->collection->handle} entries");
+
+            // Bulk-publishing someone else's entry needs the "publish other
+            // authors" variant, mirroring EntryForm::save().
+            $hasForeignEntry = Entry::where('collection', $this->collection->handle)
+                ->whereIn('id', $this->selected)
+                ->get()
+                ->contains(fn (Entry $entry): bool => ! $entry->ownedBy($user));
+
+            if ($hasForeignEntry) {
+                $user->authorizePermission("publish other authors {$this->collection->handle} entries");
+            }
         }
 
         // Updated one model at a time (not a single mass ->update() query)
@@ -394,6 +454,34 @@ class EntryManager extends Component
         unset($this->entries);
 
         Flux::toast(variant: 'success', text: trans_choice(':count entry updated.|:count entries updated.', $count, ['count' => $count]));
+    }
+
+    /**
+     * Whether $status is applicable to every currently selected entry by
+     * this user — gates the published/scheduled options in the bulk status
+     * dropdown, so entries owned by someone else aren't offered a publish
+     * action the backend would refuse.
+     */
+    public function canBulkUpdateStatus(string $status): bool
+    {
+        $user = auth()->user();
+
+        if (! $user->hasPermission("edit {$this->collection->handle} entries")) {
+            return false;
+        }
+
+        if (! in_array($status, ['published', 'scheduled'], true)) {
+            return true;
+        }
+
+        if (! $user->hasPermission("publish {$this->collection->handle} entries")) {
+            return false;
+        }
+
+        return Entry::where('collection', $this->collection->handle)
+            ->whereIn('id', $this->selected)
+            ->get()
+            ->every(fn (Entry $entry): bool => $entry->ownedBy($user) || $user->hasPermission("publish other authors {$this->collection->handle} entries"));
     }
 
     public function render(): View

@@ -449,6 +449,56 @@ class Entry extends Model
         return array_merge($term->data, ['id' => $term->id, 'slug' => $term->slug]);
     }
 
+    /**
+     * Whether $user may edit this entry: they need the base
+     * "edit {collection} entries" permission, and if the entry was created
+     * by someone else they also need "edit other authors {collection}
+     * entries". Authorship comes from the SEO tab's Meta Author field
+     * (see ownedBy()); an entry with no Meta Author recorded has no owner
+     * and counts as shared content — editable with just the base permission.
+     */
+    public function canBeEditedBy(?User $user): bool
+    {
+        if (! $user || ! $user->hasPermission("edit {$this->collection} entries")) {
+            return false;
+        }
+
+        return $this->ownedBy($user) || $user->hasPermission("edit other authors {$this->collection} entries");
+    }
+
+    /**
+     * Whether $user may delete this entry: the base
+     * "delete {collection} entries" permission, plus "delete other authors"
+     * when the entry was created by someone else (see ownedBy()).
+     */
+    public function canBeDeletedBy(?User $user): bool
+    {
+        if (! $user || ! $user->hasPermission("delete {$this->collection} entries")) {
+            return false;
+        }
+
+        return $this->ownedBy($user) || $user->hasPermission("delete other authors {$this->collection} entries");
+    }
+
+    /**
+     * Whether this entry was authored by $user, decided by the SEO tab's
+     * Meta Author field. No Meta Author recorded (empty) means the entry is
+     * global — owned by everyone, so the base edit/delete/publish
+     * permission is enough. Once a Meta Author is set, only that user
+     * counts as the owner; everyone else needs the matching
+     * "other authors" variant — see canBeEditedBy().
+     */
+    public function ownedBy(?User $user): bool
+    {
+        $author = (string) ($this->seoFields()['meta_author'] ?? '');
+
+        if ($author === '') {
+            return true;
+        }
+
+        return $user !== null && $author === (string) $user->id;
+    }
+
     protected static function wrapFluent(array $data): Fluent
     {
         return FluentWrapper::wrap($data);

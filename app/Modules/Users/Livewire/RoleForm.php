@@ -92,6 +92,17 @@ class RoleForm extends Component
     {
         auth()->user()->authorizePermission('edit roles');
 
+        // Prune values that no longer exist in the permission registry (a
+        // permission removed since the role was granted, or a stale tree
+        // posting it) before validating — Rule::in() would otherwise reject
+        // the whole save. The registry has no 'super' entry (it's toggled
+        // separately and written back below), so a Super Admin role posts an
+        // empty tree and the stored permissions become ['super'] only at
+        // persist time.
+        $this->permissions = $this->superAdmin
+            ? []
+            : array_values(array_intersect($this->permissions, app(PermissionRegistry::class)->values()));
+
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'handle' => ['required', 'string', 'max:255', Rule::unique('roles', 'handle')->ignore($this->editingId)],

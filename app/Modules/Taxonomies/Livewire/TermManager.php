@@ -31,8 +31,9 @@ class TermManager extends Component
 
     /**
      * The site new terms default to and the list is initially filtered
-     * by — the first of the taxonomy's configured sites, or the first site
-     * overall when the taxonomy has none configured.
+     * by — the first of the taxonomy's configured sites the user may access,
+     * or the first accessible site overall when the taxonomy has none
+     * configured.
      */
     public function defaultSiteHandle(): ?string
     {
@@ -40,7 +41,17 @@ class TermManager extends Component
 
         return Site::orderBy('order')
             ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
-            ->value('handle');
+            ->get()
+            ->first(fn (Site $site): bool => auth()->user()->canAccessSite($site->handle))?->handle;
+    }
+
+    /**
+     * The site the "New term" button targets — the first site this user may
+     * access (empty when they have no site access, hiding the button).
+     */
+    public function createSite(): string
+    {
+        return $this->availableSites->first()?->handle ?? '';
     }
 
     #[Computed]
@@ -65,7 +76,9 @@ class TermManager extends Component
 
         return Site::orderBy('order')
             ->when($configuredSites !== [], fn ($query) => $query->whereIn('handle', $configuredSites))
-            ->get();
+            ->get()
+            ->filter(fn (Site $site): bool => auth()->user()->canAccessSite($site->handle))
+            ->values();
     }
 
     /**
