@@ -302,6 +302,14 @@ class EntryForm extends Component
     }
 
     /**
+     * The entry currently being edited, or null on create.
+     */
+    protected function entry(): ?Entry
+    {
+        return $this->editingId ? Entry::find($this->editingId) : null;
+    }
+
+    /**
      * The sibling entry (or this entry itself) on the default/origin site —
      * authoritative source for non-localizable field values.
      */
@@ -1126,26 +1134,17 @@ class EntryForm extends Component
             $validated['status'] = Carbon::parse($validated['entryDate'])->isFuture() ? 'scheduled' : 'published';
         }
 
-        // Publishing is a transition INTO a published/scheduled state — it is
-        // only checked on create and when an entry leaves
-        // draft/need_review, never when saving an entry that is already
-        // published/scheduled (a reviewer editing content keeps editing
-        // without needing a publish right). Publishing someone else's entry
-        // additionally needs "publish other authors {handle} entries".
-        $user = auth()->user();
-        $transitionsToPublishState = in_array($validated['status'], ['published', 'scheduled'], true)
-            && ! ($this->editingId && in_array(Entry::where('id', $this->editingId)->value('status'), ['published', 'scheduled'], true));
+        // The status picker is disabled for anyone who can't manage this
+        // entry's publish state (see canEditStatusOf()): changing it in ANY
+        // direction — into published/scheduled or between draft/need_review —
+        // needs the collection's "publish {handle} entries" permission, and
+        // editing someone else's entry additionally "publish other authors
+        // {handle} entries". Saving with the status unchanged never needs a
+        // publish right (a reviewer editing content keeps editing without one).
+        $entry = $this->entry();
 
-        if ($transitionsToPublishState) {
-            if ($this->editingId) {
-                $entry = Entry::find($this->editingId);
-
-                if ($entry && ! $entry->ownedBy($user)) {
-                    $user->authorizePermission("publish other authors {$this->collection->handle} entries");
-                }
-            }
-
-            $user->authorizePermission("publish {$this->collection->handle} entries");
+        if ($validated['status'] !== ($entry?->status ?? 'draft') && ! $this->canEditStatusOf($entry)) {
+            abort(403);
         }
 
         $data = $validated['data'] ?? [];
@@ -1245,21 +1244,39 @@ class EntryForm extends Component
 
     public function render(): View
     {
-        $statuses = self::STATUSES;
+        return view('collections::livewire.entry-form', [
+            'statuses' => self::STATUSES,
+            'canEditStatus' => $this->canEditStatus,
+        ])->title($this->editingId ? __('Edit entry') : __('New entry'));
+    }
 
-        // Without the publish permission the published/scheduled states are
-        // hidden from the picker — but an entry that is already published
-        // or scheduled keeps its current state listed (as the locked,
-        // selected value), so a reviewer can still save content edits.
-        if (! auth()->user()->hasPermission("publish {$this->collection->handle} entries")) {
-            $statuses = collect($statuses)
-                ->reject(fn (string $label, string $handle): bool => in_array($handle, ['published', 'scheduled'], true))
-                ->put($this->status, self::STATUSES[$this->status] ?? $this->status)
-                ->all();
+    /**
+     * Whether the status picker is enabled for the entry being edited —
+     * see canEditStatusOf().
+     */
+    #[Computed]
+    public function canEditStatus(): bool
+    {
+        return $this->canEditStatusOf($this->entry());
+    }
+
+    /**
+     * Whether the user may change the status picker for the given entry.
+     * Moving the workflow state in any direction (Published / Scheduled /
+     * Need Review / Draft) requires the collection's base "publish {handle}
+     * entries" permission; editing someone else's entry (decided by the SEO
+     * Meta Author field, see Entry::ownedBy()) additionally requires
+     * "publish other authors {handle} entries".
+     */
+    protected function canEditStatusOf(?Entry $entry): bool
+    {
+        $user = auth()->user();
+
+        if (! $user->hasPermission("publish {$this->collection->handle} entries")) {
+            return false;
         }
 
-        return view('collections::livewire.entry-form', [
-            'statuses' => $statuses,
-        ])->title($this->editingId ? __('Edit entry') : __('New entry'));
+        return $entry === null || $entry->ownedBy($user)
+            || $user->hasPermission("publish other authors {$this->collection->handle} entries");
     }
 }

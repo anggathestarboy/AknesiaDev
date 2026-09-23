@@ -2622,6 +2622,47 @@ test('an editor without the publish permission can save an unchanged published e
     expect($entry->fresh()->data['title'])->toBe('Hello updated');
 });
 
+test('a non-publisher sees all four statuses but cannot pick a different one', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $editor = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'view blog entries', 'create blog entries']]);
+    $editor->roles()->attach($role);
+    $this->actingAs($editor);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->assertOk()
+        ->assertSee('Published')
+        ->assertSee('Scheduled')
+        ->assertSee('Need Review')
+        ->assertSee('Draft')
+        ->assertSet('canEditStatus', false);
+});
+
+test('a publisher can pick any status on their own entry, but not on another author\'s entry', function () {
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+
+    $author = User::factory()->create();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'status' => 'draft', 'seo' => ['meta_author' => (string) $author->id], 'data' => ['title' => 'Hello']]);
+
+    $publisher = User::factory()->create();
+    $role = Role::create(['handle' => 'publisher', 'title' => 'Publisher', 'permissions' => ['access cp', 'view blog entries', 'edit blog entries', 'publish blog entries']]);
+    $publisher->roles()->attach($role);
+    $this->actingAs($publisher);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry])
+        ->assertSet('canEditStatus', false);
+
+    $own = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'own', 'status' => 'draft', 'seo' => ['meta_author' => (string) $publisher->id], 'data' => ['title' => 'Own']]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $own])
+        ->assertSet('canEditStatus', true);
+});
+
 test('site walls are opt-in and only bite once an "access ... site" permission exists', function () {
     makeSites();
     makePostBlueprint();
