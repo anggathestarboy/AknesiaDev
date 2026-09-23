@@ -91,11 +91,42 @@ class GlobalSetManager extends Component
         Flux::modal('global-set-form')->show();
     }
 
+    /**
+     * Whether this user may edit a global set's definition (name/handle/
+     * blueprints/sites) or its values — the umbrella "configure globals"
+     * permission works for every set (its children are granted by the role
+     * UI alongside it), or the per-set "edit {handle} globals" permission.
+     * Mirrors the GlobalSetForm save action.
+     */
+    protected function canEdit(GlobalSet $globalSet): bool
+    {
+        $user = auth()->user();
+
+        return $user->hasPermission('configure globals')
+            || $user->hasPermission("edit {$globalSet->handle} globals");
+    }
+
+    /**
+     * Whether this user may delete a global set. Same shape as canEdit():
+     * the umbrella "configure globals" permission or the per-set
+     * "delete {handle} globals" permission.
+     */
+    protected function canDelete(GlobalSet $globalSet): bool
+    {
+        $user = auth()->user();
+
+        return $user->hasPermission('configure globals')
+            || $user->hasPermission("delete {$globalSet->handle} globals");
+    }
+
     public function edit(int $id): void
     {
-        auth()->user()->authorizePermission('configure globals');
-
+        $user = auth()->user();
         $globalSet = GlobalSet::findOrFail($id);
+
+        if (! $this->canEdit($globalSet)) {
+            abort(403);
+        }
 
         $this->editingId = $globalSet->id;
         $this->handle = $globalSet->handle;
@@ -118,7 +149,17 @@ class GlobalSetManager extends Component
 
     public function save(): void
     {
-        auth()->user()->authorizePermission('configure globals');
+        $user = auth()->user();
+
+        if ($this->editingId) {
+            $globalSet = GlobalSet::findOrFail($this->editingId);
+
+            if (! $this->canEdit($globalSet)) {
+                abort(403);
+            }
+        } else {
+            $user->authorizePermission('configure globals');
+        }
 
         $siteOrder = $this->availableSites->pluck('handle')->all();
         $this->sites = collect(array_unique(array_merge($this->sites, array_filter([$this->defaultSiteHandle]))))
@@ -172,9 +213,11 @@ class GlobalSetManager extends Component
 
     public function delete(int $id): void
     {
-        auth()->user()->authorizePermission('configure globals');
-
         $globalSet = GlobalSet::findOrFail($id);
+
+        if (! $this->canDelete($globalSet)) {
+            abort(403);
+        }
 
         GlobalSetVariable::where('handle', $globalSet->handle)->delete();
         $globalSet->delete();

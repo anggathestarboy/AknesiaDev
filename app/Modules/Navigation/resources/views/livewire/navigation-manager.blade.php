@@ -23,51 +23,66 @@
 
                 <flux:table.rows>
                     @forelse ($this->navigations as $navigation)
-                        <flux:table.row wire:key="navigation-{{ $navigation->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'navigation-{{ $navigation->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                        @php
+                            $canEdit = $this->canEdit($navigation);
+                            $canDelete = $this->canDelete($navigation);
+                            $canOperate = $canEdit || $canDelete;
+                        @endphp
+                        <flux:table.row wire:key="navigation-{{ $navigation->id }}" x-on:contextmenu.prevent.stop="{{ $canOperate ? 'contextMenu = \'navigation-' . $navigation->id . '\'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10' : '' }}">
                             <flux:table.cell>
-                                <a @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0) @else class="hover:text-orange-700" href="{{route('navigation.edit', $navigation->handle)}}" wire:navigate @endif>{{ $navigation->title }} </a>
+                                @if ($canEdit)
+                                    <a @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0) @else class="hover:text-orange-700" href="{{route('navigation.edit', $navigation->handle)}}" wire:navigate @endif>{{ $navigation->title }} </a>
+                                @else
+                                    <span>{{ $navigation->title }}</span>
+                                @endif
                             </flux:table.cell>
                             <flux:table.cell>{{ $navigation->handle }}</flux:table.cell>
                             <flux:table.cell>{{ $navigation->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell>
                             <flux:table.cell class="flex justify-end gap-1">
-                                @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0)
-                                    <flux:button size="sm" variant="primary" disabled tooltip="{{ __('Add fields to this navigation\'s blueprint first.') }}">{{ __("Edit content") }}</flux:button>
-                                @else
-                                    <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __("Edit tree") : __("Edit content") }}</flux:button>
+                                @if ($canEdit)
+                                    @if (!$this->isProtected($navigation) && count($navigation->effectiveBlueprint()?->data["fields"] ?? []) === 0)
+                                        <flux:button size="sm" variant="primary" disabled tooltip="{{ __('Add fields to this navigation\'s blueprint first.') }}">{{ __("Edit content") }}</flux:button>
+                                    @else
+                                        <flux:button size="sm" variant="primary" :href="route('navigation.edit', $navigation->handle)" wire:navigate>{{ $this->isProtected($navigation) ? __("Edit tree") : __("Edit content") }}</flux:button>
+                                    @endif
                                 @endif
 
+                                @if ($canOperate)
                                 <flux:dropdown>
                                     <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
                                     <flux:menu>
                                         @if ($this->isProtected($navigation))
                                             <flux:menu.item icon="pencil" disabled>{{ __("Edit") }}</flux:menu.item>
-                                        @else
+                                        @elseif ($canEdit)
                                             <flux:menu.item icon="pencil" wire:click="edit({{ $navigation->id }})">{{ __("Edit") }}</flux:menu.item>
                                         @endif
                                         @if ($this->isProtected($navigation))
                                             <flux:menu.item icon="trash" variant="danger" disabled>{{ __("Delete") }}</flux:menu.item>
-                                        @else
+                                        @elseif ($canDelete)
                                             <flux:modal.trigger name="confirm-delete-navigation">
                                                 <flux:menu.item icon="trash" variant="danger" x-on:click="deleteNavigationId = {{ $navigation->id }}">{{ __("Delete") }}</flux:menu.item>
                                             </flux:modal.trigger>
                                         @endif
                                     </flux:menu>
                                 </flux:dropdown>
+                                @endif
 
+                                @if ($canOperate)
                                 <div x-show="contextMenu === 'navigation-{{ $navigation->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                                     @if ($this->isProtected($navigation))
                                         <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm opacity-50">{{ __("Edit") }}</button>
-                                    @else
+                                    @elseif ($canEdit)
                                         <button type="button" wire:click.stop="edit({{ $navigation->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</button>
                                     @endif
                                     @if ($this->isProtected($navigation))
                                         <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm text-red-600 opacity-50">{{ __("Delete") }}</button>
-                                    @else
+                                    @elseif ($canDelete)
                                         <flux:modal.trigger name="confirm-delete-navigation">
                                             <button type="button" x-on:click="deleteNavigationId = {{ $navigation->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
                                         </flux:modal.trigger>
                                     @endif
                                 </div>
+                                @endif
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

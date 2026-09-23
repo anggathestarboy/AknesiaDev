@@ -176,6 +176,20 @@ class NavigationTreeEditor extends Component
         return $this->blueprintFields() !== [];
     }
 
+    /**
+     * Whether the user can edit this navigation's content — either the
+     * umbrella "configure navigation" permission or the per-navigation
+     * "edit {handle} navigation" permission (mount only requires "view ...",
+     * since opening the page to read its content stays allowed).
+     */
+    public function canEdit(): bool
+    {
+        $user = auth()->user();
+
+        return $user->hasPermission('configure navigation')
+            || $user->hasPermission("edit {$this->navigation->handle} navigation");
+    }
+
     #[Computed]
     public function blueprintFields(): array
     {

@@ -22,31 +22,52 @@
                 </flux:table.columns>
                 <flux:table.rows>
                     @forelse ($this->globalSets as $globalSet)
-                        <flux:table.row wire:key="global-set-{{ $globalSet->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'global-set-{{ $globalSet->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
+                        @php
+                            $canEdit = $this->canEdit($globalSet);
+                            $canDelete = $this->canDelete($globalSet);
+                            $canOperate = $canEdit || $canDelete;
+                        @endphp
+                        <flux:table.row wire:key="global-set-{{ $globalSet->id }}" x-on:contextmenu.prevent.stop="{{ $canOperate ? 'contextMenu = \'global-set-' . $globalSet->id . '\'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10' : '' }}">
                             <flux:table.cell>
-                                <a href="{{ route('globals.edit', $globalSet->handle) }}" class="hover:text-orange-700" wire:navigate>{{ $globalSet->title }}</a>
+                                @if ($canEdit)
+                                    <a href="{{ route('globals.edit', $globalSet->handle) }}" class="hover:text-orange-700" wire:navigate>{{ $globalSet->title }}</a>
+                                @else
+                                    <span>{{ $globalSet->title }}</span>
+                                @endif
                             </flux:table.cell>
                             <flux:table.cell>{{ $globalSet->handle }}</flux:table.cell>
                             {{-- <flux:table.cell>{{ $globalSet->effectiveBlueprint()?->handle ?? "—" }}</flux:table.cell> --}}
                             <flux:table.cell class="flex justify-end gap-2">
+                                @if ($canOperate)
                                 <flux:dropdown>
                                     <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
                                     <flux:menu>
-                                        <flux:menu.item icon="pencil" :href="route('globals.edit', $globalSet->handle)" wire:navigate>{{ __("Edit values") }}</flux:menu.item>
-                                        <flux:menu.item icon="cog-6-tooth" wire:click="edit({{ $globalSet->id }})">{{ __("Settings") }}</flux:menu.item>
-                                        <flux:modal.trigger name="confirm-delete-global-set">
-                                            <flux:menu.item icon="trash" variant="danger" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}">{{ __("Delete") }}</flux:menu.item>
-                                        </flux:modal.trigger>
+                                        @if ($canEdit)
+                                            <flux:menu.item icon="pencil" :href="route('globals.edit', $globalSet->handle)" wire:navigate>{{ __("Edit values") }}</flux:menu.item>
+                                            <flux:menu.item icon="cog-6-tooth" wire:click="edit({{ $globalSet->id }})">{{ __("Settings") }}</flux:menu.item>
+                                        @endif
+                                        @if ($canDelete)
+                                            <flux:modal.trigger name="confirm-delete-global-set">
+                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}">{{ __("Delete") }}</flux:menu.item>
+                                            </flux:modal.trigger>
+                                        @endif
                                     </flux:menu>
                                 </flux:dropdown>
+                                @endif
 
+                                @if ($canOperate)
                                 <div x-show="contextMenu === 'global-set-{{ $globalSet->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                                    <a href="{{ route('globals.edit', $globalSet->handle) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit values") }}</a>
-                                    <button type="button" wire:click.stop="edit({{ $globalSet->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Settings") }}</button>
-                                    <flux:modal.trigger name="confirm-delete-global-set">
-                                        <button type="button" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
-                                    </flux:modal.trigger>
+                                    @if ($canEdit)
+                                        <a href="{{ route('globals.edit', $globalSet->handle) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit values") }}</a>
+                                        <button type="button" wire:click.stop="edit({{ $globalSet->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Settings") }}</button>
+                                    @endif
+                                    @if ($canDelete)
+                                        <flux:modal.trigger name="confirm-delete-global-set">
+                                            <button type="button" x-on:click="deleteGlobalSetId = {{ $globalSet->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
+                                        </flux:modal.trigger>
+                                    @endif
                                 </div>
+                                @endif
                             </flux:table.cell>
                         </flux:table.row>
                     @empty
