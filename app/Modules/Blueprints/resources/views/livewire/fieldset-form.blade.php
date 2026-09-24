@@ -8,7 +8,7 @@
         <flux:input wire:model="handle" :label="__('Handle')" description:trailing="{{ __('Lowercase letters, numbers and underscores only — no spaces.') }}" required />
 
         <div class="space-y-3">
-            <div class="flex items-center justify-between bg-white z-999 sticky top-0 p-2 border rounded-b-xl dark:bg-zinc-900 dark:border-zinc-700">
+            <div class="flex items-center justify-between bg-white z-10 sticky top-0 p-2 border rounded-b-xl dark:bg-zinc-900 dark:border-zinc-700">
                 <flux:switch wire:model.live="fieldsCollapsedByDefault" size="sm" :label="__('Collapse fields by default')" />
                 <div class="flex gap-2">
                     <flux:button size="xs" variant="ghost" type="button" wire:click="$dispatch('collapse-all-fields')">{{ __("Collapse all") }}</flux:button>
