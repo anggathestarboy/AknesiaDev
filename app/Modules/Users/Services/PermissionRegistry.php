@@ -225,7 +225,6 @@ class PermissionRegistry
                 $this->permission('assign user roles', 'Assign roles to users'),
                 $this->permission('edit user groups', 'Edit groups'),
                 $this->permission('edit roles', 'Edit roles'),
-                $this->permission('impersonate users', 'Impersonate users', 'Allows logging in as any user, including super admins. Grant this permission with caution.'),
             ],
         ];
     }

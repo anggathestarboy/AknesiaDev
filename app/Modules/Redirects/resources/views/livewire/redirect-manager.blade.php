@@ -57,7 +57,7 @@
     </div>
 
     <flux:modal name="redirect-form" class="max-w-lg" :show="$errors->isNotEmpty()">
-        <form wire:submit="save" class="space-y-6">
+        <form wire:submit="save" class="space-y-6" x-on:keydown.window.ctrl.s.prevent="if ($el.closest('dialog')?.open) $wire.save()" x-on:keydown.window.meta.s.prevent="if ($el.closest('dialog')?.open) $wire.save()">
             <flux:heading size="lg">{{ $editingId ? __("Redirect details") : __("New redirect") }}</flux:heading>
 
             <div class="space-y-4">

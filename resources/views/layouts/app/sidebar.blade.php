@@ -60,11 +60,14 @@
                 @foreach ($sidebarItems as $item)
                     @if (($item["children"] ?? []) !== [])
                         @php
-                            $parentIsCurrent = collect($item["children"])->contains(fn($child) => $sidebarIsCurrent($sidebarTreeService->resolveUrl($child)));
+                            $parentUrl = $sidebarTreeService->resolveUrl($item);
+                            $parentIsCurrent = $sidebarIsCurrent($parentUrl) || collect($item["children"])->contains(fn($child) => $sidebarIsCurrent($sidebarTreeService->resolveUrl($child)));
                         @endphp
                         <div x-data="{ open: {{ $parentIsCurrent ? 'true' : 'false' }} }" class="flex flex-col">
-                            <button
-                                type="button"
+                            <a
+                                href="{{ $parentUrl ?? '#' }}"
+                                target="{{ $item['target'] }}"
+                                wire:navigate
                                 x-on:click="open = !open"
                                 @if ($parentIsCurrent) data-current @endif
                                 class="my-px flex h-8 w-full items-center gap-3 rounded-lg border border-transparent px-3 text-start text-sm font-medium text-zinc-500 hover:bg-zinc-800/5 hover:text-zinc-800 data-current:border-zinc-200 data-current:bg-white data-current:text-(--color-accent-content) dark:text-white/80 dark:hover:bg-white/7 dark:hover:text-white dark:data-current:border-transparent dark:data-current:bg-white/7"
@@ -72,7 +75,7 @@
                                 <span class="flex-1 truncate text-start">{{ $item["title"] }}</span>
                                 <flux:icon.chevron-right x-show="!open" x-cloak class="size-4 shrink-0 text-zinc-500 dark:text-white/80" />
                                 <flux:icon.chevron-down x-show="open" x-cloak class="size-4 shrink-0 text-zinc-500 dark:text-white/80" />
-                            </button>
+                            </a>
 
                             <div x-show="open" x-cloak class="flex flex-col">
                                 @foreach ($item["children"] as $child)

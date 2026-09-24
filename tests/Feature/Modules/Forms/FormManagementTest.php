@@ -8,6 +8,7 @@ use App\Modules\Forms\Models\Form;
 use App\Modules\Forms\Models\FormSubmission;
 use App\Modules\Media\Models\AssetContainer;
 use App\Modules\Media\Models\AssetMeta;
+use App\Modules\Users\Models\Role;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -28,6 +29,15 @@ test('forms page is displayed', function () {
     $this->actingAs(User::factory()->create());
 
     $this->get('/admin-panel/forms')->assertOk();
+});
+
+test('a user without the configure forms permission cannot view the forms page', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    $this->get('/admin-panel/forms')->assertForbidden();
 });
 
 test('a form can be created with a handle-generate button and picks an existing blueprint', function () {
