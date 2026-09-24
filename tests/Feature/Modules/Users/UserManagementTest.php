@@ -295,6 +295,12 @@ test('the super permission is no longer offered as a tree checkbox', function ()
     expect($values)->not->toContain('super');
 });
 
+test('the impersonate users permission is no longer offered as a tree checkbox', function () {
+    $values = app(PermissionRegistry::class)->values();
+
+    expect($values)->not->toContain('impersonate users');
+});
+
 test('a user without access cp is forbidden from the whole control panel', function () {
     $user = User::factory()->create();
     $role = Role::create(['handle' => 'no-access', 'title' => 'No Access', 'permissions' => []]);

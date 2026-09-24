@@ -43,6 +43,11 @@ class FormManager extends Component
      */
     public array $previewFields = [];
 
+    public function mount(): void
+    {
+        auth()->user()->authorizePermission('configure forms');
+    }
+
     #[Computed]
     public function forms()
     {
