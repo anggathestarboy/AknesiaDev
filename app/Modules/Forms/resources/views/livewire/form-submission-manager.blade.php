@@ -15,13 +15,14 @@
         <flux:table.rows>
             @forelse ($this->submissions as $submission)
                 <flux:table.row wire:key="submission-{{ $submission->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'submission-{{ $submission->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
-                    <flux:table.cell>
-                        <a href="{{ route('forms.submissions.show', ['form' => $form->handle, 'submission' => $submission->id]) }}" class="hover:text-orange-700" wire:navigate> {{ $submission->created_at?->format("Y-m-d | H:i") }} </a>
-                    </flux:table.cell>
                     @foreach ($this->fields as $field)
                         @php $value = $submission->data[$field["handle"]] ?? null; @endphp
                         <flux:table.cell>@include ("forms::partials.submission-value", ["field" => $field, "value" => $value])</flux:table.cell>
                     @endforeach
+
+                    <flux:table.cell>
+                        <a href="{{ route('forms.submissions.show', ['form' => $form->handle, 'submission' => $submission->id]) }}" class="hover:text-orange-700" wire:navigate> {{ $submission->created_at?->format("Y-m-d | H:i") }} </a>
+                    </flux:table.cell>
 
                     <flux:table.cell class="flex justify-end gap-2">
                         <flux:dropdown>
