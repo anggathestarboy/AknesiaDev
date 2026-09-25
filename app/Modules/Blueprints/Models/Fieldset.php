@@ -2,6 +2,7 @@
 
 namespace App\Modules\Blueprints\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Fieldset extends Model
 {
+    use LogsActivity;
+
     protected $table = 'fieldsets';
 
     protected $fillable = ['handle', 'data'];
@@ -18,4 +21,9 @@ class Fieldset extends Model
     protected $casts = [
         'data' => 'array',
     ];
+
+    public function activityLabel(): string
+    {
+        return "fieldset '{$this->handle}'";
+    }
 }

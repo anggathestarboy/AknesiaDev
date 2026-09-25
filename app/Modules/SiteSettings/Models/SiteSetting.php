@@ -2,6 +2,7 @@
 
 namespace App\Modules\SiteSettings\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\SiteSettings\Services\SchemaMarkupBuilder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -19,6 +20,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class SiteSetting extends Model
 {
+    use LogsActivity;
+
     protected $table = 'site_settings';
 
     protected $fillable = ['robots_txt', 'llms_txt', 'llms_config', 'schema', 'integrations'];
@@ -95,5 +98,10 @@ class SiteSetting extends Model
         }
 
         return isset($schema['type']) || isset($schema['name']) ? [$schema] : [];
+    }
+
+    public function activityLabel(): string
+    {
+        return 'site settings';
     }
 }

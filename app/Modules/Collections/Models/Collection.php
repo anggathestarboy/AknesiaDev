@@ -2,6 +2,7 @@
 
 namespace App\Modules\Collections\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Blueprints\Models\Blueprint;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Collection extends Model
 {
+    use LogsActivity;
+
     protected $table = 'collections';
 
     protected $fillable = ['handle', 'title', 'settings'];
@@ -171,5 +174,10 @@ class Collection extends Model
     public function saveAction(): string
     {
         return $this->settings['save_action'] ?? 'listing';
+    }
+
+    public function activityLabel(): string
+    {
+        return "collection '{$this->title}'";
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Redirects\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -20,6 +21,8 @@ use Illuminate\Support\Carbon;
  */
 class Redirect extends Model
 {
+    use LogsActivity;
+
     protected $table = 'redirects';
 
     protected $fillable = [
@@ -44,4 +47,24 @@ class Redirect extends Model
         'is_external' => 'boolean',
         'keep_path' => 'boolean',
     ];
+
+    public function activityLabel(): string
+    {
+        return "redirect '{$this->source}' → '{$this->target}'";
+    }
+
+    /**
+     * "hits" increments on every public visitor that follows this redirect
+     * — that's traffic, not an admin action, and would otherwise flood the
+     * log with an entry per pageview. Excluding it means a save that only
+     * bumped the hit counter logs nothing at all (see LogsActivity's
+     * empty-changes guard); a real edit alongside it still gets logged
+     * normally, just without "hits" in the diff.
+     *
+     * @return array<int, string>
+     */
+    public function activityExcludedFromChanges(): array
+    {
+        return ['hits'];
+    }
 }

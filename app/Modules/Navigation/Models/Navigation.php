@@ -2,6 +2,7 @@
 
 namespace App\Modules\Navigation\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Blueprints\Models\Blueprint;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Navigation extends Model
 {
+    use LogsActivity;
+
     protected $table = 'navigations';
 
     protected $fillable = ['handle', 'title', 'settings'];
@@ -41,5 +44,10 @@ class Navigation extends Model
         }
 
         return Blueprint::where('namespace', "navigations.{$this->handle}")->first();
+    }
+
+    public function activityLabel(): string
+    {
+        return "navigation '{$this->title}'";
     }
 }

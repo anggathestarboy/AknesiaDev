@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Livewire;
 
 use App\Models\User;
+use App\Modules\ActivityLog\Services\ActivityLogger;
 use App\Modules\Users\Models\Role;
 use App\Modules\Users\Models\UserGroup;
 use Flux\Flux;
@@ -107,8 +108,35 @@ class UserForm extends Component
 
         $user = User::updateOrCreate(['id' => $this->editingId], $attributes);
 
+        // Pivot syncs don't fire model save events, so User's own
+        // LogsActivity trait can't see these — logged explicitly instead.
+        $rolesBefore = $user->roles->pluck('handle')->sort()->values()->all();
+        $groupsBefore = $user->userGroups->pluck('handle')->sort()->values()->all();
+
         $user->roles()->sync(Role::whereIn('handle', $validated['roleHandles'])->pluck('id'));
         $user->userGroups()->sync(UserGroup::whereIn('handle', $validated['groupHandles'])->pluck('id'));
+
+        $rolesAfter = collect($validated['roleHandles'])->sort()->values()->all();
+        $groupsAfter = collect($validated['groupHandles'])->sort()->values()->all();
+        $actor = auth()->user()?->name ?? 'System';
+
+        if ($rolesBefore !== $rolesAfter) {
+            ActivityLogger::log(
+                action: 'roles_changed',
+                subject: $user,
+                description: "{$actor} changed roles for user '{$user->name}'",
+                changes: ['roles' => ['from' => $rolesBefore, 'to' => $rolesAfter]],
+            );
+        }
+
+        if ($groupsBefore !== $groupsAfter) {
+            ActivityLogger::log(
+                action: 'groups_changed',
+                subject: $user,
+                description: "{$actor} changed groups for user '{$user->name}'",
+                changes: ['groups' => ['from' => $groupsBefore, 'to' => $groupsAfter]],
+            );
+        }
 
         Flux::toast(variant: 'success', text: __('User saved.'));
 

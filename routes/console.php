@@ -13,3 +13,7 @@ Artisan::command('inspire', function () {
 // actually runs `php artisan schedule:run` every minute via a real cron entry
 // (`* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1`).
 Schedule::command('entries:publish-scheduled')->everyMinute();
+
+// Executes confirmed activity log deletion requests — see
+// ActivityLogDeletionRequest / HardDeleteActivityLogYear.
+Schedule::command('activity-log:process-deletions')->dailyAt('00:00');

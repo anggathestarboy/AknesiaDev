@@ -2,6 +2,7 @@
 
 namespace App\Modules\Media\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
@@ -11,6 +12,8 @@ use Illuminate\Support\Str;
 
 class AssetMeta extends Model
 {
+    use LogsActivity;
+
     protected $table = 'assets_meta';
 
     protected $fillable = [
@@ -112,5 +115,10 @@ class AssetMeta extends Model
     public function getLoadingAttribute()
     {
         return data_get($this->meta, 'data.loading') ?: 'lazy';
+    }
+
+    public function activityLabel(): string
+    {
+        return "asset '{$this->basename}.{$this->extension}'";
     }
 }

@@ -4,6 +4,7 @@ namespace App\Modules\Collections\Models;
 
 use App\Models\TaxonomyTerm;
 use App\Models\User;
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Media\Models\AssetMeta;
@@ -30,7 +31,7 @@ use Illuminate\Support\Fluent;
  */
 class Entry extends Model
 {
-    use HasUuids;
+    use HasUuids, LogsActivity;
 
     protected $table = 'entries';
 
@@ -502,5 +503,39 @@ class Entry extends Model
     protected static function wrapFluent(array $data): Fluent
     {
         return FluentWrapper::wrap($data);
+    }
+
+    public function activityLabel(): string
+    {
+        $title = $this->data['title'] ?? $this->slug ?? $this->id;
+
+        return "entry '{$title}' ({$this->collection})";
+    }
+
+    /**
+     * @param  array<string, array{from: mixed, to: mixed}>  $changes
+     */
+    public function activityAction(string $default, array $changes): string
+    {
+        if (! array_key_exists('status', $changes)) {
+            return $default;
+        }
+
+        return match ($changes['status']['to']) {
+            'published' => 'published',
+            'scheduled' => 'scheduled',
+            default => $default,
+        };
+    }
+
+    /**
+     * schema/seo are large, rarely-reviewed JSON blocks — every entry save
+     * would otherwise dump both before/after in full into the log.
+     *
+     * @return array<int, string>
+     */
+    public function activityExcludedFromChanges(): array
+    {
+        return ['schema', 'seo'];
     }
 }

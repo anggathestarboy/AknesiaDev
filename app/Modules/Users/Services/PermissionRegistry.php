@@ -40,6 +40,7 @@ class PermissionRegistry
             $this->assetsGroup(),
             $this->usersGroup(),
             $this->formsGroup(),
+            $this->activityLogGroup(),
         ], fn (array $group): bool => $group['permissions'] !== []);
     }
 
@@ -242,6 +243,19 @@ class PermissionRegistry
             'group' => 'Forms',
             'permissions' => [
                 $this->permission('configure forms', 'Configure forms', 'Grants access to all form related permissions'),
+            ],
+        ];
+    }
+
+    protected function activityLogGroup(): array
+    {
+        return [
+            'group' => 'Activity Log',
+            'permissions' => [
+                $this->permission('view activity log', 'Access activity log', 'Ability to open the admin activity log page.'),
+                $this->permission('view activity log detail', 'View entry detail', 'Ability to view the full before/after change details of a logged entry.'),
+                $this->permission('export activity log', 'Export activity log', 'Ability to export activity log entries (per month/year) as a JSON file.'),
+                $this->permission('import activity log', 'Import activity log', 'Ability to restore activity log entries back from a previously exported file.'),
             ],
         ];
     }

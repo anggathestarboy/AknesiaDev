@@ -2,6 +2,7 @@
 
 namespace App\Modules\Globals\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class GlobalSetVariable extends Model
 {
+    use LogsActivity;
+
     protected $table = 'global_set_variables';
 
     protected $fillable = ['handle', 'locale', 'data'];
@@ -22,4 +25,9 @@ class GlobalSetVariable extends Model
     protected $casts = [
         'data' => 'array',
     ];
+
+    public function activityLabel(): string
+    {
+        return "global set values '{$this->handle}'";
+    }
 }

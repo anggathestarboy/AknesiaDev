@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasFlexibleData;
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Support\Templating\FluentWrapper;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Support\Fluent;
 
 class TaxonomyTerm extends Model
 {
-    use HasFlexibleData;
+    use HasFlexibleData, LogsActivity;
 
     protected $fillable = ['site', 'origin_id', 'slug', 'uri', 'taxonomy', 'blueprint', 'data'];
 
@@ -83,5 +84,12 @@ class TaxonomyTerm extends Model
     public function getLocalizedCount(): int
     {
         return $this->getLocalizedSites()->count();
+    }
+
+    public function activityLabel(): string
+    {
+        $title = $this->data['title'] ?? $this->slug ?? $this->id;
+
+        return "term '{$title}' ({$this->taxonomy})";
     }
 }

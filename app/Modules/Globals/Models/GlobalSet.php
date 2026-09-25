@@ -2,6 +2,7 @@
 
 namespace App\Modules\Globals\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Blueprints\Models\Blueprint;
 use Illuminate\Database\Eloquent\Model;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class GlobalSet extends Model
 {
+    use LogsActivity;
+
     protected $table = 'global_sets';
 
     protected $fillable = ['handle', 'title', 'settings'];
@@ -46,5 +49,10 @@ class GlobalSet extends Model
     public function saveAction(): string
     {
         return $this->settings['save_action'] ?? 'listing';
+    }
+
+    public function activityLabel(): string
+    {
+        return "global set '{$this->title}'";
     }
 }

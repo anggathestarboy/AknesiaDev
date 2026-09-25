@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Blueprints\Models\Blueprint;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Taxonomy extends Model
 {
+    use LogsActivity;
+
     protected $fillable = ['handle', 'title', 'sites', 'settings'];
 
     protected $casts = [
@@ -51,5 +54,10 @@ class Taxonomy extends Model
     public function saveAction(): string
     {
         return $this->settings['save_action'] ?? 'listing';
+    }
+
+    public function activityLabel(): string
+    {
+        return "taxonomy '{$this->title}'";
     }
 }

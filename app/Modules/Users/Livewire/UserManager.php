@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Livewire;
 
 use App\Models\User;
+use App\Modules\ActivityLog\Services\ActivityLogger;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Password;
@@ -121,6 +122,16 @@ class UserManager extends Component
 
         $user = User::findOrFail($id);
         $status = Password::sendResetLink(['email' => $user->email]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            $actor = auth()->user()?->name ?? 'System';
+
+            ActivityLogger::log(
+                action: 'password_reset_sent',
+                subject: $user,
+                description: "{$actor} sent a password reset link to '{$user->name}'",
+            );
+        }
 
         Flux::toast(
             variant: $status === Password::RESET_LINK_SENT ? 'success' : 'danger',

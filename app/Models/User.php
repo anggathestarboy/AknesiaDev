@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Auth\Notifications\QueuedResetPassword;
 use App\Modules\Sites\Models\Site;
 use App\Modules\Users\Models\Role;
@@ -40,7 +41,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasUuids, LogsActivity, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -160,6 +161,27 @@ class User extends Authenticatable implements PasskeyUser
     public function isSuper(): bool
     {
         return in_array('super', $this->permissions(), true);
+    }
+
+    public function activityLabel(): string
+    {
+        return "user '{$this->name}'";
+    }
+
+    /**
+     * Relabels a plain "updated" as "banned"/"unbanned" when that's what
+     * actually changed — much more useful in the activity log than a
+     * generic "updated user 'X'" for the single field that matters most.
+     *
+     * @param  array<string, array{from: mixed, to: mixed}>  $changes
+     */
+    public function activityAction(string $default, array $changes): string
+    {
+        if (! array_key_exists('banned_at', $changes)) {
+            return $default;
+        }
+
+        return $changes['banned_at']['to'] === null ? 'unbanned' : 'banned';
     }
 
     /**

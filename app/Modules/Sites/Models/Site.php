@@ -2,6 +2,7 @@
 
 namespace App\Modules\Sites\Models;
 
+use App\Modules\ActivityLog\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -16,6 +17,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Site extends Model
 {
+    use LogsActivity;
+
     protected $table = 'sites';
 
     protected $fillable = ['handle', 'name', 'url', 'locale', 'lang', 'attributes', 'order'];
@@ -23,4 +26,9 @@ class Site extends Model
     protected $casts = [
         'attributes' => 'array',
     ];
+
+    public function activityLabel(): string
+    {
+        return "site '{$this->name}'";
+    }
 }
