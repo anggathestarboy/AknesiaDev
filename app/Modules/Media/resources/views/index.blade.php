@@ -235,7 +235,7 @@
 
     <flux:modal name="preview" wire:model="showPreview" class="w-[60%] xl:w-[40%]">
         @if ($this->previewAsset)
-            <div class="mt-7 grid grid-cols-1 gap-6">
+            <div class="mt-7 grid grid-cols-1 gap-6" @keydown.ctrl.s.prevent="$wire.savePreviewMeta()" @keydown.meta.s.prevent="$wire.savePreviewMeta()">
                 <div class="flex aspect-square items-center justify-center rounded-lg bg-zinc-100 p-3 w-full dark:bg-zinc-800 h-[300px]">
                     @include ("media::partials._thumbnail", ["asset" => $this->previewAsset, "fit" => "object-contain ", "interactive" => true])
                 </div>
