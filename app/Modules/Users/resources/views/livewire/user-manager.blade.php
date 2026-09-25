@@ -54,7 +54,8 @@
                         @php
                             $isSelf = $user->id === auth()->id();
                             $canEditUser = auth()->user()->hasPermission("edit users");
-                            $canOperate = $canEditUser || (! $isSelf && (auth()->user()->hasPermission("ban users") || auth()->user()->hasPermission("delete users")));
+                            $canSendPasswordReset = auth()->user()->hasPermission("send password reset");
+                            $canOperate = $canEditUser || $canSendPasswordReset || (! $isSelf && (auth()->user()->hasPermission("ban users") || auth()->user()->hasPermission("delete users")));
                         @endphp
                         <flux:table.row wire:key="user-{{ $user->id }}" x-on:contextmenu.prevent.stop="{{ $canOperate ? 'contextMenu = \'user-' . $user->id . '\'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10' : '' }}">
                             <flux:table.cell>
@@ -99,6 +100,9 @@
                                         @if ($canEditUser)
                                             <flux:menu.item icon="pencil" :href="route('users.edit', ['user' => $user->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
                                         @endif
+                                        @if ($canSendPasswordReset)
+                                            <flux:menu.item icon="key" wire:click="sendPasswordReset('{{ $user->id }}')">{{ __("Send password reset") }}</flux:menu.item>
+                                        @endif
                                         @if (! $isSelf)
                                             @if (auth()->user()->hasPermission("ban users"))
                                                 @if ($user->isBanned())
@@ -121,6 +125,9 @@
                                 <div x-show="contextMenu === 'user-{{ $user->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                                     @if ($canEditUser)
                                         <a href="{{ route('users.edit', ['user' => $user->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                                    @endif
+                                    @if ($canSendPasswordReset)
+                                        <button type="button" wire:click.stop="sendPasswordReset('{{ $user->id }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Send password reset") }}</button>
                                     @endif
                                     @if (! $isSelf)
                                         @if (auth()->user()->hasPermission("ban users"))

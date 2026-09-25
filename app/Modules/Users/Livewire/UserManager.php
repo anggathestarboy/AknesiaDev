@@ -5,6 +5,7 @@ namespace App\Modules\Users\Livewire;
 use App\Models\User;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -107,6 +108,24 @@ class UserManager extends Component
         Flux::toast(variant: 'success', text: __('User unbanned.'));
 
         unset($this->users);
+    }
+
+    /**
+     * Emails the user a password reset link — the same broker/notification
+     * Fortify's own "Forgot password" form uses, just triggered by an admin
+     * instead of the user themselves.
+     */
+    public function sendPasswordReset(string $id): void
+    {
+        auth()->user()->authorizePermission('send password reset');
+
+        $user = User::findOrFail($id);
+        $status = Password::sendResetLink(['email' => $user->email]);
+
+        Flux::toast(
+            variant: $status === Password::RESET_LINK_SENT ? 'success' : 'danger',
+            text: __($status),
+        );
     }
 
     public function bulkDelete(): void

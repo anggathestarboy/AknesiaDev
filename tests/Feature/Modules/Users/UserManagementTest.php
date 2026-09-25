@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Auth\Notifications\QueuedResetPassword;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Navigation\Models\Navigation;
@@ -13,6 +14,7 @@ use App\Modules\Users\Livewire\UserManager;
 use App\Modules\Users\Models\Role;
 use App\Modules\Users\Models\UserGroup;
 use App\Modules\Users\Services\PermissionRegistry;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 
 test('the users page lists existing users', function () {
@@ -521,4 +523,50 @@ test('a user with edit user groups permission can manage user groups', function 
     $this->actingAs($user);
 
     Livewire::test(UserGroupManager::class)->call('create')->assertOk();
+});
+
+test('send password reset is offered as a grantable permission', function () {
+    expect(app(PermissionRegistry::class)->values())->toContain('send password reset');
+});
+
+test('sending a password reset requires the send password reset permission', function () {
+    $target = User::factory()->create();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->call('sendPasswordReset', $target->id)->assertForbidden();
+});
+
+test('a user with send password reset permission can email another user a reset link', function () {
+    Notification::fake();
+
+    $target = User::factory()->create();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view users', 'send password reset']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->call('sendPasswordReset', $target->id);
+
+    Notification::assertSentTo($target, QueuedResetPassword::class);
+});
+
+test('the send password reset button is hidden without permission, and shown with it', function () {
+    $target = User::factory()->create();
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp', 'view users']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(UserManager::class)->assertDontSeeHtml("sendPasswordReset('{$target->id}')");
+
+    $role->update(['permissions' => ['access cp', 'view users', 'send password reset']]);
+    $user->unsetRelation('roles');
+
+    Livewire::test(UserManager::class)->assertSeeHtml("sendPasswordReset('{$target->id}')");
 });

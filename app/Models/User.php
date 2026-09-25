@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Modules\Auth\Notifications\QueuedResetPassword;
 use App\Modules\Sites\Models\Site;
 use App\Modules\Users\Models\Role;
 use App\Modules\Users\Models\UserGroup;
@@ -159,5 +160,18 @@ class User extends Authenticatable implements PasskeyUser
     public function isSuper(): bool
     {
         return in_array('super', $this->permissions(), true);
+    }
+
+    /**
+     * Overrides CanResetPassword's default (sends Laravel's stock
+     * ResetPassword notification synchronously) with a queued equivalent —
+     * see QueuedResetPassword's docblock for why. Used both by the
+     * "Forgot password" form (Fortify's own password.email route) and by
+     * an admin's "Send password reset" action on the Users list, since both
+     * go through Password::sendResetLink(), which calls this method.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new QueuedResetPassword($token));
     }
 }

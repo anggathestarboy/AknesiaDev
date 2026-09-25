@@ -192,7 +192,7 @@ Options combine freely:
 
 ## Docker (staging)
 
-A self-contained Docker setup for spinning up a staging build — e.g. for a project manager to click around a real deploy — without installing PHP/Node/MySQL on the server at all, just Docker. One `app` container runs [FrankenPHP](https://frankenphp.dev/) (PHP and the Caddy web server bundled into a single binary — no separate Nginx/PHP-FPM processes or fastcgi config to keep in sync, see `docker/Caddyfile`) plus the Laravel scheduler, both under Supervisor (`docker/supervisord.conf`); a `db` container runs MySQL. Deliberately simple: one app instance, no queue worker (the app doesn't dispatch any queued jobs today — add a `queue:work` program to `docker/supervisord.conf` if that changes), meant for a staging box, not scaled production traffic.
+A self-contained Docker setup for spinning up a staging build — e.g. for a project manager to click around a real deploy — without installing PHP/Node/MySQL on the server at all, just Docker. One `app` container runs [FrankenPHP](https://frankenphp.dev/) (PHP and the Caddy web server bundled into a single binary — no separate Nginx/PHP-FPM processes or fastcgi config to keep in sync, see `docker/Caddyfile`), the Laravel scheduler, and a queue worker, all under Supervisor (`docker/supervisord.conf`); a `db` container runs MySQL. Deliberately simple: one app instance, meant for a staging box, not scaled production traffic.
 
 ### Prerequisites on the server
 
@@ -255,7 +255,7 @@ For a staging URL on port 80/443 with a real domain (rather than `http://ip:8080
 
 ### What's running
 
-- **`app`** — FrankenPHP (mapped to `APP_PORT` on the host, default `8080`) and `php artisan schedule:work` (so [scheduled entries](#scheduled-entries-requires-a-server-cron) actually go live in staging, without needing a real crontab on the host machine).
+- **`app`** — three processes: FrankenPHP (mapped to `APP_PORT` on the host, default `8080`), `php artisan schedule:work` (so [scheduled entries](#scheduled-entries-requires-a-server-cron) actually go live in staging, without needing a real crontab on the host machine), and `php artisan queue:work` (so emails — password resets, currently — send in the background instead of making the request that triggered them wait on SMTP; see `App\Models\User::sendPasswordResetNotification()`).
 - **`db`** — MySQL 8.4, with a named volume (`db-data`) so data survives `docker compose down` (use `docker compose down -v` to wipe it too — this also wipes the admin account, so the *next* `docker compose --env-file .env.docker up -d` will re-bootstrap a fresh one from `.env.docker`'s `DRAFT_ADMIN_*` values, and will pick up any `DB_PASSWORD`/`MYSQL_*` changes made since the last time the volume was created).
 - Uploaded media persists in the `storage-app` named volume across image rebuilds.
 
@@ -264,7 +264,7 @@ For a staging URL on port 80/443 with a real domain (rather than `http://ip:8080
 - **This is a staging/demo setup, not a production-hardening guide.** `.env.docker` deliberately commits a working `APP_KEY` and DB password so a fresh deploy needs zero manual steps — fine for an internal PM-facing staging box, but replace both (and rotate the admin password) before this is ever exposed anywhere that matters. `APP_DEBUG=false` is still set correctly, so Laravel's debug page won't leak values to visitors regardless.
 - `DB_USERNAME`/`MYSQL_USER` must not be `root` — the MySQL image rejects that value (root is already managed separately via `MYSQL_ROOT_PASSWORD`).
 - `db` is not published to the host by default — only `app`'s web port is. To connect a DB client (TablePlus, DBeaver, etc.) from outside Docker, add a `ports: ["3306:3306"]` entry under the `db` service in `docker-compose.yml`.
-- Logs from both `app` processes (FrankenPHP, the scheduler) go to the container's stdout — view them with `docker compose logs -f app`.
+- Logs from all three `app` processes (FrankenPHP, the scheduler, the queue worker) go to the container's stdout — view them with `docker compose logs -f app`.
 - A one-off command that doesn't need the `db` service (e.g. inspecting the built image) can skip starting it: `docker compose run --rm --no-deps app <command>`. `docker/entrypoint.sh` only waits on the database and runs the migrate/bootstrap/cache steps when the container's actual command is `supervisord` (i.e., a real `docker compose up`), so one-off commands like this run immediately.
 
 ## Testing

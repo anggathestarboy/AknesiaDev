@@ -221,6 +221,7 @@ class PermissionRegistry
                 $this->permission('delete users', 'Delete users'),
                 $this->permission('ban users', 'Ban users', 'Prevents a user from logging in until unbanned.'),
                 $this->permission('change passwords', 'Change passwords'),
+                $this->permission('send password reset', 'Send password reset link', 'Emails the user a link to reset their own password.'),
                 $this->permission('assign user groups', 'Assign groups to users'),
                 $this->permission('assign user roles', 'Assign roles to users'),
                 $this->permission('edit user groups', 'Edit groups'),
