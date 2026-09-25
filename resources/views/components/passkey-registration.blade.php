@@ -46,7 +46,13 @@
             this.error = null;
 
             try {
-                await window.Passkeys.register({ name: this.name });
+                await window.Passkeys.register({
+                    name: this.name,
+                    routes: {
+                        options: '{{ route('passkey.registration-options') }}',
+                        submit: '{{ route('passkey.store') }}',
+                    },
+                });
                 this.name = '';
                 this.showForm = false;
                 await $wire.loadPasskeys();
