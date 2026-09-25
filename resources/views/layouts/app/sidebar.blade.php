@@ -33,6 +33,13 @@
 
     $sidebarItems = $sidebarFilterByRole($sidebarItems);
 
+    if (! config('activity-log.enabled')) {
+        $sidebarItems = array_values(array_filter(
+            $sidebarItems,
+            fn (array $item): bool => ($item['url'] ?? null) !== route('activity-log.activity-log.index', absolute: false),
+        ));
+    }
+
     $sidebarIsCurrent = function (?string $url): bool {
         if (!$url) {
             return false;

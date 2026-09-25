@@ -44,7 +44,7 @@
 
             <div class="flex items-end gap-2">
                 <flux:input type="number" wire:model="deleteYear" size="sm" class="w-28" />
-                <flux:button size="sm" variant="danger" x-on:click="confirming = true">{{ __("Request deletion…") }}</flux:button>
+                <flux:button size="sm" variant="danger" x-on:click="confirming = true">{{ __("Request Delete") }}</flux:button>
             </div>
             @error ("deleteYear")
                 <span class="text-sm text-red-500">{{ $message }}</span>

@@ -210,3 +210,17 @@ test('"view activity log detail", "export activity log" and "import activity log
     expect($values)->toContain('export activity log');
     expect($values)->toContain('import activity log');
 });
+
+test('when disabled via config, nothing is logged and the page 404s', function () {
+    config(['activity-log.enabled' => false]);
+
+    $this->actingAs($admin = User::factory()->create());
+
+    // creating the admin itself would normally log a "created" entry
+    expect(ActivityLog::count())->toBe(0);
+
+    $site = Site::create(['handle' => 'english', 'name' => 'English', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+    expect(ActivityLog::where('subject_id', $site->id)->exists())->toBeFalse();
+
+    $this->get(route('activity-log.activity-log.index'))->assertNotFound();
+});

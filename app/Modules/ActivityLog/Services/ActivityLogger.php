@@ -29,6 +29,10 @@ class ActivityLogger
         array $changes = [],
         array $properties = [],
     ): void {
+        if (! config('activity-log.enabled')) {
+            return;
+        }
+
         RecordActivityLog::dispatch(
             userId: Auth::id(),
             action: $action,

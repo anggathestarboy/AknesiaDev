@@ -47,6 +47,7 @@ class ActivityLogManager extends Component
 
     public function mount(): void
     {
+        abort_unless(config('activity-log.enabled'), 404);
         auth()->user()->authorizePermission('view activity log');
 
         $this->exportMonth = now()->format('Y-m');
