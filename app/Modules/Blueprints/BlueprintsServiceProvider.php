@@ -25,7 +25,7 @@ class BlueprintsServiceProvider extends ServiceProvider
             CreateHomepageBlueprintCommand::class,
         ]);
 
-        Route::middleware(['web', 'auth', 'verified', 'permission:access cp'])
+        Route::middleware(['web', 'auth', 'verified', 'permission:access cp', 'permission:configure fields'])
             ->prefix(config('cms.route'))
             ->name('blueprints.')
             ->group(__DIR__.'/routes.php');

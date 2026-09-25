@@ -8,7 +8,9 @@
             <flux:heading size="xl">{{ __("Sites Manager") }}</flux:heading>
         </div>
 
-        <flux:button variant="primary" size="sm" wire:click="create">{{ __("Add site") }}</flux:button>
+        @if ($this->canConfigureSites())
+            <flux:button variant="primary" size="sm" wire:click="create">{{ __("Add site") }}</flux:button>
+        @endif
     </div>
 
     <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
@@ -39,33 +41,35 @@
                             <flux:table.cell>{{ $site->locale }}</flux:table.cell>
                             <flux:table.cell>{{ $site->lang }}</flux:table.cell>
                             <flux:table.cell class="flex justify-end gap-1">
-                                <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="moveUp({{ $site->id }})" :disabled="$index === 0" />
-                                <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="moveDown({{ $site->id }})" :disabled="$index === $this->sites->count() - 1" />
+                                @if ($this->canConfigureSites())
+                                    <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="moveUp({{ $site->id }})" :disabled="$index === 0" />
+                                    <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="moveDown({{ $site->id }})" :disabled="$index === $this->sites->count() - 1" />
 
-                                <flux:dropdown>
-                                    <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
-                                    <flux:menu>
-                                        <flux:menu.item icon="cog-6-tooth" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:menu.item>
+                                    <flux:dropdown>
+                                        <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                        <flux:menu>
+                                            <flux:menu.item icon="cog-6-tooth" wire:click="edit({{ $site->id }})">{{ __("Settings") }}</flux:menu.item>
+                                            @if ($index === 0)
+                                                <flux:menu.item icon="trash" variant="danger" disabled>{{ __("Delete") }}</flux:menu.item>
+                                            @else
+                                                <flux:modal.trigger name="confirm-delete-site">
+                                                    <flux:menu.item icon="trash" variant="danger" x-on:click="deleteSiteId = {{ $site->id }}">{{ __("Delete") }}</flux:menu.item>
+                                                </flux:modal.trigger>
+                                            @endif
+                                        </flux:menu>
+                                    </flux:dropdown>
+
+                                    <div x-show="contextMenu === 'site-{{ $site->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                                        <button type="button" wire:click.stop="edit({{ $site->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Settings") }}</button>
                                         @if ($index === 0)
-                                            <flux:menu.item icon="trash" variant="danger" disabled>{{ __("Delete") }}</flux:menu.item>
+                                            <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm text-red-600 opacity-50">{{ __("Delete") }}</button>
                                         @else
                                             <flux:modal.trigger name="confirm-delete-site">
-                                                <flux:menu.item icon="trash" variant="danger" x-on:click="deleteSiteId = {{ $site->id }}">{{ __("Delete") }}</flux:menu.item>
+                                                <button type="button" x-on:click="deleteSiteId = {{ $site->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
                                             </flux:modal.trigger>
                                         @endif
-                                    </flux:menu>
-                                </flux:dropdown>
-
-                                <div x-show="contextMenu === 'site-{{ $site->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                                    <button type="button" wire:click.stop="edit({{ $site->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Settings") }}</button>
-                                    @if ($index === 0)
-                                        <button type="button" disabled class="block w-full px-3 py-1.5 text-left text-sm text-red-600 opacity-50">{{ __("Delete") }}</button>
-                                    @else
-                                        <flux:modal.trigger name="confirm-delete-site">
-                                            <button type="button" x-on:click="deleteSiteId = {{ $site->id }}; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
-                                        </flux:modal.trigger>
-                                    @endif
-                                </div>
+                                    </div>
+                                @endif
                             </flux:table.cell>
                         </flux:table.row>
                     @empty

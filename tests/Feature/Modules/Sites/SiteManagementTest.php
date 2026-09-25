@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Modules\Sites\Livewire\SiteManager;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Users\Models\Role;
 use Livewire\Livewire;
 
 test('sites page is displayed', function () {
@@ -122,4 +123,40 @@ test('sites can be reordered', function () {
 
     expect($english->fresh()->order)->toBe(2);
     expect($german->fresh()->order)->toBe(1);
+});
+
+test('a user without "configure sites" permission does not see the add/edit/delete site controls', function () {
+    Site::create(['name' => 'English', 'handle' => 'english', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(SiteManager::class)
+        ->assertDontSeeHtml('wire:click="create"')
+        ->assertDontSeeHtml('wire:click="moveUp(')
+        ->assertDontSeeHtml('wire:click="moveDown(');
+});
+
+test('a user without "configure sites" permission still 403s if they call the mutating methods directly', function () {
+    $site = Site::create(['name' => 'English', 'handle' => 'english', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(SiteManager::class)->call('delete', $site->id)->assertForbidden();
+});
+
+test('a user with "configure sites" permission sees the add/edit/delete site controls', function () {
+    Site::create(['name' => 'English', 'handle' => 'english', 'url' => 'https://example.com', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 1]);
+
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure sites']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    Livewire::test(SiteManager::class)->assertSeeHtml('wire:click="create"');
 });
