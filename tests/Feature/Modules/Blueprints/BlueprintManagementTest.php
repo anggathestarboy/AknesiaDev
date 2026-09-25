@@ -1925,3 +1925,30 @@ test('a user with configure fields permission can delete a fieldset', function (
 
     expect(Fieldset::find($fieldset->id))->toBeNull();
 });
+
+test('viewing the blueprints page requires the "configure fields" permission, not just "access cp"', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    $this->get('/admin-panel/blueprints')->assertForbidden();
+});
+
+test('a user with "configure fields" permission can view the blueprints page', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'editor', 'title' => 'Editor', 'permissions' => ['access cp', 'configure fields']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    $this->get('/admin-panel/blueprints')->assertOk();
+});
+
+test('viewing the fieldsets page requires the "configure fields" permission, not just "access cp"', function () {
+    $user = User::factory()->create();
+    $role = Role::create(['handle' => 'restricted', 'title' => 'Restricted', 'permissions' => ['access cp']]);
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+
+    $this->get('/admin-panel/fieldsets')->assertForbidden();
+});

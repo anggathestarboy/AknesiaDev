@@ -42,6 +42,17 @@ class SiteManager extends Component
     }
 
     /**
+     * Whether the current user can add/edit/delete/reorder sites — every
+     * mutating method below already enforces this itself
+     * (authorizePermission()), this just lets the view hide the buttons
+     * instead of letting them 403 when clicked.
+     */
+    public function canConfigureSites(): bool
+    {
+        return auth()->user()->hasPermission('configure sites');
+    }
+
+    /**
      * @return array<string, string>
      */
     #[Computed]
