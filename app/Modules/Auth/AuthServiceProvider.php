@@ -2,8 +2,9 @@
 
 namespace App\Modules\Auth;
 
-use App\Modules\Auth\Actions\ResetUserPassword;
 use App\Models\User;
+use App\Modules\Auth\Actions\ResetUserPassword;
+use App\Services\RecaptchaService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -64,6 +65,14 @@ class AuthServiceProvider extends ServiceProvider
         // "these credentials don't match" or being let in and immediately
         // kicked back out.
         Fortify::authenticateUsing(function (Request $request) {
+            $recaptcha = app(RecaptchaService::class);
+
+            if ($recaptcha->enabled() && ! $recaptcha->verify($request->input('recaptcha_token'), 'login')) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('We could not verify you are human. Please try again.'),
+                ]);
+            }
+
             $user = User::where('email', $request->email)->first();
 
             if (! $user || ! Hash::check($request->password, $user->password)) {

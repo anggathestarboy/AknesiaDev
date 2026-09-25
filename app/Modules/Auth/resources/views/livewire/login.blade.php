@@ -7,8 +7,15 @@
 
         <x-passkey-verify />
 
-        <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6">
+        @php $recaptcha = app(\App\Services\RecaptchaService::class); @endphp
+
+        <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6" id="login-form">
             @csrf
+
+            @if ($recaptcha->enabled())
+                <x-recaptcha-script />
+                <input type="hidden" name="recaptcha_token" id="recaptcha_token">
+            @endif
 
             <!-- Email Address -->
             <flux:input
@@ -50,5 +57,37 @@
                 </flux:button>
             </div>
         </form>
+
+        @if ($recaptcha->enabled())
+            <script>
+                document.getElementById('login-form').addEventListener('submit', function (event) {
+                    // Only intercept once — after the token is filled in and
+                    // we re-submit programmatically, let it through normally.
+                    if (document.getElementById('recaptcha_token').value !== '') {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const form = event.target;
+                    const submitButton = form.querySelector('[data-test="login-button"]');
+                    submitButton.disabled = true;
+
+                    grecaptcha.ready(function () {
+                        grecaptcha.execute('{{ $recaptcha->siteKey() }}', { action: 'login' }).then(function (token) {
+                            document.getElementById('recaptcha_token').value = token;
+                            form.submit();
+                        }).catch(function () {
+                            // Google's script itself failed (blocked, offline, etc.) — let
+                            // the request through with an empty token rather than trap the
+                            // user on a dead submit button; the server-side check below
+                            // rejects an empty/invalid token the same as a failed score.
+                            submitButton.disabled = false;
+                            form.submit();
+                        });
+                    });
+                });
+            </script>
+        @endif
     </div>
 </x-layouts::auth>

@@ -108,6 +108,23 @@ php artisan entries:publish-scheduled   # or just run the command directly, once
 - **Frequency**: `everyMinute()` means an entry can go live up to ~60 seconds after its scheduled time, not instantly at the exact second.
 - **Manual override**: an editor can always bypass the wait by opening the entry and re-saving with a past/present date — see `EntryForm::save()`, which resolves Published-vs-Scheduled the same way on every save.
 
+## reCAPTCHA (bot protection)
+
+[Google reCAPTCHA v3](https://developers.google.com/recaptcha/docs/v3) — score-based, no checkbox/puzzle widget. Set these in `.env` to turn it on:
+
+```
+RECAPTCHA_SITE_KEY=
+RECAPTCHA_SECRET_KEY=
+RECAPTCHA_SCORE_THRESHOLD=0.5   # 0.0 (likely a bot) – 1.0 (likely human)
+```
+
+**Currently protects**: the admin login form only. Leaving both keys blank (the default) disables it everywhere it's wired up — nothing breaks, requests just skip the check — so it's safe to leave off in local dev.
+
+- `App\Services\RecaptchaService` — the whole implementation. `enabled()` is true only when both keys are set; `verify(?string $token, string $expectedAction, ?float $threshold = null): bool` calls Google's `siteverify` API and checks success + matching `action` + score, failing closed (`false`) on anything wrong, including a network error — never silently "pass" on a broken check. `siteKey()` exposes the public key for the frontend script.
+- `<x-recaptcha-script />` (`resources/views/components/recaptcha-script.blade.php`) — loads Google's JS (`@once`, so including it more than once on a page is harmless).
+- `App\Modules\Auth\resources\views\livewire\login.blade.php` and `AuthServiceProvider::configureActions()` are the reference implementation for wiring a new form up: render `<x-recaptcha-script />` + a hidden `recaptcha_token` input only when `$recaptcha->enabled()`, call `grecaptcha.execute(siteKey, {action: '...'})` on submit to fill that hidden input before the form actually posts, then check `$recaptcha->verify($request->input('recaptcha_token'), '...')` server-side before doing anything else with the request. Pick a distinct `action` name per form/flow (e.g. `'login'`) — it's part of what's verified, and helps you tell forms apart in the [reCAPTCHA admin console](https://www.google.com/recaptcha/admin).
+- Add it to a Livewire component the same way: call `app(RecaptchaService::class)->verify(...)` wherever you'd otherwise start processing a submission (e.g. the top of a `save()`/`submit()` method), same as `AuthServiceProvider` does — `enabled()` first, `verify()` second, and treat a `false` from either exactly like a validation failure.
+
 ## Frontend templating
 
 A public request hits `App\Modules\Collections\Http\Controllers\PageController`, which resolves the `Site` from the request host/path, finds the matching published `Entry` by its URL, and renders the Blade view configured on that entry's blueprint (`Blueprint::data.template`) with:

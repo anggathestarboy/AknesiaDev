@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Laravel\Fortify\Features;
 
 test('login screen can be rendered', function () {
@@ -63,5 +64,79 @@ test('users can logout', function () {
 
     $response->assertRedirect(route('home'));
 
+    $this->assertGuest();
+});
+
+test('login is not blocked by recaptcha when it is not configured', function () {
+    config(['services.recaptcha3.site_key' => '', 'services.recaptcha3.secret_key' => '']);
+
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $this->assertAuthenticated();
+});
+
+test('login is rejected when recaptcha is configured but no token is submitted', function () {
+    config(['services.recaptcha3.site_key' => 'site-key', 'services.recaptcha3.secret_key' => 'secret-key']);
+
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertSessionHasErrorsIn('email');
+    $this->assertGuest();
+});
+
+test('login succeeds when recaptcha is configured and the token verifies', function () {
+    config(['services.recaptcha3.site_key' => 'site-key', 'services.recaptcha3.secret_key' => 'secret-key']);
+
+    Http::fake([
+        'https://www.google.com/recaptcha/api/siteverify' => Http::response([
+            'success' => true,
+            'action' => 'login',
+            'score' => 0.9,
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+        'recaptcha_token' => 'a-valid-token',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+    $this->assertAuthenticated();
+});
+
+test('login is rejected when recaptcha verification returns a low score', function () {
+    config(['services.recaptcha3.site_key' => 'site-key', 'services.recaptcha3.secret_key' => 'secret-key']);
+
+    Http::fake([
+        'https://www.google.com/recaptcha/api/siteverify' => Http::response([
+            'success' => true,
+            'action' => 'login',
+            'score' => 0.1,
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+        'recaptcha_token' => 'a-suspicious-token',
+    ]);
+
+    $response->assertSessionHasErrorsIn('email');
     $this->assertGuest();
 });
