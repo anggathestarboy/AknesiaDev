@@ -113,14 +113,17 @@ php artisan entries:publish-scheduled   # or just run the command directly, once
 [Google reCAPTCHA v3](https://developers.google.com/recaptcha/docs/v3) — score-based, no checkbox/puzzle widget. Set these in `.env` to turn it on:
 
 ```
+RECAPTCHA_ENABLED=true
 RECAPTCHA_SITE_KEY=
 RECAPTCHA_SECRET_KEY=
 RECAPTCHA_SCORE_THRESHOLD=0.5   # 0.0 (likely a bot) – 1.0 (likely human)
 ```
 
-**Currently protects**: the admin login form only. Leaving both keys blank (the default) disables it everywhere it's wired up — nothing breaks, requests just skip the check — so it's safe to leave off in local dev.
+**`RECAPTCHA_ENABLED`** is a dedicated on/off switch, separate from the keys — flip it to `false` to disable reCAPTCHA locally during development without having to blank out (and later re-type) real keys. It defaults to `true`.
 
-- `App\Services\RecaptchaService` — the whole implementation. `enabled()` is true only when both keys are set; `verify(?string $token, string $expectedAction, ?float $threshold = null): bool` calls Google's `siteverify` API and checks success + matching `action` + score, failing closed (`false`) on anything wrong, including a network error — never silently "pass" on a broken check. `siteKey()` exposes the public key for the frontend script.
+**Currently protects**: the admin login form only. It's disabled (skipped everywhere it's wired up, nothing breaks) whenever `RECAPTCHA_ENABLED=false` *or* either key is blank — so it's safe to leave off in local dev either way.
+
+- `App\Services\RecaptchaService` — the whole implementation. `enabled()` is true only when the toggle is on and both keys are set; `verify(?string $token, string $expectedAction, ?float $threshold = null): bool` calls Google's `siteverify` API and checks success + matching `action` + score, failing closed (`false`) on anything wrong, including a network error — never silently "pass" on a broken check. `siteKey()` exposes the public key for the frontend script.
 - `<x-recaptcha-script />` (`resources/views/components/recaptcha-script.blade.php`) — loads Google's JS (`@once`, so including it more than once on a page is harmless).
 - `App\Modules\Auth\resources\views\livewire\login.blade.php` and `AuthServiceProvider::configureActions()` are the reference implementation for wiring a new form up: render `<x-recaptcha-script />` + a hidden `recaptcha_token` input only when `$recaptcha->enabled()`, call `grecaptcha.execute(siteKey, {action: '...'})` on submit to fill that hidden input before the form actually posts, then check `$recaptcha->verify($request->input('recaptcha_token'), '...')` server-side before doing anything else with the request. Pick a distinct `action` name per form/flow (e.g. `'login'`) — it's part of what's verified, and helps you tell forms apart in the [reCAPTCHA admin console](https://www.google.com/recaptcha/admin).
 - Add it to a Livewire component the same way: call `app(RecaptchaService::class)->verify(...)` wherever you'd otherwise start processing a submission (e.g. the top of a `save()`/`submit()` method), same as `AuthServiceProvider` does — `enabled()` first, `verify()` second, and treat a `false` from either exactly like a validation failure.

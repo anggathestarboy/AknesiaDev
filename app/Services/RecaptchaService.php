@@ -18,15 +18,19 @@ class RecaptchaService
     }
 
     /**
-     * Whether reCAPTCHA is actually configured (both keys set). Callers
-     * should check this before requiring a token — verify() itself always
-     * fails closed once called, so an unconfigured environment (e.g. local
-     * dev with blank keys) should skip the check entirely rather than have
-     * every login silently pass (or worse, silently block) through verify().
+     * Whether reCAPTCHA should actually run — the RECAPTCHA_ENABLED toggle
+     * is on (defaults to true) AND both keys are configured. Callers should
+     * check this before requiring a token — verify() itself always fails
+     * closed once called, so a disabled/unconfigured environment (e.g.
+     * local dev with RECAPTCHA_ENABLED=false, or blank keys) should skip
+     * the check entirely rather than have every login silently pass (or
+     * worse, silently block) through verify().
      */
     public function enabled(): bool
     {
-        return $this->secretKey !== '' && $this->siteKey() !== '';
+        return (bool) config('services.recaptcha3.enabled', true)
+            && $this->secretKey !== ''
+            && $this->siteKey() !== '';
     }
 
     /**

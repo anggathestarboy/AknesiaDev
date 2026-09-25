@@ -60,33 +60,45 @@
 
         @if ($recaptcha->enabled())
             <script>
-                document.getElementById('login-form').addEventListener('submit', function (event) {
-                    // Only intercept once — after the token is filled in and
-                    // we re-submit programmatically, let it through normally.
-                    if (document.getElementById('recaptcha_token').value !== '') {
+                (function () {
+                    const form = document.getElementById('login-form');
+
+                    // Guards against this <script> block executing more than
+                    // once for the same form element (e.g. Livewire
+                    // re-running inline scripts during its own hydration
+                    // pass) — without this, two 'submit' listeners end up
+                    // attached, each grabbing its own token on every click,
+                    // and Google rejects one of the two as
+                    // "timeout-or-duplicate" every single time.
+                    if (!form || form.dataset.recaptchaBound === '1') {
                         return;
                     }
+                    form.dataset.recaptchaBound = '1';
 
-                    event.preventDefault();
+                    form.addEventListener('submit', function (event) {
+                        // form.submit() below does NOT re-fire the 'submit'
+                        // event (unlike a real click), so this only ever
+                        // runs once per actual user click.
+                        event.preventDefault();
 
-                    const form = event.target;
-                    const submitButton = form.querySelector('[data-test="login-button"]');
-                    submitButton.disabled = true;
+                        const submitButton = form.querySelector('[data-test="login-button"]');
+                        submitButton.disabled = true;
 
-                    grecaptcha.ready(function () {
-                        grecaptcha.execute('{{ $recaptcha->siteKey() }}', { action: 'login' }).then(function (token) {
-                            document.getElementById('recaptcha_token').value = token;
-                            form.submit();
-                        }).catch(function () {
-                            // Google's script itself failed (blocked, offline, etc.) — let
-                            // the request through with an empty token rather than trap the
-                            // user on a dead submit button; the server-side check below
-                            // rejects an empty/invalid token the same as a failed score.
-                            submitButton.disabled = false;
-                            form.submit();
+                        grecaptcha.ready(function () {
+                            grecaptcha.execute('{{ $recaptcha->siteKey() }}', { action: 'login' }).then(function (token) {
+                                document.getElementById('recaptcha_token').value = token;
+                                form.submit();
+                            }).catch(function () {
+                                // Google's script itself failed (blocked, offline, etc.) — let
+                                // the request through with an empty token rather than trap the
+                                // user on a dead submit button; the server-side check below
+                                // rejects an empty/invalid token the same as a failed score.
+                                submitButton.disabled = false;
+                                form.submit();
+                            });
                         });
                     });
-                });
+                })();
             </script>
         @endif
     </div>

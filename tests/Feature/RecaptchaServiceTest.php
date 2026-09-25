@@ -18,6 +18,18 @@ test('enabled is false unless both keys are configured', function () {
     expect(app(RecaptchaService::class)->enabled())->toBeTrue();
 });
 
+test('the RECAPTCHA_ENABLED toggle overrides everything else, in both directions', function () {
+    config([
+        'services.recaptcha3.site_key' => 'site-key',
+        'services.recaptcha3.secret_key' => 'secret-key',
+        'services.recaptcha3.enabled' => false,
+    ]);
+    expect(app(RecaptchaService::class)->enabled())->toBeFalse();
+
+    config(['services.recaptcha3.enabled' => true]);
+    expect(app(RecaptchaService::class)->enabled())->toBeTrue();
+});
+
 test('verify fails closed on an empty token, without even calling Google', function () {
     Http::fake();
     config(['services.recaptcha3.site_key' => 'site-key', 'services.recaptcha3.secret_key' => 'secret-key']);

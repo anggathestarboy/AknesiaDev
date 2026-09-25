@@ -35,6 +35,10 @@ return [
     ],
 
     'recaptcha3' => [
+        // A dedicated on/off switch, separate from whether the keys below
+        // are filled in — lets a developer disable reCAPTCHA locally
+        // without having to blank out (and later re-type) real keys.
+        'enabled' => env('RECAPTCHA_ENABLED', true),
         'site_key' => env('RECAPTCHA_SITE_KEY'),
         'secret_key' => env('RECAPTCHA_SECRET_KEY'),
         'score_threshold' => (float) env('RECAPTCHA_SCORE_THRESHOLD', 0.5),
