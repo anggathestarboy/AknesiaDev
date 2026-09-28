@@ -26,7 +26,9 @@
                 <flux:table.rows>
                     @forelse ($this->roles as $role)
                         <flux:table.row wire:key="role-{{ $role->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'role-{{ $role->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
-                            <flux:table.cell>{{ $role->title }}</flux:table.cell>
+                            <flux:table.cell>
+                                <a href="{{ route('users.roles.edit', ['role' => $role->handle]) }}" class="hover:text-orange-700" wire:navigate> {{ $role->title }} </a>
+                            </flux:table.cell>
                             <flux:table.cell>{{ $role->handle }}</flux:table.cell>
                             <flux:table.cell>
                                 @if (in_array("super", $role->permissions, true))

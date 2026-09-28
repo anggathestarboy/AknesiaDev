@@ -14,8 +14,22 @@
             <flux:input wire:model="email" type="email" :label="__('Email')" placeholder="jane@example.com" required />
         </div>
 
-        @if (! $editingId || auth()->user()->hasPermission("change passwords"))
-            <flux:input wire:model="password" type="password" :label="__('Password')" :description="$editingId ? __('Leave blank to keep the current password.') : null" placeholder="••••••••" :required="!$editingId" />
+        @if (! $editingId)
+            <flux:field>
+                <flux:label>{{ __("Password") }}</flux:label>
+                <flux:radio.group wire:model.live="passwordMode">
+                    <flux:radio value="admin" label="{{ __('Set password now') }}" />
+                    <flux:radio value="reset_link" label="{{ __('Email the user a link to set their own password') }}" />
+                </flux:radio.group>
+            </flux:field>
+
+            @if ($passwordMode === "admin")
+                <flux:input wire:model="password" type="password" :label="__('Password')" placeholder="••••••••" required />
+            @else
+                <flux:text class="text-sm text-zinc-500">{{ __('A password-reset link will be emailed to them once saved — they set their own password from there.') }}</flux:text>
+            @endif
+        @elseif (auth()->user()->hasPermission("change passwords"))
+            <flux:input wire:model="password" type="password" :label="__('Password')" :description="__('Leave blank to keep the current password.')" placeholder="••••••••" />
         @endif
 
         <flux:field>

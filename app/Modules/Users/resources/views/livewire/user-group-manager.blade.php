@@ -25,7 +25,9 @@
                 <flux:table.rows>
                     @forelse ($this->groups as $group)
                         <flux:table.row wire:key="group-{{ $group->id }}" x-on:contextmenu.prevent.stop="contextMenu = 'group-{{ $group->id }}'; contextMenuX = $event.clientX - 20; contextMenuY = $event.clientY + 10">
-                            <flux:table.cell>{{ $group->title }}</flux:table.cell>
+                            <flux:table.cell>
+                                <button type="button" wire:click.stop="edit({{ $group->id }})" x-on:click="contextMenu = null" class="hover:text-orange-700 cursor-pointer">{{ $group->title }}</button>
+                            </flux:table.cell>
                             <flux:table.cell>{{ $group->handle }}</flux:table.cell>
                             <flux:table.cell>
                                 <div class="flex flex-wrap gap-1">
@@ -67,7 +69,7 @@
     </div>
 
     <flux:modal name="user-group-form" class="max-w-lg" :show="$errors->isNotEmpty()">
-        <form wire:submit="save" class="space-y-6" x-on:keydown.window.ctrl.s.prevent="if ($el.closest('dialog')?.open) $wire.save()" x-on:keydown.window.meta.s.prevent="if ($el.closest('dialog')?.open) $wire.save()">
+        <form wire:submit="save" class="space-y-6" x-on:keydown.window.ctrl.s.prevent="if ($el.closest('dialog')?.open) $wire.save();" x-on:keydown.window.meta.s.prevent="if ($el.closest('dialog')?.open) $wire.save();">
             <flux:heading size="lg">{{ $editingId ? __("Edit group") : __("Add group") }}</flux:heading>
 
             <flux:input size="sm" wire:model="title" :label="__('Title')" placeholder="Marketing" required autofocus />

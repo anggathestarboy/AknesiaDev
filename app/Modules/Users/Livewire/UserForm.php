@@ -9,6 +9,8 @@ use App\Modules\Users\Models\UserGroup;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -24,6 +26,15 @@ class UserForm extends Component
     public string $email = '';
 
     public string $password = '';
+
+    /**
+     * Only meaningful while creating a new user (never shown when editing):
+     * 'admin' sets the password typed into $password directly, 'reset_link'
+     * gives the account an unusable random password and emails the new user
+     * a "set your password" link instead — the same reset flow triggered by
+     * UserManager::sendPasswordReset() / "Forgot password".
+     */
+    public string $passwordMode = 'admin';
 
     /**
      * @var array<int, string>
@@ -66,10 +77,12 @@ class UserForm extends Component
     {
         auth()->user()->authorizePermission($this->editingId ? 'edit users' : 'create users');
 
+        $newUserSetsOwnPassword = ! $this->editingId && $this->passwordMode === 'reset_link';
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->editingId)],
-            'password' => [$this->editingId ? 'nullable' : 'required', 'string', 'min:8'],
+            'password' => [$this->editingId || $newUserSetsOwnPassword ? 'nullable' : 'required', 'string', 'min:8'],
             'roleHandles' => ['array'],
             'roleHandles.*' => ['string', Rule::exists('roles', 'handle')],
             'groupHandles' => ['array'],
@@ -102,11 +115,19 @@ class UserForm extends Component
             'email' => $validated['email'],
         ];
 
-        if ($validated['password'] !== '' && $validated['password'] !== null) {
+        if ($newUserSetsOwnPassword) {
+            // Unusable until they go through the reset link below — nobody
+            // ever needs to type or know this value.
+            $attributes['password'] = Hash::make(Str::random(40));
+        } elseif ($validated['password'] !== '' && $validated['password'] !== null) {
             $attributes['password'] = Hash::make($validated['password']);
         }
 
         $user = User::updateOrCreate(['id' => $this->editingId], $attributes);
+
+        if ($newUserSetsOwnPassword) {
+            Password::sendResetLink(['email' => $user->email]);
+        }
 
         // Pivot syncs don't fire model save events, so User's own
         // LogsActivity trait can't see these — logged explicitly instead.
@@ -138,7 +159,10 @@ class UserForm extends Component
             );
         }
 
-        Flux::toast(variant: 'success', text: __('User saved.'));
+        Flux::toast(
+            variant: 'success',
+            text: $newUserSetsOwnPassword ? __('User created. A password-reset email was sent to :email.', ['email' => $user->email]) : __('User saved.'),
+        );
 
         $this->redirect(route('users.index'), navigate: true);
     }

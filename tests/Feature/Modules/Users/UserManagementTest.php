@@ -53,6 +53,32 @@ test('a user cannot be created without a password', function () {
         ->assertHasErrors(['password']);
 });
 
+test('creating a user with "email a reset link" needs no password and emails a reset link instead', function () {
+    Notification::fake();
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(UserForm::class)
+        ->set('name', 'Jane Doe')
+        ->set('email', 'jane@example.com')
+        ->set('passwordMode', 'reset_link')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $user = User::where('email', 'jane@example.com')->sole();
+    Notification::assertSentTo($user, QueuedResetPassword::class);
+});
+
+test('creating a user with "email a reset link" still requires an email to send the link to', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(UserForm::class)
+        ->set('name', 'Jane Doe')
+        ->set('email', '')
+        ->set('passwordMode', 'reset_link')
+        ->call('save')
+        ->assertHasErrors(['email']);
+});
+
 test('editing a user without a password keeps the existing one', function () {
     $this->actingAs(User::factory()->create());
     $user = User::factory()->create(['password' => bcrypt('original-password')]);
