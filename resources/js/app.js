@@ -23,6 +23,22 @@ const Video = Node.create({
     },
 });
 
+const Audio = Node.create({
+    name: 'audio',
+    group: 'block',
+    atom: true,
+    draggable: true,
+    addAttributes() {
+        return { src: { default: null } };
+    },
+    parseHTML() {
+        return [{ tag: 'audio[src]' }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['audio', mergeAttributes(HTMLAttributes, { controls: 'controls' })];
+    },
+});
+
 const FileAttachment = Node.create({
     name: 'fileAttachment',
     group: 'block',
@@ -56,6 +72,10 @@ const mediaNodeFor = ({ url, mime, filename }) => {
 
     if ((mime || '').startsWith('video/')) {
         return { type: 'video', attrs: { src: url } };
+    }
+
+    if ((mime || '').startsWith('audio/')) {
+        return { type: 'audio', attrs: { src: url } };
     }
 
     return { type: 'fileAttachment', attrs: { src: url, filename } };
@@ -120,7 +140,7 @@ document.addEventListener('alpine:init', () => {
                     // Link and Underline are already bundled by StarterKit
                     // in Tiptap v3 — importing them separately registered
                     // each extension twice, which also corrupts transactions.
-                    extensions: [StarterKit.configure({ link: { openOnClick: false } }), Image, Video, FileAttachment],
+                    extensions: [StarterKit.configure({ link: { openOnClick: false } }), Image, Video, Audio, FileAttachment],
                     content: content || '',
                     onUpdate: ({ editor }) => {
                         this.imageMenu = null;
@@ -135,7 +155,7 @@ document.addEventListener('alpine:init', () => {
             },
 
             onEditorClick(event) {
-                const mediaEl = event.target.closest('img, video, [data-file-attachment]');
+                const mediaEl = event.target.closest('img, video, audio, [data-file-attachment]');
 
                 if (!mediaEl) {
                     this.imageMenu = null;

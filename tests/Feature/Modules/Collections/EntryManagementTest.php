@@ -946,6 +946,23 @@ test('selecting a video for a bard field resolves its mime type via the shared a
     $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', items: [['url' => $asset->url, 'mime' => 'video/mp4', 'filename' => $asset->title]]);
 });
 
+test('selecting an audio file for a bard field resolves its mime type via the shared asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    $container = AssetContainer::create(['handle' => 'assets', 'title' => 'Assets', 'disk' => 'public', 'settings' => []]);
+    $asset = AssetMeta::create(['container' => $container->handle, 'folder' => '', 'basename' => 'track.mp3', 'filename' => 'track', 'extension' => 'mp3', 'path' => 'track.mp3', 'meta' => ['mime_type' => 'audio/mpeg']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('assetsSelected', ['__bard__', 'data.body'], [$asset->id]);
+
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', items: [['url' => $asset->url, 'mime' => 'audio/mpeg', 'filename' => $asset->title]]);
+});
+
 test('link field can store a plain URL', function () {
     $this->actingAs(User::factory()->create());
 
