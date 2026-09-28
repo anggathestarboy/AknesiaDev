@@ -125,9 +125,16 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            event.detail.items.forEach((item) => {
-                editor.chain().focus().insertContent(mediaNodeFor(item)).run();
-            });
+            // A single insertContent call with all nodes at once — inserting
+            // them one chain().run() at a time left only the last one, since
+            // each insert leaves the new atom node selected and the next
+            // insertContent then replaces that selection instead of adding
+            // after it.
+            editor
+                .chain()
+                .focus()
+                .insertContent(event.detail.items.map(mediaNodeFor))
+                .run();
         };
 
         return {
