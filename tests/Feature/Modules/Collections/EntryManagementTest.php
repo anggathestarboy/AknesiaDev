@@ -2376,6 +2376,24 @@ test('SEO field validation errors read with friendly names, not the seo.* attrib
     expect($component->errors()->first('seo.meta_description'))->toBe('The Meta Description field is required.');
 });
 
+test('meta title and meta description reject values past their character limit', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['seo_enabled' => true])]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('seo.meta_title', str_repeat('a', 61))
+        ->set('seo.meta_description', str_repeat('a', 161))
+        ->call('save')
+        ->assertHasErrors(['seo.meta_title' => 'max', 'seo.meta_description' => 'max']);
+});
+
 test('an author field rejects a user id that does not exist', function () {
     $this->actingAs(User::factory()->create());
     makeSites();

@@ -845,8 +845,8 @@ class EntryForm extends Component
     protected function seoValidationRules(): array
     {
         return [
-            'seo.meta_title' => ['required', 'string', 'max:255'],
-            'seo.meta_description' => ['required', 'string', 'max:500'],
+            'seo.meta_title' => ['required', 'string', 'max:60'],
+            'seo.meta_description' => ['required', 'string', 'max:160'],
             'seo.meta_canonical' => ['nullable', 'string', 'max:2048'],
             'seo.robots' => ['required', 'array', 'min:1'],
             'seo.robots.*' => [Rule::in(array_keys(self::SEO_ROBOTS_OPTIONS))],
