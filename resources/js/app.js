@@ -1,6 +1,65 @@
-import { Editor } from '@tiptap/core';
+import { Editor, Node, mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
+
+// Video/file assets have no dedicated schema node in Tiptap's starter kit —
+// without one, a <video>/<a download> inserted into the doc gets stripped on
+// the next parse, which is why non-image uploads previously "did nothing".
+// These render the same tags the front end later gets from getHTML(), so a
+// plain <video controls> / downloadable <a> is all that's needed for both.
+const Video = Node.create({
+    name: 'video',
+    group: 'block',
+    atom: true,
+    draggable: true,
+    addAttributes() {
+        return { src: { default: null } };
+    },
+    parseHTML() {
+        return [{ tag: 'video[src]' }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['video', mergeAttributes(HTMLAttributes, { controls: 'controls' })];
+    },
+});
+
+const FileAttachment = Node.create({
+    name: 'fileAttachment',
+    group: 'block',
+    atom: true,
+    draggable: true,
+    addAttributes() {
+        return {
+            src: { default: null },
+            filename: { default: null },
+        };
+    },
+    parseHTML() {
+        return [{ tag: 'a[data-file-attachment]' }];
+    },
+    renderHTML({ HTMLAttributes, node }) {
+        return [
+            'a',
+            mergeAttributes(HTMLAttributes, { href: node.attrs.src, download: node.attrs.filename, 'data-file-attachment': '', class: 'bard-file' }),
+            `\u{1F4CE} ${node.attrs.filename || node.attrs.src}`,
+        ];
+    },
+});
+
+// Picks the schema node a selected asset belongs in, keyed by mime type —
+// used both for inserting a new one and for swapping one node type for
+// another when "Replace" picks a file of a different kind.
+const mediaNodeFor = ({ url, mime, filename }) => {
+    if ((mime || '').startsWith('image/')) {
+        return { type: 'image', attrs: { src: url } };
+    }
+
+    if ((mime || '').startsWith('video/')) {
+        return { type: 'video', attrs: { src: url } };
+    }
+
+    return { type: 'fileAttachment', attrs: { src: url, filename } };
+};
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('bardEditor', (content, model, container) => {
@@ -25,22 +84,29 @@ document.addEventListener('alpine:init', () => {
         // property to write into, we open it with a sentinel path and the
         // Livewire component (EntryForm/TermForm/GlobalSetForm) forwards
         // the resolved image URLs to us via "bard-image-selected" instead.
-        const onImageSelected = (event) => {
+        const onMediaSelected = (event) => {
             if (event.detail.prefix !== model) {
                 return;
             }
 
             if (event.detail.mode === 'replace') {
                 if (replacingPos !== null) {
-                    editor.chain().focus().setNodeSelection(replacingPos).updateAttributes('image', { src: event.detail.urls[0] }).run();
+                    const pos = replacingPos;
                     replacingPos = null;
+
+                    editor
+                        .chain()
+                        .focus()
+                        .deleteRange({ from: pos, to: pos + 1 })
+                        .insertContentAt(pos, mediaNodeFor(event.detail.items[0]))
+                        .run();
                 }
 
                 return;
             }
 
-            event.detail.urls.forEach((src) => {
-                editor.chain().focus().setImage({ src }).run();
+            event.detail.items.forEach((item) => {
+                editor.chain().focus().insertContent(mediaNodeFor(item)).run();
             });
         };
 
@@ -54,7 +120,7 @@ document.addEventListener('alpine:init', () => {
                     // Link and Underline are already bundled by StarterKit
                     // in Tiptap v3 — importing them separately registered
                     // each extension twice, which also corrupts transactions.
-                    extensions: [StarterKit.configure({ link: { openOnClick: false } }), Image],
+                    extensions: [StarterKit.configure({ link: { openOnClick: false } }), Image, Video, FileAttachment],
                     content: content || '',
                     onUpdate: ({ editor }) => {
                         this.imageMenu = null;
@@ -65,18 +131,25 @@ document.addEventListener('alpine:init', () => {
                     },
                 });
 
-                window.addEventListener('bard-image-selected', onImageSelected);
+                window.addEventListener('bard-image-selected', onMediaSelected);
             },
 
             onEditorClick(event) {
-                if (event.target.tagName !== 'IMG') {
+                const mediaEl = event.target.closest('img, video, [data-file-attachment]');
+
+                if (!mediaEl) {
                     this.imageMenu = null;
 
                     return;
                 }
 
-                const pos = editor.view.posAtDOM(event.target, 0);
-                const imageRect = event.target.getBoundingClientRect();
+                // Prevents the file attachment's own <a href> from navigating
+                // away while editing — the front end still gets a real,
+                // clickable download link since it renders the same markup.
+                event.preventDefault();
+
+                const pos = editor.view.posAtDOM(mediaEl, 0);
+                const imageRect = mediaEl.getBoundingClientRect();
                 const containerRect = this.$refs.editor.getBoundingClientRect();
 
                 editor.chain().setNodeSelection(pos).run();
@@ -148,7 +221,7 @@ document.addEventListener('alpine:init', () => {
             },
 
             destroy() {
-                window.removeEventListener('bard-image-selected', onImageSelected);
+                window.removeEventListener('bard-image-selected', onMediaSelected);
                 editor?.destroy();
             },
         };
