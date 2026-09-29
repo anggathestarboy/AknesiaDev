@@ -335,7 +335,7 @@ class NavigationTreeEditor extends Component
         auth()->user()->authorizePermission("edit {$this->navigation->handle} navigation");
 
         if (($path[0] ?? null) === '__bard__') {
-            $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', urls: AssetMeta::whereIn('id', $ids)->get()->pluck('url')->all());
+            $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', items: AssetMeta::whereIn('id', $ids)->get()->map(fn (AssetMeta $asset): array => ['url' => $asset->url, 'mime' => $asset->mime_type, 'filename' => $asset->title])->all());
 
             return;
         }

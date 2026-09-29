@@ -907,7 +907,7 @@ test('selecting an image for a bard field resolves its url via the shared asset 
     $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->call('assetsSelected', ['__bard__', 'data.body'], [$asset->id]);
 
-    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', urls: [$asset->url]);
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', items: [['url' => $asset->url, 'mime' => $asset->mime_type, 'filename' => $asset->title]]);
     expect($component->get('data.body'))->toBe('');
 });
 
@@ -925,8 +925,42 @@ test('replacing an image for a bard field forwards the replace mode via the shar
     $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
         ->call('assetsSelected', ['__bard__', 'data.body', 'replace'], [$asset->id]);
 
-    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'replace', urls: [$asset->url]);
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'replace', items: [['url' => $asset->url, 'mime' => $asset->mime_type, 'filename' => $asset->title]]);
     expect($component->get('data.body'))->toBe('');
+});
+
+test('selecting a video for a bard field resolves its mime type via the shared asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    $container = AssetContainer::create(['handle' => 'assets', 'title' => 'Assets', 'disk' => 'public', 'settings' => []]);
+    $asset = AssetMeta::create(['container' => $container->handle, 'folder' => '', 'basename' => 'clip.mp4', 'filename' => 'clip', 'extension' => 'mp4', 'path' => 'clip.mp4', 'meta' => ['mime_type' => 'video/mp4']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('assetsSelected', ['__bard__', 'data.body'], [$asset->id]);
+
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', items: [['url' => $asset->url, 'mime' => 'video/mp4', 'filename' => $asset->title]]);
+});
+
+test('selecting an audio file for a bard field resolves its mime type via the shared asset picker', function () {
+    $this->actingAs(User::factory()->create());
+
+    $container = AssetContainer::create(['handle' => 'assets', 'title' => 'Assets', 'disk' => 'public', 'settings' => []]);
+    $asset = AssetMeta::create(['container' => $container->handle, 'folder' => '', 'basename' => 'track.mp3', 'filename' => 'track', 'extension' => 'mp3', 'path' => 'track.mp3', 'meta' => ['mime_type' => 'audio/mpeg']]);
+
+    Blueprint::create(['namespace' => null, 'handle' => 'post', 'data' => ['fields' => [
+        ['handle' => 'body', 'display' => 'Body', 'type' => 'bard', 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null],
+    ]]]);
+    $collection = makeBlogCollection();
+
+    $component = Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('assetsSelected', ['__bard__', 'data.body'], [$asset->id]);
+
+    $component->assertDispatched('bard-image-selected', prefix: 'data.body', mode: 'insert', items: [['url' => $asset->url, 'mime' => 'audio/mpeg', 'filename' => $asset->title]]);
 });
 
 test('link field can store a plain URL', function () {
@@ -2241,6 +2275,20 @@ test('an entry in a schema-disabled collection never persists schema blocks', fu
     expect(Entry::sole()->schemaBlocks())->toBe([]);
 });
 
+test('picking the SEO featured image restricts the asset picker to images', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['seo_enabled' => true])]);
+
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->call('pickSeoImage')
+        ->assertDispatched('open-asset-picker', path: ['__entry_seo_image__'], container: 'photos', selected: [], max: 1, validation: 'image');
+});
+
 test('an entry can save its own SEO fields when the collection has the SEO tab enabled', function () {
     $this->actingAs(User::factory()->create());
     makeSites();
@@ -2326,6 +2374,24 @@ test('SEO field validation errors read with friendly names, not the seo.* attrib
 
     expect($component->errors()->first('seo.meta_title'))->toBe('The Meta Title field is required.');
     expect($component->errors()->first('seo.meta_description'))->toBe('The Meta Description field is required.');
+});
+
+test('meta title and meta description reject values past their character limit', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    $collection->update(['settings' => array_merge($collection->settings ?? [], ['seo_enabled' => true])]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'site' => 'indonesia'])
+        ->set('title', 'Hello World')
+        ->set('slug', 'hello-world')
+        ->set('entryDate', '2024-01-01T00:00')
+        ->set('data.status', 'draft')
+        ->set('seo.meta_title', str_repeat('a', 61))
+        ->set('seo.meta_description', str_repeat('a', 161))
+        ->call('save')
+        ->assertHasErrors(['seo.meta_title' => 'max', 'seo.meta_description' => 'max']);
 });
 
 test('an author field rejects a user id that does not exist', function () {

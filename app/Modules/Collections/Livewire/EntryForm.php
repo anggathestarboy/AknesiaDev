@@ -549,7 +549,7 @@ class EntryForm extends Component
 
     public function pickSeoImage(): void
     {
-        $this->dispatch('open-asset-picker', path: ['__entry_seo_image__'], container: $this->assetContainer, selected: $this->seo['meta_featured_image'] ?? [], max: 1);
+        $this->dispatch('open-asset-picker', path: ['__entry_seo_image__'], container: $this->assetContainer, selected: $this->seo['meta_featured_image'] ?? [], max: 1, validation: 'image');
     }
 
     public function removeSeoImage(int $assetId): void
@@ -691,7 +691,7 @@ class EntryForm extends Component
         // has no "assets" data property to write into — resolve URLs and
         // hand them back to the editor instead of touching $this->data.
         if (($path[0] ?? null) === '__bard__') {
-            $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', urls: AssetMeta::whereIn('id', $ids)->get()->pluck('url')->all());
+            $this->dispatch('bard-image-selected', prefix: $path[1], mode: $path[2] ?? 'insert', items: AssetMeta::whereIn('id', $ids)->get()->map(fn (AssetMeta $asset): array => ['url' => $asset->url, 'mime' => $asset->mime_type, 'filename' => $asset->title])->all());
 
             return;
         }
@@ -845,8 +845,8 @@ class EntryForm extends Component
     protected function seoValidationRules(): array
     {
         return [
-            'seo.meta_title' => ['required', 'string', 'max:255'],
-            'seo.meta_description' => ['required', 'string', 'max:500'],
+            'seo.meta_title' => ['required', 'string', 'max:60'],
+            'seo.meta_description' => ['required', 'string', 'max:160'],
             'seo.meta_canonical' => ['nullable', 'string', 'max:2048'],
             'seo.robots' => ['required', 'array', 'min:1'],
             'seo.robots.*' => [Rule::in(array_keys(self::SEO_ROBOTS_OPTIONS))],
