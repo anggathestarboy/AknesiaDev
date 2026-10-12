@@ -1,5 +1,5 @@
 <section class="w-full space-y-6" x-data="{ deleteSubmissionId: null, contextMenu: null, contextMenuX: 0, contextMenuY: 0 }" @click="contextMenu = null">
-    <div class="flex items-center justify-between border py-2 px-4 rounded-xl dark:border-zinc-500">
+    <div class="flex items-center flex-wrap justify-between border py-2 px-2 md:px-4 rounded-xl dark:border-zinc-500 overflow-hidden gap-3">
         <flux:heading size="xl">{{ __(":title submissions", ["title" => $form->title]) }}</flux:heading>
     </div>
 
