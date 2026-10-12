@@ -33,11 +33,8 @@
 
     $sidebarItems = $sidebarFilterByRole($sidebarItems);
 
-    if (! config('activity-log.enabled')) {
-        $sidebarItems = array_values(array_filter(
-            $sidebarItems,
-            fn (array $item): bool => ($item['url'] ?? null) !== route('activity-log.activity-log.index', absolute: false),
-        ));
+    if (!config("activity-log.enabled")) {
+        $sidebarItems = array_values(array_filter($sidebarItems, fn(array $item): bool => ($item["url"] ?? null) !== route("activity-log.activity-log.index", absolute: false)));
     }
 
     $sidebarIsCurrent = function (?string $url): bool {
@@ -59,11 +56,17 @@
     <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
         <flux:sidebar.header>
             <x-partials.app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+            <a href="/" target="_blank" class="hidden lg:block">
+                <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M4.37 7.657c2.063.528 2.396 2.806 3.202 3.87 1.07 1.413 2.075 1.228 3.192 2.644 1.805 2.289 1.312 5.705 1.312 6.705M20 15h-1a4 4 0 0 0-4 4v1M8.587 3.992c0 .822.112 1.886 1.515 2.58 1.402.693 2.918.351 2.918 2.334 0 .276 0 2.008 1.972 2.008 2.026.031 2.026-1.678 2.026-2.008 0-.65.527-.9 1.177-.9H20M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+            </a>
+
             <flux:sidebar.collapse class="lg:hidden" />
         </flux:sidebar.header>
 
         <flux:sidebar.nav>
-            <flux:sidebar.group heading="CMS General" class="grid">
+            <flux:sidebar.group class="grid">
                 @foreach ($sidebarItems as $item)
                     @if (($item["children"] ?? []) !== [])
                         @php
@@ -109,16 +112,15 @@
 
         <flux:spacer />
 
-        <flux:sidebar.nav>
-            <flux:sidebar.item href="/" target="_blank"> {{ __("Visit Site") }} </flux:sidebar.item>
-            {{-- <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank"> {{ __("Documentation") }} </flux:sidebar.item> --}}
-        </flux:sidebar.nav>
+        {{-- <flux:sidebar.nav> --}}
+        {{-- <flux:sidebar.item href="/" target="_blank"> {{ __("Visit Site") }} </flux:sidebar.item> --}}
+        {{-- <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank"> {{ __("Documentation") }} </flux:sidebar.item> --}}
+        {{-- </flux:sidebar.nav> --}}
 
-        {{-- Same appearance switcher as /settings/appearance (App\Modules\Auth\Livewire\Settings\Appearance) — surfaced here too so switching light/dark doesn't require leaving whatever admin page you're on. --}}
         <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="px-2">
-            <flux:radio value="light" icon="sun" />
-            <flux:radio value="dark" icon="moon" />
-            <flux:radio value="system" icon="computer-desktop" />
+            <flux:radio value="light" icon="sun" class="cursor-pointer" />
+            <flux:radio value="dark" icon="moon" class="cursor-pointer" />
+            <flux:radio value="system" icon="computer-desktop" class="cursor-pointer" />
         </flux:radio.group>
 
         <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
@@ -129,6 +131,12 @@
         <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
         <flux:spacer />
+
+        <a href="/" target="_blank" class="mr-3">
+            <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M4.37 7.657c2.063.528 2.396 2.806 3.202 3.87 1.07 1.413 2.075 1.228 3.192 2.644 1.805 2.289 1.312 5.705 1.312 6.705M20 15h-1a4 4 0 0 0-4 4v1M8.587 3.992c0 .822.112 1.886 1.515 2.58 1.402.693 2.918.351 2.918 2.334 0 .276 0 2.008 1.972 2.008 2.026.031 2.026-1.678 2.026-2.008 0-.65.527-.9 1.177-.9H20M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+        </a>
 
         <flux:dropdown position="top" align="end">
             <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
