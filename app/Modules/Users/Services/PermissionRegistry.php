@@ -41,6 +41,7 @@ class PermissionRegistry
             $this->usersGroup(),
             $this->formsGroup(),
             $this->activityLogGroup(),
+            $this->packageUpdatesGroup(),
         ], fn (array $group): bool => $group['permissions'] !== []);
     }
 
@@ -256,6 +257,16 @@ class PermissionRegistry
                 $this->permission('view activity log detail', 'View entry detail', 'Ability to view the full before/after change details of a logged entry.'),
                 $this->permission('export activity log', 'Export activity log', 'Ability to export activity log entries (per month/year) as a JSON file.'),
                 $this->permission('import activity log', 'Import activity log', 'Ability to restore activity log entries back from a previously exported file.'),
+            ],
+        ];
+    }
+
+    protected function packageUpdatesGroup(): array
+    {
+        return [
+            'group' => 'Package Updates',
+            'permissions' => [
+                $this->permission('view package updates', 'View package updates', 'Ability to open the admin page listing available Composer/npm package updates.'),
             ],
         ];
     }

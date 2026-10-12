@@ -63,6 +63,7 @@ class SeedAdminSidebarCommand extends Command
             ['title' => 'Sitemap Manager', 'url' => route('sitemap.index', absolute: false)],
             ['title' => 'Sites', 'url' => route('sites.sites.index', absolute: false)],
             ['title' => 'Site Settings', 'url' => route('site-settings.index', absolute: false)],
+            ['title' => 'Package Updates', 'url' => route('package-updates.index', absolute: false)],
             ['title' => 'Users', 'url' => route('users.index', absolute: false)],
             ['title' => 'Roles', 'url' => route('users.roles.index', absolute: false)],
             ['title' => 'User Groups', 'url' => route('users.groups.index', absolute: false)],
