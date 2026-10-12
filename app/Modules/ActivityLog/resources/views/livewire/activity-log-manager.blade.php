@@ -101,10 +101,10 @@
         <flux:button size="sm" variant="ghost" wire:click="resetFilters">{{ __("Clear filters") }}</flux:button>
     @endif
 
-    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+    <div class="bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-xl">
         <div class="bg-white dark:bg-zinc-800 rounded-xl overflow-hidden">
             <flux:table>
-                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                <flux:table.columns class="bg-zinc-100 dark:bg-zinc-900 [&>*]:text-white">
                     <flux:table.column>{{ __("When") }}</flux:table.column>
                     <flux:table.column>{{ __("User") }}</flux:table.column>
                     <flux:table.column>{{ __("Action") }}</flux:table.column>

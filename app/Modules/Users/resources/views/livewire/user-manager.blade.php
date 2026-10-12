@@ -34,10 +34,10 @@
         @endif
     </div>
 
-    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+    <div class="bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-xl">
         <div class="bg-white dark:bg-zinc-800 rounded-xl overflow-hidden">
             <flux:table>
-                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                <flux:table.columns class="bg-zinc-100 dark:bg-zinc-900 [&>*]:text-white">
                     <flux:table.column class="w-10" :border="false">
                         <input type="checkbox" wire:click="toggleSelectAll" :checked="count($selected) > 0 && count($selected) === $this->users->count()" class="rounded w-max border-zinc-300 dark:border-zinc-600" />
                     </flux:table.column>

@@ -11,10 +11,10 @@
         <flux:button variant="primary" size="sm" wire:click="create">{{ __("Add group") }}</flux:button>
     </div>
 
-    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+    <div class="bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-xl">
         <div class="bg-white dark:bg-zinc-800 rounded-xl">
             <flux:table>
-                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                <flux:table.columns class="bg-zinc-100 dark:bg-zinc-900 [&>*]:text-white">
                     <flux:table.column>{{ __("Title") }}</flux:table.column>
                     <flux:table.column>{{ __("Handle") }}</flux:table.column>
                     <flux:table.column>{{ __("Roles") }}</flux:table.column>

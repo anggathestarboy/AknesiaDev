@@ -15,10 +15,10 @@
         <flux:input wire:model.live.debounce.300ms="search" placeholder="{{ __('Search by source or target…') }}" icon="magnifying-glass" size="sm" />
     </div>
 
-    <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+    <div class="bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-xl">
         <div class="bg-white rounded-xl dark:bg-zinc-800">
             <flux:table>
-                <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                <flux:table.columns class="bg-zinc-100 dark:bg-zinc-900 [&>*]:text-white">
                     <flux:table.column>{{ __("Source") }}</flux:table.column>
                     <flux:table.column>{{ __("Target") }}</flux:table.column>
                     <flux:table.column>{{ __("Status") }}</flux:table.column>
@@ -57,7 +57,7 @@
     </div>
 
     <flux:modal name="redirect-form" class="max-w-lg" :show="$errors->isNotEmpty()">
-        <form wire:submit="save" class="space-y-6" x-on:keydown.window.ctrl.s.prevent="if ($el.closest('dialog')?.open) $wire.save()" x-on:keydown.window.meta.s.prevent="if ($el.closest('dialog')?.open) $wire.save()">
+        <form wire:submit="save" class="space-y-6" x-on:keydown.window.ctrl.s.prevent="if ($el.closest('dialog')?.open) $wire.save();" x-on:keydown.window.meta.s.prevent="if ($el.closest('dialog')?.open) $wire.save();">
             <flux:heading size="lg">{{ $editingId ? __("Redirect details") : __("New redirect") }}</flux:heading>
 
             <div class="space-y-4">

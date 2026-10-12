@@ -10,7 +10,7 @@
             {{-- <flux:subheading>{{ __("Handle: :handle", ["handle" => $collection->handle]) }}</flux:subheading> --}}
         </div>
 
-        @if ($this->availableBlueprints->isNotEmpty() && auth()->user()->hasPermission("create {$collection->handle} entries") && $this->createSite() !== '')
+        @if ($this->availableBlueprints->isNotEmpty() && auth() ->user() ->hasPermission("create {$collection->handle} entries") && $this->createSite() !== "")
             <form method="GET" class="flex gap-2 items-center" action="{{ route('collections.entries.create', ['collection' => $collection->handle, 'site' => $this->createSite()]) }}" class="flex flex-col items-end gap-2">
                 <flux:select name="blueprint" size="sm">
                     @foreach ($this->availableBlueprints as $availableBlueprint)
@@ -92,10 +92,10 @@
             @endforelse
         </ul>
     @else
-        <div class="bg-gray-200 dark:bg-zinc-900 p-1.5 rounded-xl">
+        <div class="bg-zinc-100 dark:bg-zinc-900 p-1.5 rounded-xl">
             <div class="bg-white rounded-xl dark:bg-zinc-800">
                 <flux:table>
-                    <flux:table.columns class="bg-gray-200 dark:bg-zinc-900 [&>*]:text-white">
+                    <flux:table.columns class="bg-zinc-100 dark:bg-zinc-900 [&>*]:text-white">
                         <flux:table.column class="w-8">
                             @if ($this->bulkActionsAvailable() && $this->entries->isNotEmpty())
                                 <input type="checkbox" wire:click="toggleSelectAll" :checked="count(array_intersect($selected, $this->entries->pluck('id')->all())) === $this->entries->count()" />
@@ -176,33 +176,33 @@
                                 </flux:table.cell>
                                 <flux:table.cell class="flex justify-end gap-2 w-32">
                                     @if ($canOperate)
-                                    <flux:dropdown>
-                                        <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
-                                        <flux:menu>
+                                        <flux:dropdown>
+                                            <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" />
+                                            <flux:menu>
+                                                @if ($canEdit)
+                                                    <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                                @endif
+                                                @if ($canDelete)
+                                                    <flux:modal.trigger name="confirm-delete-entry">
+                                                        <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
+                                                    </flux:modal.trigger>
+                                                @endif
+                                            </flux:menu>
+                                        </flux:dropdown>
+                                    @endif
+
+                                    @if ($canOperate)
+                                        <div x-show="contextMenu === 'entry-{{ $entry->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                                             @if ($canEdit)
-                                                <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                                                <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
                                             @endif
                                             @if ($canDelete)
                                                 <flux:modal.trigger name="confirm-delete-entry">
-                                                    <flux:menu.item icon="trash" variant="danger" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true">{{ __("Delete") }}</flux:menu.item>
+                                                    <button type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
                                                 </flux:modal.trigger>
                                             @endif
-                                        </flux:menu>
-                                    </flux:dropdown>
-                                @endif
-
-                                @if ($canOperate)
-                                    <div x-show="contextMenu === 'entry-{{ $entry->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                                        @if ($canEdit)
-                                            <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
-                                        @endif
-                                        @if ($canDelete)
-                                            <flux:modal.trigger name="confirm-delete-entry">
-                                                <button type="button" x-on:click="deleteEntryId = '{{ $entry->id }}'; deleteSiblingCount = {{ $this->localeSiblingCount($entry) }}; deleteAllLocales = true; contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Delete") }}</button>
-                                            </flux:modal.trigger>
-                                        @endif
-                                    </div>
-                                @endif
+                                        </div>
+                                    @endif
                                 </flux:table.cell>
                             </flux:table.row>
                         @empty
