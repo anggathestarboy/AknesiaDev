@@ -7,6 +7,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
+use App\Modules\Blueprints\Support\LinkValidation;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sites\Models\Site;
@@ -93,6 +94,10 @@ class TermForm extends Component
             $originData = $this->fillFieldsData($this->blueprintFields(), $this->originTerm()?->data);
             $this->overlayNonLocalizableData($this->blueprintFields(), $this->data, $originData);
 
+            if (! $term) {
+                $this->prefillLocalizableDataFromOrigin($this->blueprintFields(), $this->data, $originData);
+            }
+
             // A link pointing at the default language's term/entry shows
             // that same content's version on this site, so the picker is
             // pre-selected on the translation instead of the first option.
@@ -167,6 +172,23 @@ class TermForm extends Component
             if (! ($field['localizable'] ?? false)) {
                 $data[$field['handle']] = $originData[$field['handle']] ?? $data[$field['handle']] ?? null;
             }
+        }
+    }
+
+    /**
+     * Starts a brand-new translation's localizable fields off with the
+     * origin locale's value instead of blank — see
+     * EntryForm::prefillLocalizableDataFromOrigin(). Only for a not-yet-saved
+     * term, so a saved locale's own value is never overwritten on reopen.
+     */
+    protected function prefillLocalizableDataFromOrigin(array $fields, array &$data, array $originData): void
+    {
+        foreach ($fields as $field) {
+            if ($field['type'] === 'replicator' || ! ($field['localizable'] ?? false)) {
+                continue;
+            }
+
+            $data[$field['handle']] = $originData[$field['handle']] ?? $data[$field['handle']];
         }
     }
 
@@ -619,7 +641,7 @@ class TermForm extends Component
                 };
 
                 if (! empty($field['validation'])) {
-                    $linkRules[] = $field['validation'];
+                    $linkRules[] = LinkValidation::rule($field['validation']);
                 }
 
                 $rules[$key] = $linkRules;

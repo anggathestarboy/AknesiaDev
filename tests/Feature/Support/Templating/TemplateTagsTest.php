@@ -7,7 +7,9 @@ use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Globals\Models\GlobalSetVariable;
+use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Sites\Models\Site;
+use App\Modules\Structure\Models\Tree;
 use App\Support\Templating\TemplateTags;
 use Illuminate\Support\Facades\Blade;
 
@@ -144,4 +146,20 @@ test('collection() related returns nothing, not every entry, when the source has
     $related = TemplateTags::collection('blog', ['related' => $source]);
 
     expect($related)->toBeEmpty();
+});
+
+test('@navigation directive uses the site\'s value only for localizable fields', function () {
+    Site::create(['name' => 'Indonesia', 'handle' => 'indonesia', 'url' => '/', 'locale' => 'id_ID', 'lang' => 'id', 'attributes' => [], 'order' => 1]);
+    Site::create(['name' => 'English', 'handle' => 'english', 'url' => '/en', 'locale' => 'en_US', 'lang' => 'en', 'attributes' => [], 'order' => 2]);
+    Blueprint::create(['namespace' => 'navigations.header', 'handle' => 'header', 'title' => 'Header', 'data' => ['tabs' => [], 'fields' => [
+        ['type' => 'text', 'handle' => 'cta', 'localizable' => true],
+        ['type' => 'text', 'handle' => 'brand', 'localizable' => false],
+    ]]]);
+    Navigation::create(['handle' => 'header', 'title' => 'Header']);
+    Tree::create(['type' => 'navigation', 'handle' => 'header', 'locale' => 'indonesia', 'tree' => ['cta' => 'Hubungi', 'brand' => 'Draft ID']]);
+    Tree::create(['type' => 'navigation', 'handle' => 'header', 'locale' => 'english', 'tree' => ['cta' => 'Contact', 'brand' => 'Draft EN']]);
+
+    $html = Blade::render("@navigation('header', ['site' => 'english']){{ \$navigation->cta }}|{{ \$navigation->brand }}@endnavigation");
+
+    expect($html)->toBe('Contact|Draft ID');
 });

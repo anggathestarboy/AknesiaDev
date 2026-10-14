@@ -569,6 +569,30 @@ trait HasFieldBuilder
     }
 
     /**
+     * Handle of every "fieldset" field in the whole field tree (replicator
+     * sub-fields included), one entry per use — a fieldset can only be
+     * imported once per blueprint, since its fields would otherwise appear
+     * twice with the same handles.
+     *
+     * @param  array<int, array<string, mixed>>|null  $fields
+     * @return array<int, string>
+     */
+    public function fieldsetHandlesInUse(?array $fields = null): array
+    {
+        $handles = [];
+
+        foreach ($fields ?? $this->fields as $field) {
+            if ($field['type'] === 'fieldset' && ($field['options'] ?? '') !== '') {
+                $handles[] = $field['options'];
+            }
+
+            $handles = [...$handles, ...$this->fieldsetHandlesInUse($field['replicator_fields'] ?? [])];
+        }
+
+        return $handles;
+    }
+
+    /**
      * Validate a level of the field tree (and recurse into every
      * replicator's own sub-fields), returning dotted-path errors keyed the
      * same way Livewire's own $this->validate() would. Recursion is what
@@ -645,6 +669,8 @@ trait HasFieldBuilder
                     $errors["{$errorKey}.options"] = __('Select a fieldset.');
                 } elseif (! in_array($fieldsetHandle, $this->availableFieldsets->pluck('handle')->all(), true)) {
                     $errors["{$errorKey}.options"] = __('That fieldset does not exist.');
+                } elseif (count(array_keys($this->fieldsetHandlesInUse(), $fieldsetHandle, true)) > 1) {
+                    $errors["{$errorKey}.options"] = __('That fieldset is already used in this blueprint.');
                 }
             }
 

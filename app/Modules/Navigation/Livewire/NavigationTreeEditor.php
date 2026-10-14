@@ -4,6 +4,7 @@ namespace App\Modules\Navigation\Livewire;
 
 use App\Models\TaxonomyTerm;
 use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
+use App\Modules\Blueprints\Support\LinkValidation;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Navigation\Models\Navigation;
@@ -123,7 +124,7 @@ class NavigationTreeEditor extends Component
         }
 
         $originData = $this->treeService()->load($this->navigation, $this->originLocale());
-        $this->data = $this->fillFieldsData($this->blueprintFields(), array_merge($originData, $ownData));
+        $this->data = $this->fillFieldsData($this->blueprintFields(), array_merge($originData, array_diff_key($ownData, array_flip($this->nonLocalizableHandles()))));
 
         // A link pointing at the default language's entry shows that same
         // content's entry on this site, so the picker is pre-selected on
@@ -169,6 +170,18 @@ class NavigationTreeEditor extends Component
         return collect($data)
             ->reject(fn ($value, string $handle): bool => array_key_exists($handle, $originData) && $originData[$handle] == $value)
             ->all();
+    }
+
+    /**
+     * Top-level fields not marked "localizable" — they only have one value
+     * (the default language's), so other languages always show it and never
+     * store their own.
+     *
+     * @return array<int, string>
+     */
+    protected function nonLocalizableHandles(): array
+    {
+        return collect($this->blueprintFields())->reject(fn (array $field): bool => $field['localizable'] ?? false)->pluck('handle')->all();
     }
 
     public function usesBlueprint(): bool
@@ -466,13 +479,23 @@ class NavigationTreeEditor extends Component
             $key = "{$prefix}.{$field['handle']}";
 
             if ($field['type'] === 'replicator') {
+                if ($scopeValues !== null && ! $this->fieldIsVisible($field, $scopeValues)) {
+                    $rules[$key] = ['nullable', 'array'];
+
+                    continue;
+                }
+
                 $rules[$key] = ['array'];
 
                 if ($field['required'] ?? false) {
                     $rules[$key][] = 'required';
                 }
 
-                $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.*"));
+                // Per row (not "*") so each row's sub-field conditions are
+                // evaluated against that row's own values.
+                foreach ($scopeValues[$field['handle']] ?? [] as $rowIndex => $row) {
+                    $rules = array_merge($rules, $this->fieldRulesFor($field['replicator_fields'] ?? [], "{$key}.{$rowIndex}", $row));
+                }
 
                 continue;
             }
@@ -574,7 +597,7 @@ class NavigationTreeEditor extends Component
                 $linkRules[] = 'max:2048';
 
                 if (! empty($field['validation'])) {
-                    $linkRules[] = $field['validation'];
+                    $linkRules[] = LinkValidation::rule($field['validation']);
                 }
 
                 $rules[$key] = $linkRules;
@@ -847,7 +870,7 @@ class NavigationTreeEditor extends Component
                 // locale override and keeps live-following the default
                 // language. A genuinely different entry still overrides.
                 $originData = Entry::localizeLinkValues($originData, $this->blueprintFields(), $this->activeSite);
-                $data = $this->overridesFrom($data, $originData);
+                $data = array_diff_key($this->overridesFrom($data, $originData), array_flip($this->nonLocalizableHandles()));
             }
 
             $this->treeService()->save($this->navigation, $data, $this->activeLocale());

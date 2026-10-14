@@ -440,7 +440,8 @@
     @else
         <flux:field>
             <flux:label title="{{ $field['handle'] }}">{!! $fieldLabel !!}</flux:label>
-            <flux:select wire:model="{{ $prefix }}.0" placeholder="{{ __('Select a term') }}">
+            <flux:select wire:model="{{ $prefix }}.0">
+                <flux:select.option value="">{{ __("Select a term") }}</flux:select.option>
                 @foreach ($taxonomyOptions as $term)
                     <flux:select.option value="{{ $term->id }}">{{ $term->data["title"] ?? $term->slug }}</flux:select.option>
                 @endforeach

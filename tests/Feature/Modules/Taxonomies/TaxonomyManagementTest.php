@@ -486,3 +486,21 @@ test('a user with edit terms permission can edit a term', function () {
     Livewire::test(TermForm::class, ['taxonomy' => $taxonomy, 'term' => $term])
         ->assertSet('slug', 'politics');
 });
+
+test('creating a new term translation prefills a localizable field with the default language\'s value', function () {
+    $this->actingAs(User::factory()->create());
+    makeTaxonomySites();
+    makeNewsCategoriesBlueprint();
+    $taxonomy = Taxonomy::create(['handle' => 'news_categories', 'title' => 'News Categories', 'sites' => ['indonesia', 'english'], 'settings' => ['blueprint' => 'news_categories']]);
+
+    $original = TaxonomyTerm::create([
+        'taxonomy' => 'news_categories',
+        'site' => 'indonesia',
+        'blueprint' => 'news_categories',
+        'slug' => 'politik',
+        'data' => ['title' => 'Politik', 'color' => 'red', 'description' => 'Berita politik'],
+    ]);
+
+    $this->get(route('taxonomies.terms.create', ['taxonomy' => 'news_categories', 'site' => 'english', 'origin' => $original->id]))
+        ->assertSee('Berita politik', false);
+});

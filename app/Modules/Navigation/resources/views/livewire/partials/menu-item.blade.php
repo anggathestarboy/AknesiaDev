@@ -66,7 +66,7 @@
             @endforeach
         </div>
 
-        @if ($childReplicatorField)
+        @if ($childReplicatorField && $this->fieldIsVisible($childReplicatorField, $row))
             <div class="border-l-2 border-zinc-200 pl-4 dark:border-zinc-700">
                 @include ("navigation::livewire.partials.menu-list",
                     [
