@@ -967,6 +967,12 @@ class EntryForm extends Component
                             return;
                         }
 
+                        if (! $asset->fileExists()) {
+                            $fail(__("The file \"{$asset->filename}\" is missing from storage — remove it and pick another."));
+
+                            return;
+                        }
+
                         $file = new File($asset->absolutePath());
 
                         if (Validator::make(['file' => $file], ['file' => $field['validation']])->fails()) {
