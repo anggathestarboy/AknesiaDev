@@ -20,7 +20,6 @@
     if (slidesCount > 1) startAutoplay();" @mouseenter="stopAutoplay()"
         @mouseleave="if (slidesCount > 1) startAutoplay()"
         class="relative w-full h-[calc(100vh-65px)] min-h-[500px] overflow-hidden bg-black text-white">
-        {{-- BACKGROUND: fade in / crossfade --}}
         @foreach ($data->hero_loop ?? [] as $index => $hero)
             <div class="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
                 :class="isActive({{ $index }}) ? 'opacity-100' : 'opacity-0'" aria-hidden="true">
@@ -32,11 +31,9 @@
             </div>
         @endforeach
 
-        {{-- KONTEN TEKS --}}
         <div class="relative z-10 container mx-auto h-full px-4 lg:px-0 flex items-center">
             <div class="max-w-2xl w-full">
 
-                {{-- Semua slide ditumpuk di 1 cell grid, rata bawah, supaya tinggi area tetap --}}
                 <div class="grid">
                     @foreach ($data->hero_loop ?? [] as $index => $hero)
                         <div class="col-start-1 row-start-1 self-end lg:self-start space-y-6"
@@ -74,7 +71,6 @@
                     @endforeach
                 </div>
 
-                {{-- Pagination mobile/tablet: 1 saja, di luar slide, posisi tetap di bawah button --}}
                 @if (count($data->hero_loop ?? []) > 1)
                     <div class="flex lg:hidden flex-row items-center gap-3 pt-10">
                         @foreach ($data->hero_loop ?? [] as $index => $hero)
@@ -90,7 +86,6 @@
             </div>
         </div>
 
-        {{-- Pagination desktop: vertikal, di sisi kanan container dengan jarak ke dalam --}}
         @if (count($data->hero_loop ?? []) > 1)
             <div class="hidden lg:block absolute inset-0 z-20 pointer-events-none">
                 <div class="container mx-auto h-full flex items-center justify-end lg:pr-1">
@@ -151,39 +146,55 @@
                 </h2>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
-                @collection('news', ["limit" => 3])
-                <div>
+                @collection('news', ['limit' => 3])
                     @php
-                        $newsImage = $data->news_image;
-                        if (is_array($newsImage)) {
-                            $newsImage = \App\Modules\Media\Models\AssetMeta::find(reset($newsImage) ?: null);
-                        }
-
-                        $newsDate = $entry->date ? \Illuminate\Support\Carbon::parse($entry->date)->format('F, jS Y') : null;
-                        $newsAuthor = \App\Models\User::find($entry->seoFields()['meta_author'] ?? '')?->name;
+                        $newsCollection = \App\Modules\Collections\Models\Collection::where(
+                            'handle',
+                            $entry->collection,
+                        )->first();
+                        $newsUrl = $newsCollection
+                            ? app(\App\Modules\Collections\Services\EntryUrlResolver::class)->url(
+                                $newsCollection,
+                                $entry,
+                            )
+                            : null;
                     @endphp
-                    <div class="w-full max-w-[381px] h-[325px] overflow-hidden rounded-xl">
-                        <img src="{{ $newsImage?->url }}" alt="Lorem ipsum dolor sit amet consectetur"
-                            class="w-full h-full object-cover" />
-                    </div>
-                    <h3 class="mt-5 text-lg font-bold text-zinc-900 leading-snug">
-                        {{ $data->news_title }}
-                    </h3>
-                    @if ($newsDate || $newsAuthor)
-                        <p class="mt-3 text-sm text-zinc-500">
-                            @if ($newsDate)
-                                {{ $newsDate }}
+                    <a href="{{ $newsUrl ?? '#' }}" class="group">
+                        <div>
+                            @php
+                                $newsImage = $data->news_image;
+                                if (is_array($newsImage)) {
+                                    $newsImage = \App\Modules\Media\Models\AssetMeta::find(reset($newsImage) ?: null);
+                                }
+
+                                $newsDate = $entry->date
+                                    ? \Illuminate\Support\Carbon::parse($entry->date)->format('F, jS Y')
+                                    : null;
+                                $newsAuthor = \App\Models\User::find($entry->seoFields()['meta_author'] ?? '')?->name;
+                            @endphp
+                            <div class="w-full max-w-[381px] h-[325px] overflow-hidden rounded-xl">
+                                <img src="{{ $newsImage?->url }}" alt="Lorem ipsum dolor sit amet consectetur"
+                                    class="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105" />
+                            </div>
+                            <h3 class="mt-5 text-lg font-bold text-zinc-900 max-w-[400px] line-clamp-2 leading-snug">
+                                {{ $data->news_title }}
+                            </h3>
+                            @if ($newsDate || $newsAuthor)
+                                <p class="mt-3 text-sm text-zinc-500">
+                                    @if ($newsDate)
+                                        {{ $newsDate }}
+                                    @endif
+                                    @if ($newsDate && $newsAuthor)
+                                        <span class="mx-1 text-zinc-300">|</span>
+                                    @endif
+                                    @if ($newsAuthor)
+                                        By {{ $newsAuthor }}
+                                    @endif
+                                </p>
                             @endif
-                            @if ($newsDate && $newsAuthor)
-                                <span class="mx-1 text-zinc-300">|</span>
-                            @endif
-                            @if ($newsAuthor)
-                                By {{ $newsAuthor }}
-                            @endif
-                        </p>
-                    @endif
-                </div>
-            @endcollection
+                        </div>
+                    </a>
+                @endcollection
             </div>
         </div>
     </section>
