@@ -1,134 +1,190 @@
 <x-layouts::site.layout :title="$data->heading ?? $data->title" :site="$site ?? null">
-    <div class="mx-auto">
-        <section class="bg-white lg:grid lg:place-content-center">
-            <div class="mx-auto w-screen max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-32">
-                <div class="mx-auto max-w-prose text-center">
-                    <h1 class="text-4xl font-bold text-gray-900 sm:text-5xl">{{ $data->heading }}</h1>
+    <section x-data="{
+        activeSlide: 0,
+        ready: false,
+        slidesCount: {{ count($data->hero_loop ?? []) }},
+        autoplayInterval: null,
+        isActive(i) {
+            return this.ready && this.activeSlide === i;
+        },
+        startAutoplay() {
+            this.stopAutoplay();
+            this.autoplayInterval = setInterval(() => {
+                this.activeSlide = (this.activeSlide + 1) % this.slidesCount;
+            }, 5000);
+        },
+        stopAutoplay() {
+            clearInterval(this.autoplayInterval);
+        }
+    }" x-init="setTimeout(() => ready = true, 50);
+    if (slidesCount > 1) startAutoplay();" @mouseenter="stopAutoplay()"
+        @mouseleave="if (slidesCount > 1) startAutoplay()"
+        class="relative w-full h-[calc(100vh-65px)] min-h-[500px] overflow-hidden bg-black text-white">
+        {{-- BACKGROUND: fade in / crossfade --}}
+        @foreach ($data->hero_loop ?? [] as $index => $hero)
+            <div class="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
+                :class="isActive({{ $index }}) ? 'opacity-100' : 'opacity-0'" aria-hidden="true">
+                @if (isset($hero->hero_image->url))
+                    <img src="{{ $hero->hero_image->url }}" alt="{{ $hero->hero_label ?? 'Hero Image' }}"
+                        class="absolute inset-0 w-full h-full object-cover" />
+                @endif
+                <div class="absolute inset-0 bg-black/40"></div>
+            </div>
+        @endforeach
 
-                    <div class="">
-                        <img src="{{ $data->gambar?->url }}" alt="" />
+        {{-- KONTEN TEKS --}}
+        <div class="relative z-10 container mx-auto h-full px-4 lg:px-0 flex items-center">
+            <div class="max-w-2xl w-full">
+
+                {{-- Semua slide ditumpuk di 1 cell grid, rata bawah, supaya tinggi area tetap --}}
+                <div class="grid">
+                    @foreach ($data->hero_loop ?? [] as $index => $hero)
+                        <div class="col-start-1 row-start-1 self-end lg:self-start space-y-6"
+                            :class="isActive({{ $index }}) ? '' : 'pointer-events-none'"
+                            :aria-hidden="isActive({{ $index }}) ? 'false' : 'true'">
+                            @if (isset($hero->hero_label))
+                                <h1 class="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight text-white transition-all ease-out"
+                                    :class="isActive({{ $index }}) ?
+                                        'opacity-100 translate-y-0 duration-700 delay-300' :
+                                        'opacity-0 -translate-y-8 duration-300 delay-0'">
+                                    {{ $hero->hero_label }}
+                                </h1>
+                            @endif
+
+                            @if (isset($hero->hero_desc))
+                                <p class="text-sm md:text-base lg:text-lg text-zinc-200 leading-relaxed transition-all ease-out"
+                                    :class="isActive({{ $index }}) ?
+                                        'opacity-100 translate-y-0 duration-700 delay-500' :
+                                        'opacity-0 -translate-y-8 duration-300 delay-0'">
+                                    {{ $hero->hero_desc }}
+                                </p>
+                            @endif
+
+                            <div class="pt-2 transition-all ease-out"
+                                :class="isActive({{ $index }}) ?
+                                    'opacity-100 translate-y-0 duration-700 delay-700' :
+                                    'opacity-0 -translate-y-8 duration-300 delay-0'">
+                                <a href="{{ $data->hero_cta_link ?? '#' }}"
+                                    :tabindex="isActive({{ $index }}) ? 0 : -1"
+                                    class="inline-flex uppercase items-center justify-center px-8 py-3.5 rounded-[8px] bg-white text-zinc-900 font-semibold text-sm transition-all duration-300 hover:bg-zinc-200 hover:shadow-lg hover:-translate-y-0.5">
+                                    {{ $data->hero_cta_label }}
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Pagination mobile/tablet: 1 saja, di luar slide, posisi tetap di bawah button --}}
+                @if (count($data->hero_loop ?? []) > 1)
+                    <div class="flex lg:hidden flex-row items-center gap-3 pt-10">
+                        @foreach ($data->hero_loop ?? [] as $index => $hero)
+                            <button @click="activeSlide = {{ $index }}" type="button"
+                                aria-label="Slide {{ $index + 1 }}" class="focus:outline-none">
+                                <span class="block h-2 rounded-full bg-white transition-all duration-300"
+                                    :class="activeSlide === {{ $index }} ? 'w-8 opacity-100' :
+                                        'w-2 opacity-50 hover:opacity-100'"></span>
+                            </button>
+                        @endforeach
                     </div>
+                @endif
+            </div>
+        </div>
 
-                    @if ($data->subheading)
-                        <p class="mt-4 text-base text-pretty text-gray-700 sm:text-lg/relaxed">{{ $data->subheading }}</p>
-                    @endif
+        {{-- Pagination desktop: vertikal, di sisi kanan container dengan jarak ke dalam --}}
+        @if (count($data->hero_loop ?? []) > 1)
+            <div class="hidden lg:block absolute inset-0 z-20 pointer-events-none">
+                <div class="container mx-auto h-full flex items-center justify-end lg:pr-1">
+                    <div class="pointer-events-auto flex flex-col items-center gap-3">
+                        @foreach ($data->hero_loop ?? [] as $index => $hero)
+                            <button @click="activeSlide = {{ $index }}" type="button"
+                                aria-label="Slide {{ $index + 1 }}" class="focus:outline-none">
+                                <span class="block w-2 rounded-full bg-white transition-all duration-300"
+                                    :class="activeSlide === {{ $index }} ? 'h-8 opacity-100' :
+                                        'h-2 opacity-50 hover:opacity-100'"></span>
+                            </button>
+                        @endforeach
+                    </div>
                 </div>
             </div>
-        </section>
+        @endif
+    </section>
 
-        <div class="mx-auto max-w-3xl px-6 py-12 prose">{!! $data->contentss !!}</div>
+    @php
+        $overviewImage = $data->overview_image ?? null;
+        $overviewImage = is_array($overviewImage)
+            ? \App\Modules\Media\Models\AssetMeta::find(reset($overviewImage) ?: null)
+            : $overviewImage;
+    @endphp
 
-        <div class="mx-auto max-w-xl px-6 pb-12">
-            @foreach ($data->pilih_gambar ?? [] as $image)
-                <img src="{{ $image->url }}" alt="" class="w-full rounded-lg" />
-            @endforeach
-        </div>
+    <section class="w-full bg-white py-16 md:py-24">
+        <div class="container mx-auto px-4 lg:px-0">
+            <div class="max-w-5xl mx-auto flex flex-col items-center text-center">
 
-        {{-- Demo/preview of the new @collection/@taxonomy/@sites/@global Blade directives --}}
-        <div class="mx-auto max-w-3xl space-y-8 px-6 pb-12">
-            <div>
-                <h2 class="font-bold text-gray-900">@@global — site_settings</h2>
-                @global ("site_settings")
-                    <pre class="rounded bg-gray-100 p-3 text-xs">{{ json_encode($global, JSON_PRETTY_PRINT) }}</pre>
-                @endglobal
-            </div>
+                <div class="mb-8 md:mb-10">
+                    <img src="{{ $overviewImage?->url }}" alt="Akenesia Logo"
+                        class="h-20 md:h-28 w-auto object-contain" />
+                </div>
 
-            <div>
-                <h2 class="font-bold text-gray-900">@@sites — configured sites</h2>
-                <ul class="list-disc pl-5">
-                    @sites ()
-                        <li>{{ $site->name }} ({{ $site->handle }}, {{ $site->locale }})</li>
-                    @endsites
-                </ul>
-            </div>
+                <h2
+                    class="text-2xl sm:text-3xl md:text-4xl  font-bold text-zinc-900 leading-tight md:leading-snug mb-8">
+                    {{ $data->overview_heading }}
+                </h2>
 
-            <div>
-                <h2 class="font-bold text-gray-900">@@collection('pages') — entries in the "pages" collection</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages")
-                        <li>{{ $data->title ?? $entry->slug }} ({{ $entry->site }})</li>
-                    @endcollection
-                </ul>
-            </div>
+                <div
+                    class="text-sm sm:text-base text-zinc-500 max-w-2xl leading-relaxed [&_a]:text-blue-600 hover:[&_a]:underline [&_a]:transition-colors">
+                    {!! $data->overview_desc !!}
+                </div>
 
-            <div>
-                <h2 class="font-bold text-gray-900">@@taxonomy('categories') — terms of the "categories" taxonomy</h2>
-                <ul class="list-disc pl-5">
-                    @taxonomy ("categories")
-                        <li>{{ $data->title ?? $term->slug }}</li>
-                    @endtaxonomy
-                </ul>
-            </div>
-
-            {{--
-                @collection()/@taxonomy() second-argument options — see
-                App\Support\Templating\TemplateTags for the full behavior of
-                each. All are optional and combine freely.
-            --}}
-            <div>
-                <h2 class="font-bold text-gray-900">'site' — only this site's entries</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["site" => $site->handle])
-                        <li>{{ $data->title ?? $entry->slug }}</li>
-                    @endcollection
-                </ul>
-            </div>
-
-            <div>
-                <h2 class="font-bold text-gray-900">'status' — override the default "published" filter</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["status" => "draft"])
-                        <li>{{ $data->title ?? $entry->slug }} ({{ $entry->status }})</li>
-                    @endcollection
-                </ul>
-            </div>
-
-            <div>
-                <h2 class="font-bold text-gray-900">'limit' — cap how many rows come back</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["limit" => 3])
-                        <li>{{ $data->title ?? $entry->slug }}</li>
-                    @endcollection
-                </ul>
-            </div>
-
-            <div>
-                <h2 class="font-bold text-gray-900">'sort' — order by a column or a data field, "field:asc"/"field:desc"</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["sort" => "date:desc", "limit" => 5])
-                        <li>{{ $data->title ?? $entry->slug }} ({{ $entry->date }})</li>
-                    @endcollection
-                </ul>
-            </div>
-
-            <div>
-                <h2 class="font-bold text-gray-900">'where' — equality filter on a column or a data field</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["where" => ["featured" => true]])
-                        <li>{{ $data->title ?? $entry->slug }}</li>
-                    @endcollection
-                    <li class="text-gray-400 italic">(empty above unless a "pages" entry has a "featured" field set to true)</li>
-                </ul>
-            </div>
-
-            <div>
-                <h2 class="font-bold text-gray-900">'random' — shuffle instead of the default order</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["random" => true, "limit" => 3])
-                        <li>{{ $data->title ?? $entry->slug }}</li>
-                    @endcollection
-                </ul>
-            </div>
-
-            <div>
-                <h2 class="font-bold text-gray-900">'related' — other entries sharing a taxonomy term with $entry</h2>
-                <ul class="list-disc pl-5">
-                    @collection ("pages", ["related" => $entry, "limit" => 3])
-                        <li>{{ $data->title ?? $entry->slug }}</li>
-                    @endcollection
-                    <li class="text-gray-400 italic">(empty above unless this entry's blueprint has a "taxonomy" field with terms picked)</li>
-                </ul>
             </div>
         </div>
-    </div>
+    </section>
+
+    <section class="w-full py-16 lg:py-20 bg-white">
+        <div class="container mx-auto px-4 lg:px-0">
+            <div class="mb-10">
+                <span class="block text-sm font-bold uppercase tracking-wide text-orange-500 mb-2">
+                    {{ $data->news_section_label }}
+                </span>
+                <h2 class="text-2xl md:text-3xl font-bold text-zinc-900">
+                    {{ $data->news_section_heading }}
+
+                </h2>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
+                @collection('news', ["limit" => 3])
+                <div>
+                    @php
+                        $newsImage = $data->news_image;
+                        if (is_array($newsImage)) {
+                            $newsImage = \App\Modules\Media\Models\AssetMeta::find(reset($newsImage) ?: null);
+                        }
+
+                        $newsDate = $entry->date ? \Illuminate\Support\Carbon::parse($entry->date)->format('F, jS Y') : null;
+                        $newsAuthor = \App\Models\User::find($entry->seoFields()['meta_author'] ?? '')?->name;
+                    @endphp
+                    <div class="w-full max-w-[381px] h-[325px] overflow-hidden rounded-xl">
+                        <img src="{{ $newsImage?->url }}" alt="Lorem ipsum dolor sit amet consectetur"
+                            class="w-full h-full object-cover" />
+                    </div>
+                    <h3 class="mt-5 text-lg font-bold text-zinc-900 leading-snug">
+                        {{ $data->news_title }}
+                    </h3>
+                    @if ($newsDate || $newsAuthor)
+                        <p class="mt-3 text-sm text-zinc-500">
+                            @if ($newsDate)
+                                {{ $newsDate }}
+                            @endif
+                            @if ($newsDate && $newsAuthor)
+                                <span class="mx-1 text-zinc-300">|</span>
+                            @endif
+                            @if ($newsAuthor)
+                                By {{ $newsAuthor }}
+                            @endif
+                        </p>
+                    @endif
+                </div>
+            @endcollection
+            </div>
+        </div>
+    </section>
 </x-layouts::site.layout>

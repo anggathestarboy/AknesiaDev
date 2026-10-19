@@ -5,13 +5,20 @@
 ])
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $site?->lang ?? app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', $site?->lang ?? app()->getLocale()) }}" class="h-full scroll-smooth">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ filled($title) ? $title . " - " . config("app.name") : config("app.name") }}</title>
     <link rel="icon" href="/favicon.png" sizes="any" />
+    
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+
     @vite (["resources/css/site.css"])
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     @php $siteSettings = \App\Modules\SiteSettings\Models\SiteSetting::current(); @endphp
 
@@ -45,10 +52,12 @@
         @endforeach
     @endif
 </head>
-<body class="">
-    <div id="cms-preview-frame" style="overflow-x: hidden">
+<body class="min-h-full flex flex-col bg-white text-zinc-900 antialiased selection:bg-zinc-900 selection:text-white">
+    <div id="cms-preview-frame" class="w-full flex-1 flex flex-col min-h-screen transition-all duration-200 overflow-x-hidden">
         <x-layouts::site.header :site="$site" />
-        <main class="">{{ $slot }}</main>
+        <main class="flex-1 w-full">
+            {{ $slot }}
+        </main>
         <x-layouts::site.footer :site="$site" />
     </div>
 
@@ -89,7 +98,6 @@
             }
         </style>
 
-        {{-- Floating status + device-width toggle — this preview always opens as its own page (not embedded in the CMS), so both live here. The status dot/label reflects the auto-refresh poll below: pulsing green "Live" while idle, spinning amber "Updating…" while a change made in the editor (not yet saved) is being pulled in. --}}
         <div style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #e4e4e7; border-radius: 9999px; padding: 4px 4px 4px 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif">
             <span id="cms-preview-status-dot" class="is-live"></span>
             <span id="cms-preview-status-label" style="font-size: 12px; color: #71717a; white-space: nowrap; min-width: 52px">{{ __("Live") }}</span>
