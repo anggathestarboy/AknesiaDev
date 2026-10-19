@@ -40,7 +40,7 @@
                             :class="isActive({{ $index }}) ? '' : 'pointer-events-none'"
                             :aria-hidden="isActive({{ $index }}) ? 'false' : 'true'">
                             @if (isset($hero->hero_label))
-                                <h1 class="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight text-white transition-all ease-out"
+                                <h1 class="text-3xl md:text-5xl font-bold leading-tight text-white transition-all ease-out"
                                     :class="isActive({{ $index }}) ?
                                         'opacity-100 translate-y-0 duration-700 delay-300' :
                                         'opacity-0 -translate-y-8 duration-300 delay-0'">
@@ -113,7 +113,7 @@
 
     <section class="w-full bg-white py-16 md:py-24">
         <div class="container mx-auto px-4 lg:px-0">
-            <div class="max-w-5xl mx-auto flex flex-col items-center text-center">
+            <div class="max-w-3xl mx-auto flex flex-col items-center text-center">
 
                 <div class="mb-8 md:mb-10">
                     <img src="{{ $overviewImage?->url }}" alt="Akenesia Logo"
@@ -121,7 +121,7 @@
                 </div>
 
                 <h2
-                    class="text-2xl sm:text-3xl md:text-4xl  font-bold text-zinc-900 leading-tight md:leading-snug mb-8">
+                    class="text-2xl font-bold text-zinc-900 leading-tight md:leading-snug mb-8">
                     {{ $data->overview_heading }}
                 </h2>
 

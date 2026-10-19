@@ -1,33 +1,45 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 @source '../views/layouts/site';
 @source '../views/pages';
 
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
 @layer utilities {
-  .container {
-    max-width: 100%;
-  }
-  @media (min-width: 1024px) {
     .container {
-      max-width: 1050px;
+        max-width: 100%;
     }
-  }
-  @media (min-width: 1280px) {
-    .container {
-      max-width: 1200px;
+
+    @media (min-width: 1024px) {
+        .container {
+            max-width: 1050px;
+        }
     }
-  }
-  @media (min-width: 1536px) {
-    .container {
-      max-width: 1280px;
+
+    @media (min-width: 1280px) {
+        .container {
+            max-width: 1200px;
+        }
     }
-  }
+
+    @media (min-width: 1536px) {
+        .container {
+            max-width: 1280px;
+        }
+    }
 }
+
 html {
-  scroll-behavior: smooth;
+    scroll-behavior: smooth;
 }
+
 html .spt {
-  scroll-padding-top: 10rem;
+    scroll-padding-top: 10rem;
 }
+
 .hidescroll::-webkit-scrollbar {
-  display: none;
+    display: none;
 }

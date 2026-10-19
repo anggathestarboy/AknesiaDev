@@ -16,6 +16,7 @@
         [x-cloak] { display: none !important; }
     </style>
 
+
     @vite (["resources/css/site.css"])
 
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -51,6 +52,8 @@
             </script>
         @endforeach
     @endif
+
+    
 </head>
 <body class="min-h-full flex flex-col bg-white text-zinc-900 antialiased selection:bg-zinc-900 selection:text-white">
     <div id="cms-preview-frame" class="w-full flex-1 flex flex-col min-h-screen transition-all duration-200 overflow-x-hidden">
