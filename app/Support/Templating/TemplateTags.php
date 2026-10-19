@@ -5,6 +5,8 @@ namespace App\Support\Templating;
 use App\Models\TaxonomyTerm;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Globals\Models\GlobalSetVariable;
+use App\Modules\Navigation\Models\Navigation;
+use App\Modules\Navigation\Services\NavigationTreeService;
 use App\Modules\Sites\Models\Site;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -31,6 +33,43 @@ class TemplateTags
         $variable = GlobalSetVariable::where('handle', $handle)->where('locale', null)->first();
 
         return $variable ? FluentWrapper::wrap($variable->data ?? []) : null;
+    }
+
+    /**
+     * A blueprint-driven navigation's values for $options['site'] (defaults
+     * to the default language): non-localizable fields always come from the
+     * default language; localizable ones use the site's own value, falling
+     * back to the default language's. Mirrors NavigationTreeEditor.
+     *
+     * @param  array{site?: string}  $options
+     */
+    public static function navigation(string $handle, array $options = []): ?Fluent
+    {
+        $navigation = Navigation::where('handle', $handle)->first();
+
+        if (! $navigation) {
+            return null;
+        }
+
+        $trees = app(NavigationTreeService::class);
+        $fields = $navigation->effectiveBlueprint()?->data['fields'] ?? [];
+        $originSite = Site::orderBy('order')->value('handle');
+        $site = Site::count() > 1 ? ($options['site'] ?? $originSite) : null;
+
+        $data = $trees->load($navigation, $site === null ? null : $originSite);
+
+        if ($site !== null && $site !== $originSite) {
+            $localizable = collect($fields)->filter(fn (array $field): bool => $field['localizable'] ?? false)->pluck('handle')->all();
+            $data = array_merge($data, array_intersect_key($trees->load($navigation, $site), array_flip($localizable)));
+        }
+
+        // Turns "entry::{id}" links into URLs and asset ids into AssetMeta models, like Entry::fluentData().
+        $linkSite = new Entry;
+        $linkSite->site = $options['site'] ?? $originSite;
+        $data = $linkSite->resolveLinkFields($data, $fields);
+        $data = $linkSite->resolveAssetFields($data, $fields);
+
+        return FluentWrapper::wrap($data);
     }
 
     /**

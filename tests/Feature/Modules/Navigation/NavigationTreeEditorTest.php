@@ -371,7 +371,7 @@ test('a navigation with blueprint fields uses a single blueprint-driven form, wi
         'namespace' => 'navigations.main',
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
-            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null],
         ]],
     ]);
 
@@ -393,7 +393,7 @@ test('a navigation field with a "show when" condition only renders once it match
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
             ['handle' => 'show_header', 'display' => 'Show Header', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'instructions' => null, 'conditions' => null],
-            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'show_header', 'operator' => 'equals', 'value' => 'true']],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'show_header', 'operator' => 'equals', 'value' => 'true']],
         ]],
     ]);
 
@@ -412,7 +412,7 @@ test('a navigation field referenced by another field\'s condition is bound live'
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
             ['handle' => 'show_header', 'display' => 'Show Header', 'type' => 'toggle', 'required' => false, 'placeholder' => null, 'default' => false, 'instructions' => null, 'conditions' => null],
-            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'show_header', 'operator' => 'equals', 'value' => 'true']],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null, 'conditions' => ['mode' => 'show', 'field' => 'show_header', 'operator' => 'equals', 'value' => 'true']],
         ]],
     ]);
 
@@ -429,7 +429,7 @@ test('saving fails validation when a required blueprint field is left blank', fu
         'namespace' => 'navigations.main',
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
-            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => true, 'placeholder' => null, 'instructions' => null],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'localizable' => true, 'required' => true, 'placeholder' => null, 'instructions' => null],
         ]],
     ]);
 
@@ -449,7 +449,7 @@ test('the default language is whichever site has the topmost order', function ()
         'namespace' => 'navigations.main',
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
-            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null],
         ]],
     ]);
 
@@ -468,7 +468,7 @@ test('a non-default language inherits the default language live until edited dir
         'namespace' => 'navigations.main',
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
-            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'required' => false, 'placeholder' => null, 'instructions' => null],
+            ['handle' => 'header_text', 'display' => 'Header Text', 'type' => 'text', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null],
         ]],
     ]);
 
@@ -567,7 +567,7 @@ test('link fields on a navigation only offer entries of the active language', fu
         'namespace' => 'navigations.main',
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
-            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
         ]],
     ]);
 
@@ -594,7 +594,7 @@ test('a link to the default language\'s entry shows its translated sibling in an
         'namespace' => 'navigations.main',
         'handle' => 'main',
         'data' => ['tabs' => [], 'fields' => [
-            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
+            ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'localizable' => true, 'required' => false, 'placeholder' => null, 'instructions' => null, 'options' => []],
         ]],
     ]);
 
@@ -784,4 +784,23 @@ test('a user with edit navigation permission can add items and save the tree', f
     $tree = app(NavigationTreeService::class)->load($navigation->fresh());
     expect($tree)->toHaveCount(1);
     expect($tree[0]['title'])->toBe('Home');
+});
+
+test('a link field\'s custom validation rule only applies to typed URLs, not to a picked entry', function () {
+    $this->actingAs(User::factory()->create());
+    makeNavigationSite('indonesian', 0);
+    Collection::create(['handle' => 'pages', 'title' => 'Pages', 'settings' => []]);
+    $navigation = makeNavigation();
+    Blueprint::create(['namespace' => 'navigations.main', 'handle' => 'main', 'data' => ['tabs' => [], 'fields' => [
+        ['handle' => 'cta', 'display' => 'Cta', 'type' => 'link', 'localizable' => true, 'required' => false, 'validation' => 'url', 'placeholder' => null, 'instructions' => null, 'options' => []],
+    ]]]);
+    $entry = Entry::create(['site' => 'indonesian', 'collection' => 'pages', 'data' => ['title' => 'Beranda']]);
+
+    Livewire::test(NavigationTreeEditor::class, ['navigation' => $navigation])
+        ->set('data.cta', 'not a url')
+        ->call('save')
+        ->assertHasErrors(['data.cta'])
+        ->set('data.cta', 'entry::'.$entry->id)
+        ->call('save')
+        ->assertHasNoErrors();
 });

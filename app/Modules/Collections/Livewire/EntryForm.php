@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
+use App\Modules\Blueprints\Support\LinkValidation;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Collections\Services\CollectionTreeService;
@@ -966,6 +967,12 @@ class EntryForm extends Component
                             return;
                         }
 
+                        if (! $asset->fileExists()) {
+                            $fail(__("The file \"{$asset->filename}\" is missing from storage — remove it and pick another."));
+
+                            return;
+                        }
+
                         $file = new File($asset->absolutePath());
 
                         if (Validator::make(['file' => $file], ['file' => $field['validation']])->fails()) {
@@ -1058,7 +1065,7 @@ class EntryForm extends Component
                 };
 
                 if (! empty($field['validation'])) {
-                    $linkRules[] = $field['validation'];
+                    $linkRules[] = LinkValidation::rule($field['validation']);
                 }
 
                 $rules[$key] = $linkRules;

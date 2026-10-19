@@ -35,7 +35,7 @@
 
         @foreach ($ungroupedFields as $field)
             @if ($this->fieldIsVisible($field, $data))
-                <div>
+                <div @if (!($field["localizable"] ?? false) && !$this->isOriginLocale()) inert class="opacity-60" title="{{ __('Same for every language — edit it from the default language.') }}" @endif>
                     @if ($field["type"] === "replicator")
                         @include ("navigation::livewire.partials.menu-list",
                             [
@@ -69,7 +69,7 @@
                     <div class="space-y-6 bg-white dark:bg-zinc-800 p-3 rounded-lg mt-3">
                         @foreach ($sectionFields as $field)
                             @if ($this->fieldIsVisible($field, $data))
-                                <div>
+                                <div @if (!($field["localizable"] ?? false) && !$this->isOriginLocale()) inert class="opacity-60" title="{{ __('Same for every language — edit it from the default language.') }}" @endif>
                                     @if ($field["type"] === "replicator")
                                         @include ("navigation::livewire.partials.menu-list",
                                             [

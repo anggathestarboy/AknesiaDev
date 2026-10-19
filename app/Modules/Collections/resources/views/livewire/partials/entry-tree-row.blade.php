@@ -66,6 +66,7 @@
                     <flux:menu>
                         @if ($canEdit)
                             <flux:menu.item icon="pencil" :href="route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id])" wire:navigate>{{ __("Edit") }}</flux:menu.item>
+                            <flux:menu.item icon="document-duplicate" wire:click="duplicate('{{ $entry->id }}')">{{ __("Duplicate") }}</flux:menu.item>
                         @endif
                         @if ($canDelete)
                             <flux:modal.trigger name="confirm-delete-entry">
@@ -81,6 +82,7 @@
             <div x-show="contextMenu === 'entry-{{ $entry->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                 @if ($canEdit)
                     <a href="{{ route('collections.entries.edit', ['collection' => $collection->handle, 'entry' => $entry->id]) }}" wire:navigate x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Edit") }}</a>
+                <button type="button" wire:click="duplicate('{{ $entry->id }}')" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Duplicate") }}</button>
                 @endif
                 @if ($canDelete)
                     <flux:modal.trigger name="confirm-delete-entry">

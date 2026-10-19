@@ -3446,3 +3446,40 @@ test('ordering still works normally even when the Order field is hidden', functi
 
     expect(Entry::sole()->order)->toBe(5);
 });
+
+test('duplicating an entry copies every language as a draft with its own title and slug', function () {
+    $this->actingAs(User::factory()->create());
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    makeSites();
+
+    $original = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'halo', 'status' => 'published', 'published' => true, 'data' => ['title' => 'Halo']]);
+    Entry::create(['site' => 'english', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'hello', 'origin_id' => $original->id, 'status' => 'published', 'published' => true, 'data' => ['title' => 'Hello']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])->call('duplicate', $original->id);
+
+    $copy = Entry::where('slug', 'halo-copy')->sole();
+    $englishCopy = Entry::where('slug', 'hello-copy')->sole();
+
+    expect($copy->data['title'])->toBe('Halo (Copy)')
+        ->and($copy->status)->toBe('draft')
+        ->and($englishCopy->data['title'])->toBe('Hello (Copy)')
+        ->and($englishCopy->origin_id)->toBe($copy->id)
+        ->and(Entry::count())->toBe(4);
+});
+
+test('duplicating an entry needs the edit permission', function () {
+    $role = Role::create(['handle' => 'viewer', 'title' => 'Viewer', 'permissions' => ['access cp', 'view blog entries']]);
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+    $this->actingAs($user);
+    makePostBlueprint();
+    $collection = makeBlogCollection();
+    makeSites();
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'blog', 'blueprint' => 'post', 'slug' => 'halo', 'data' => ['title' => 'Halo']]);
+
+    Livewire::test(EntryManager::class, ['collection' => $collection])
+        ->assertDontSee('Duplicate')
+        ->call('duplicate', $entry->id)
+        ->assertForbidden();
+});

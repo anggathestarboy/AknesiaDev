@@ -102,7 +102,7 @@
                 <div class="">
                     <flux:select wire:model="{{ $prefix }}.options" :label="__('Fieldset')" placeholder="{{ __('Select a fieldset') }}" size="sm">
                         @foreach ($fieldsets as $fieldsetOption)
-                            <flux:select.option value="{{ $fieldsetOption->handle }}">{{ $fieldsetOption->handle }}</flux:select.option>
+                            <flux:select.option value="{{ $fieldsetOption->handle }}" :disabled="$fieldsetOption->handle !== ($field['options'] ?? '') && in_array($fieldsetOption->handle, $this->fieldsetHandlesInUse(), true)" class="disabled:text-red-500">{{ $fieldsetOption->handle }}</flux:select.option>
                         @endforeach
                     </flux:select>
                     @error ("{$prefix}.options")

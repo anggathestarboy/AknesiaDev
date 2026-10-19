@@ -6,6 +6,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Blueprints\Support\EvaluatesFieldConditions;
+use App\Modules\Blueprints\Support\LinkValidation;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Globals\Models\GlobalSetVariable;
@@ -576,7 +577,7 @@ class GlobalSetForm extends Component
                 $linkRules[] = 'max:2048';
 
                 if (! empty($field['validation'])) {
-                    $linkRules[] = $field['validation'];
+                    $linkRules[] = LinkValidation::rule($field['validation']);
                 }
 
                 $rules[$key] = $linkRules;

@@ -6,10 +6,12 @@ use App\Modules\Blueprints\Models\Blueprint;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Collections\Services\CollectionTreeService;
+use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Sites\Models\Site;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -301,6 +303,58 @@ class EntryManager extends Component
     public function localeSiblingCount(Entry $entry): int
     {
         return $this->localeSiblings($entry)->count();
+    }
+
+    /**
+     * Copies an entry and all of its other-language versions as drafts, each
+     * language getting its own " (Copy)" title and a unique "-copy" slug, and
+     * keeping the original's place in a structured collection's tree. Needs
+     * the same permission as editing it.
+     */
+    public function duplicate(string $id): void
+    {
+        $user = auth()->user();
+        $user->authorizePermission("edit {$this->collection->handle} entries");
+
+        $entry = Entry::where('collection', $this->collection->handle)->findOrFail($id);
+        $versions = $this->localeSiblings($entry)->prepend($entry);
+
+        abort_unless($versions->every(fn (Entry $version): bool => $version->canBeEditedBy($user)), 403);
+
+        $trees = app(CollectionTreeService::class);
+        $urls = app(EntryUrlResolver::class);
+        $originId = $entry->origin_id ?? $entry->id;
+        $newOriginId = null;
+
+        foreach ($versions->sortBy(fn (Entry $version): int => $version->id === $originId ? 0 : 1) as $version) {
+            $slug = $baseSlug = Str::limit("{$version->slug}-copy", 240, '');
+
+            for ($n = 2; Entry::where('collection', $version->collection)->where('site', $version->site)->where('slug', $slug)->exists(); $n++) {
+                $slug = "{$baseSlug}-{$n}";
+            }
+
+            $copy = Entry::create([
+                ...$version->only(['site', 'collection', 'blueprint', 'schema', 'seo']),
+                'origin_id' => $version->id === $originId ? null : $newOriginId,
+                'slug' => $slug,
+                'status' => 'draft',
+                'published' => false,
+                'date' => $version->date,
+                'data' => [...$version->data, 'title' => ($version->data['title'] ?? $version->slug).' (Copy)'],
+            ]);
+
+            $newOriginId ??= $copy->id;
+
+            if ($this->collection->structured()) {
+                $trees->setParent($this->collection->handle, $copy->site, $copy->id, $trees->parentIdOf($this->collection->handle, $version->site, $version->id), $this->collection->maxDepth());
+            }
+
+            $copy->update(['uri' => $urls->path($this->collection, $copy)]);
+        }
+
+        Flux::toast(variant: 'success', text: __('Entry duplicated.'));
+
+        unset($this->entries, $this->entryTree);
     }
 
     public function delete(string $id, bool $deleteLocaleSiblings = true): void

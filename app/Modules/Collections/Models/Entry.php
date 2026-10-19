@@ -263,7 +263,7 @@ class Entry extends Model
      * @param  array<int, array<string, mixed>>  $fields
      * @return array<string, mixed>
      */
-    protected function resolveLinkFields(array $data, array $fields): array
+    public function resolveLinkFields(array $data, array $fields): array
     {
         $resolver = app(EntryUrlResolver::class);
 
@@ -386,7 +386,7 @@ class Entry extends Model
      * @param  array<int, array<string, mixed>>  $fields
      * @return array<string, mixed>
      */
-    protected function resolveAssetFields(array $data, array $fields): array
+    public function resolveAssetFields(array $data, array $fields): array
     {
         foreach ($fields as $field) {
             $handle = $field['handle'];

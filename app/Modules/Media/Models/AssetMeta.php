@@ -64,6 +64,11 @@ class AssetMeta extends Model
         );
     }
 
+    public function fileExists(): bool
+    {
+        return is_file($this->absolutePath());
+    }
+
     public function absolutePath(): string
     {
         $disk = $this->containerModel?->disk ?? 'public';

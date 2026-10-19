@@ -24,6 +24,8 @@ use Illuminate\Support\ServiceProvider;
  * @sites() ... {{ $site->name }} ... @endsites
  *
  * @global('site-settings') ... {{ $global->site_name }} ... @endglobal
+ *
+ * @navigation('header', ['site' => $site->handle]) ... @foreach ($navigation->navbar_loop as $item) {{ $item->navbar_label }} @endforeach ... @endnavigation
  */
 class TemplatingServiceProvider extends ServiceProvider
 {
@@ -37,6 +39,9 @@ class TemplatingServiceProvider extends ServiceProvider
 
         Blade::directive('sites', fn (string $expression): string => "<?php foreach (\\App\\Support\\Templating\\TemplateTags::sites({$expression}) as \$site): ?>");
         Blade::directive('endsites', fn (): string => '<?php endforeach; ?>');
+
+        Blade::directive('navigation', fn (string $expression): string => "<?php if (\$navigation = \\App\\Support\\Templating\\TemplateTags::navigation({$expression})): ?>");
+        Blade::directive('endnavigation', fn (): string => '<?php endif; ?>');
 
         Blade::directive('global', fn (string $expression): string => "<?php if (\$global = \\App\\Support\\Templating\\TemplateTags::global({$expression})): ?>");
         Blade::directive('endglobal', fn (): string => '<?php endif; ?>');

@@ -1952,3 +1952,20 @@ test('viewing the fieldsets page requires the "configure fields" permission, not
 
     $this->get('/admin-panel/fieldsets')->assertForbidden();
 });
+
+test('the same fieldset cannot be imported twice in one blueprint', function () {
+    $this->actingAs(User::factory()->create());
+
+    Fieldset::create(['handle' => 'seo', 'data' => ['fields' => [
+        ['handle' => 'meta_title', 'display' => 'Meta Title', 'type' => 'text', 'required' => false],
+    ]]]);
+
+    Livewire::test(BlueprintForm::class)
+        ->set('handle', 'post')
+        ->set('fields', [
+            ['handle' => '', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => 'seo'],
+            ['handle' => '', 'display' => '', 'type' => 'fieldset', 'required' => false, 'options' => 'seo'],
+        ])
+        ->call('save')
+        ->assertHasErrors(['fields.0.options', 'fields.1.options']);
+});

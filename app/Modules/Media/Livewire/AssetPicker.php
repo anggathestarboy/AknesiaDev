@@ -194,6 +194,10 @@ class AssetPicker extends Component
             return true;
         }
 
+        if (! $asset->fileExists()) {
+            return false;
+        }
+
         $file = new File($asset->absolutePath());
 
         return ! Validator::make(['file' => $file], ['file' => $this->validationRule])->fails();
