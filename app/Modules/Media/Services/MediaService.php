@@ -16,6 +16,20 @@ use ZipArchive;
 class MediaService
 {
     /**
+     * Always blocked, regardless of a container's `allowed_extensions`
+     * setting — these are server-executable or markup types that would let
+     * an upload run as code (or inline script) if served from a
+     * web-accessible disk like `public`.
+     *
+     * @var array<int, string>
+     */
+    protected const BLOCKED_EXTENSIONS = [
+        'php', 'php3', 'php4', 'php5', 'php7', 'phtml', 'pht', 'phar',
+        'cgi', 'pl', 'py', 'rb', 'sh', 'bash', 'asp', 'aspx', 'jsp', 'jspx',
+        'exe', 'htaccess', 'svg', 'htm', 'html',
+    ];
+
+    /**
      * @return array{folders: Collection<int, string>, files: Collection<int, AssetMeta>}
      */
     public function listFolder(string $container, string $path): array
@@ -148,6 +162,11 @@ class MediaService
         $disk = $containerModel->disk;
 
         $extension = strtolower($file->getClientOriginalExtension());
+
+        if (in_array($extension, self::BLOCKED_EXTENSIONS, true)) {
+            throw new MediaException("The extension \".{$extension}\" is not allowed for security reasons.");
+        }
+
         $allowedExtensions = data_get($containerModel->settings, 'allowed_extensions');
 
         if (! empty($allowedExtensions) && ! in_array($extension, array_map('strtolower', $allowedExtensions), true)) {
