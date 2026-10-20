@@ -26,11 +26,14 @@
           </div>
           <div>
             <dt class="text-sm text-slate-500">{{ $site?->name == "Indonesia" ? "Tanggal Publikasi" : "Date" }}</dt>
-            <dd class="mt-2 font-medium uppercase text-slate-800">{{ $data->date }}</dd>
+            <dd class="mt-2 font-medium uppercase text-slate-800">{{ $data->date->format('d/m/Y') }}</dd>
           </div>
           <div>
             <dt class="text-sm text-slate-500">{{ $site?->name == "Indonesia" ? "Kategori" : "Category" }}</dt>
-            <dd class="mt-2 font-medium uppercase text-slate-800">General</dd>
+            <dd class="mt-2 font-medium uppercase text-slate-800">{{ collect(is_array($data->news_taxonomy) ? $data->news_taxonomy : [$data->news_taxonomy])->filter()->pluck('title')->implode(', ') }}</dd>
+            @foreach ($data->news_category as $category)
+                {{ $category->title }}
+            @endforeach
           </div>
         </dl>
       </div>
