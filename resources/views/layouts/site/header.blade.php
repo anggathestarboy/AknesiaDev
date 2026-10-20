@@ -23,8 +23,8 @@
         <div
             class="container mx-auto flex items-center justify-between px-4 py-3 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-6 lg:px-0">
             <a href="/" class="flex items-center gap-2 justify-self-start font-bold text-xl text-black">
-                @if ($navigation->site_logo)
-                    <img src="{{ $navigation->site_logo->url }}" alt="Aksnesia" class="h-[60px] w-auto">
+                @if ($data->site_logo)
+                    <img src="{{ $data->site_logo->url }}" alt="Aksnesia" class="h-[60px] w-auto">
                 @else
                     <span>Aksnesia</span>
                 @endif
@@ -42,12 +42,11 @@
 
             <!-- Navigation Desktop -->
             <nav class="hidden lg:flex lg:items-center lg:gap-6">
-                @foreach ($navigation->navbar_loop ?? [] as $index => $item)
+                @foreach ($data->navbar_loop ?? [] as $index => $item)
                     @php
                         $isActive = $isUrlActive($item->navbar_url)
                             || collect($item->child_loop ?? [])->contains(fn ($child) => $isUrlActive($child->child_menu_url));
                     @endphp
-
                     @if ($item->menu_level && count($item->child_loop ?? []))
                         <div class="relative py-2"
                             @mouseenter="clearTimeout(closeTimer); openDropdown = 'desktop-{{ $index }}'"
@@ -133,7 +132,7 @@
             class="fixed inset-x-0 top-[65px] z-40 h-0 w-full overflow-hidden bg-white transition-[height] duration-700 ease-in-out lg:hidden">
             <div class="flex h-full flex-col justify-between overflow-y-auto px-6 py-6">
                 <nav class="flex flex-col gap-3">
-                    @foreach ($navigation->navbar_loop ?? [] as $index => $item)
+                    @foreach ($data->navbar_loop ?? [] as $index => $item)
                         @php
                             $isActive = $isUrlActive($item->navbar_url)
                                 || collect($item->child_loop ?? [])->contains(fn ($child) => $isUrlActive($child->child_menu_url));
