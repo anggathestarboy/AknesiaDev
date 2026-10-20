@@ -137,7 +137,7 @@
     <section class="w-full py-16 lg:py-20 bg-white">
         <div class="container mx-auto px-4 lg:px-0">
             <div class="mb-10">
-                <span class="block text-sm font-bold uppercase tracking-wide text-orange-500 mb-2">
+                <span class="block text-sm font-bold uppercase tracking-wide text-red-500 mb-2">
                     {{ $data->news_section_label }}
                 </span>
                 <h2 class="text-2xl md:text-3xl font-bold text-zinc-900">
