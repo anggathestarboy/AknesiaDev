@@ -14,6 +14,9 @@
         $isUrlActive = fn ($url) => filled($url) && $url !== '#' && $normalizePath($url) === $currentPath;
 
         $activeHandle = $site?->handle;
+
+        // URL bahasa lain untuk halaman ini; null jika tidak ada terjemahan published
+        $languageUrl = fn ($target) => ($currentEntry ?? null) ? $currentEntry->urlForSite($target->handle) : $target->url;
     @endphp
 
     <header x-data="{ mobileMenuOpen: false, openDropdown: null, closeTimer: null }" x-effect="document.body.classList.toggle('overflow-hidden', mobileMenuOpen)"
@@ -116,7 +119,8 @@
                     @click.outside="openDropdown = null" x-cloak
                     class="absolute right-0 top-full z-10 min-w-44 rounded-md border border-zinc-200 bg-white py-1 shadow-lg">
                     @sites
-                        <a href="{{ $site->url }}" @class([
+                        @continue(! $languageUrl($site) && $site->handle !== $activeHandle)
+                        <a href="{{ $languageUrl($site) ?? '#' }}" @class([
                             'block whitespace-nowrap px-4 py-2 text-zinc-700 hover:bg-zinc-100',
                             'font-semibold bg-zinc-50' => $site->handle === $activeHandle,
                         ])>{{ $site->name }}
@@ -190,7 +194,8 @@
                     <div class="flex items-center gap-2">
                         @sites
                             @php($langCode = strtolower($site->lang))
-                            <a href="{{ $site->url }}" @class([
+                            @continue(! $languageUrl($site) && $site->handle !== $activeHandle)
+                            <a href="{{ $languageUrl($site) ?? '#' }}" @class([
                                 'inline-flex items-center justify-center h-10 w-12 rounded border text-xs font-bold transition-colors uppercase',
                                 'border-zinc-900 bg-zinc-900 text-white' => $site->handle === $activeHandle,
                                 'border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100' =>

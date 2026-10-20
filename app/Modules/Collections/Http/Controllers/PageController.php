@@ -40,6 +40,8 @@ class PageController
             throw new NotFoundHttpException;
         }
 
+        view()->share('currentEntry', $entry);
+
         return view($template, [
             'entry' => $entry,
             'data' => $entry->fluentData(),

@@ -312,6 +312,22 @@ class Entry extends Model
     }
 
     /**
+     * This entry's translation on another site (same origin group) as a
+     * full URL, or null when that site has none.
+     */
+    public function urlForSite(string $siteHandle): ?string
+    {
+        $rootId = $this->origin_id ?? $this->id;
+        $target = static::where('site', $siteHandle)
+            ->where('status', 'published')
+            ->where(fn ($query) => $query->where('id', $rootId)->orWhere('origin_id', $rootId))
+            ->first();
+        $collection = $target ? Collection::where('handle', $target->collection)->first() : null;
+
+        return $collection ? app(EntryUrlResolver::class)->url($collection, $target) : null;
+    }
+
+    /**
      * Recursively resolves every "link" field in $fields against $data,
      * walking into a "replicator" field's own rows (each row matching
      * "replicator_fields") to any depth.
