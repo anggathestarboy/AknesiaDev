@@ -6,10 +6,10 @@
     <header class="border-b border-zinc-200 bg-white">
         <div class="container mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-6 py-3">
             <a href="/" class="flex items-center gap-2 justify-self-start">
-                    <img src="{{ $navigation->site_logo->url }}" alt="{{ $navigation->site_logo->alt }}" width="{{ $navigation->site_logo->width }}" height="{{ $navigation->site_logo->height }}" class="h-10 w-auto" />
+                    <span>Aksnesia</span>
             </a>
             <nav class="flex items-center gap-6">
-                @foreach ($navigation->navbar_loop ?? [] as $item)
+                @foreach ($data->navbar_loop ?? [] as $item)
                     @if ($item->menu_level && count($item->child_loop ?? []))
                         <div class="group relative">
                             <a href="{{ $item->navbar_url ?: '#' }}" class="inline-flex items-center gap-1 text-sm font-medium text-zinc-700 hover:text-zinc-900">
