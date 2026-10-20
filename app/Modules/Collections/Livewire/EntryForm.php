@@ -196,6 +196,7 @@ class EntryForm extends Component
 
         if ($this->collection->seoEnabled()) {
             $this->seo = $entry?->seoFields() ?? Entry::defaultSeoFields();
+            $this->dropDeletedSeoImages();
         }
 
         if (! $this->isOriginLocale()) {
@@ -214,6 +215,8 @@ class EntryForm extends Component
                         $this->seo[$key] = $originSeo[$key];
                     }
                 }
+
+                $this->dropDeletedSeoImages();
             }
 
             // A link pointing at the default language's entry shows that
@@ -551,6 +554,18 @@ class EntryForm extends Component
     public function pickSeoImage(): void
     {
         $this->dispatch('open-asset-picker', path: ['__entry_seo_image__'], container: $this->assetContainer, selected: $this->seo['meta_featured_image'] ?? [], max: 1, validation: 'image');
+    }
+
+    /**
+     * A featured image deleted from the media library leaves a dangling id —
+     * drop it so the picker slot shows again instead of hiding behind it.
+     */
+    protected function dropDeletedSeoImages(): void
+    {
+        $this->seo['meta_featured_image'] = collect($this->seo['meta_featured_image'] ?? [])
+            ->filter(fn ($id): bool => AssetMeta::whereKey($id)->exists())
+            ->values()
+            ->all();
     }
 
     public function removeSeoImage(int $assetId): void
