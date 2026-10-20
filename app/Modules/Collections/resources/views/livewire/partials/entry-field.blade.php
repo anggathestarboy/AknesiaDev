@@ -272,8 +272,8 @@
             @unless ($isRequired)
                 <button type="button" x-on:click="mode = 'none'; $wire.set('{{ $prefix }}', '')" x-bind:class="mode === 'none' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("None") }}</button>
             @endunless
-            <button type="button" x-on:click="mode = 'url'" x-bind:class="mode === 'url' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("URL") }}</button>
-            <button type="button" x-on:click="mode = 'entry'" x-bind:class="mode === 'entry' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("Entry") }}</button>
+            <button type="button" x-on:click="if (mode !== 'url') { mode = 'url'; $wire.set('{{ $prefix }}', '') }" x-bind:class="mode === 'url' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("URL") }}</button>
+            <button type="button" x-on:click="if (mode !== 'entry') { mode = 'entry'; $wire.set('{{ $prefix }}', '') }" x-bind:class="mode === 'entry' ? 'bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900' : ''" class="px-2 py-1">{{ __("Entry") }}</button>
         </div>
 
         <div x-show="mode === 'url'">
