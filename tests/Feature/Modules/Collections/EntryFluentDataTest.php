@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Models\Collection;
 use App\Modules\Collections\Models\Entry;
 use App\Modules\Media\Models\AssetContainer;
@@ -233,4 +234,22 @@ test('a link pointing at an entry with no translation on this site resolves to "
     $entry = Entry::create(['site' => 'english', 'collection' => 'pages', 'blueprint' => 'page', 'data' => ['title' => 'Home', 'cta' => "entry::{$indonesia->id}"]]);
 
     expect($entry->fluentData()->cta)->toBe('#');
+});
+
+test('an assets field inside a fieldset resolves to its asset, and url/date are exposed on $data', function () {
+    $asset = makeFluentDataAsset();
+    Fieldset::create(['namespace' => null, 'handle' => 'hero', 'data' => ['fields' => [
+        ['handle' => 'cover', 'display' => 'Cover', 'type' => 'assets', 'options' => 'assets', 'max_items' => 1],
+    ]]]);
+    Blueprint::create(['namespace' => null, 'handle' => 'page', 'data' => ['fields' => [
+        ['handle' => 'hero_ref', 'display' => 'Hero', 'type' => 'fieldset', 'options' => 'hero'],
+    ]]]);
+    $entry = Entry::create(['site' => 'indonesia', 'collection' => 'pages', 'blueprint' => 'page', 'date' => '2026-01-02 10:00:00', 'data' => ['cover' => [$asset->id]]]);
+
+    $data = $entry->fluentData();
+
+    expect($data->cover->url)->toBe($asset->url);
+    expect($data->date->format('Y-m-d'))->toBe('2026-01-02');
+    expect($data->url)->toBe('#');
+    expect($data->author)->toBeNull();
 });

@@ -6,6 +6,7 @@ use App\Models\TaxonomyTerm;
 use App\Models\User;
 use App\Modules\ActivityLog\Concerns\LogsActivity;
 use App\Modules\Blueprints\Models\Blueprint;
+use App\Modules\Blueprints\Models\Fieldset;
 use App\Modules\Collections\Services\EntryUrlResolver;
 use App\Modules\Media\Models\AssetMeta;
 use App\Modules\Sitemap\Services\SitemapSyncer;
@@ -13,6 +14,7 @@ use App\Modules\SiteSettings\Services\SchemaMarkupBuilder;
 use App\Support\Templating\FluentWrapper;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Fluent;
 
 /**
@@ -150,6 +152,14 @@ class Entry extends Model
         $data = $this->resolveLinkFields($data, $fields);
         $data = $this->resolveAssetFields($data, $fields);
 
+        // Built-ins a template would otherwise rebuild by hand; a blueprint field with the same handle wins.
+        $collection = Collection::where('handle', $this->collection)->first();
+        $data += [
+            'url' => $collection ? (app(EntryUrlResolver::class)->url($collection, $this) ?? '#') : '#',
+            'date' => $this->date ? Carbon::parse($this->date) : null,
+            'author' => $this->seoAuthor(),
+        ];
+
         return static::wrapFluent($data);
     }
 
@@ -224,6 +234,18 @@ class Entry extends Model
     }
 
     /**
+     * The SEO tab's Meta Author as id/name/email (never other user columns), or null.
+     *
+     * @return array{id: int, name: string, email: string}|null
+     */
+    protected function seoAuthor(): ?array
+    {
+        $author = User::find($this->seoFields()['meta_author'] ?? null);
+
+        return $author ? ['id' => $author->id, 'name' => $author->name, 'email' => $author->email] : null;
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -251,7 +273,42 @@ class Entry extends Model
      */
     public function blueprintFields(): array
     {
-        return Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? [];
+        return static::expandFieldsets(Blueprint::where('handle', $this->blueprint)->value('data')['fields'] ?? []);
+    }
+
+    /**
+     * Inlines every "fieldset" reference field with the referenced fieldset's
+     * own fields (recursively, at any replicator depth), mirroring
+     * EntryForm::expandFieldsetFields() — so asset/link/taxonomy fields that
+     * live inside a fieldset get resolved in fluentData() like blueprint ones.
+     *
+     * @param  array<int, array<string, mixed>>  $fields
+     * @param  array<int, string>  $seen
+     * @return array<int, array<string, mixed>>
+     */
+    public static function expandFieldsets(array $fields, array $seen = []): array
+    {
+        $expanded = [];
+
+        foreach ($fields as $field) {
+            if ($field['type'] === 'fieldset') {
+                $handle = $field['options'] ?? null;
+
+                if ($handle && ! in_array($handle, $seen, true)) {
+                    $expanded = [...$expanded, ...static::expandFieldsets(Fieldset::where('handle', $handle)->first()?->data['fields'] ?? [], [...$seen, $handle])];
+                }
+
+                continue;
+            }
+
+            if ($field['type'] === 'replicator') {
+                $field['replicator_fields'] = static::expandFieldsets($field['replicator_fields'] ?? [], $seen);
+            }
+
+            $expanded[] = $field;
+        }
+
+        return $expanded;
     }
 
     /**

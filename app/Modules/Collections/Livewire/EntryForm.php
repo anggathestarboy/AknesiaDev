@@ -948,8 +948,11 @@ class EntryForm extends Component
                 $arrayRules[] = $field['required'] ?? false ? 'required' : 'nullable';
                 $arrayRules[] = 'array';
 
+                // An optional field may be left empty — "min" only applies once something is picked.
                 if (($field['min_items'] ?? null) !== null) {
-                    $arrayRules[] = "min:{$field['min_items']}";
+                    $arrayRules[] = fn (string $attribute, mixed $value, \Closure $fail) => $value && count($value) < $field['min_items']
+                        ? $fail(__('The :attribute must have at least :min items.', ['attribute' => $field['display'] ?? $field['handle'], 'min' => $field['min_items']]))
+                        : null;
                 }
 
                 if (($field['max_items'] ?? null) !== null) {
