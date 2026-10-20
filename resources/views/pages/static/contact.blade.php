@@ -18,7 +18,7 @@
                 <nav class="flex items-center gap-2 text-sm text-zinc-200 mb-4">
                     <a href="/" class="hover:text-white transition-colors">Beranda</a>
                     <span class="text-zinc-400">&gt;</span>
-                    <span class="font-bold text-white">{{ $data->hero_heading }}</span>
+                    <span class="font-semibold text-red-500">{{ $data->hero_heading }}</span>
                 </nav>
 
                 <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-white mb-4">

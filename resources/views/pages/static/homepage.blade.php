@@ -63,7 +63,7 @@
                                     'opacity-0 -translate-y-8 duration-300 delay-0'">
                                 <a href="{{ $data->hero_cta_link ?? '#' }}"
                                     :tabindex="isActive({{ $index }}) ? 0 : -1"
-                                    class="inline-flex uppercase items-center justify-center px-8 py-3.5 rounded-[8px] bg-white text-zinc-900 font-semibold text-sm transition-all duration-300 hover:bg-zinc-200 hover:shadow-lg hover:-translate-y-0.5">
+                                    class="inline-flex uppercase items-center justify-center px-8 py-3.5 rounded-[8px] bg-red-500 text-white font-semibold text-sm transition-all duration-300 hover:bg-red-700 hover:shadow-lg">
                                     {{ $data->hero_cta_label }}
                                 </a>
                             </div>
