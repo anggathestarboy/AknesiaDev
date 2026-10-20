@@ -159,7 +159,7 @@ test('@navigation directive uses the site\'s value only for localizable fields',
     Tree::create(['type' => 'navigation', 'handle' => 'header', 'locale' => 'indonesia', 'tree' => ['cta' => 'Hubungi', 'brand' => 'Draft ID']]);
     Tree::create(['type' => 'navigation', 'handle' => 'header', 'locale' => 'english', 'tree' => ['cta' => 'Contact', 'brand' => 'Draft EN']]);
 
-    $html = Blade::render("@navigation('header', ['site' => 'english']){{ \$navigation->cta }}|{{ \$navigation->brand }}@endnavigation");
+    $html = Blade::render("@navigation('header', ['site' => 'english']){{ \$data->cta }}|{{ \$data->brand }}@endnavigation");
 
     expect($html)->toBe('Contact|Draft ID');
 });
