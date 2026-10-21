@@ -19,6 +19,7 @@ use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -612,16 +613,55 @@ class EntryForm extends Component
                 continue;
             }
 
-            if ($field['type'] === 'assets' || $field['type'] === 'taxonomy') {
+            if ($field['type'] === 'assets') {
+                $ids = array_values((array) ($existingData[$field['handle']] ?? []));
+                $existing = AssetMeta::whereIn('id', $ids)->pluck('id')->all();
+                $data[$field['handle']] = array_values(array_filter($ids, fn ($id): bool => in_array($id, $existing)));
+
+                continue;
+            }
+
+            if ($field['type'] === 'taxonomy') {
                 $data[$field['handle']] = $existingData[$field['handle']] ?? [];
 
                 continue;
+            }
+
+            $value = $existingData[$field['handle']] ?? null;
+
+            // A link or image that no longer exists (e.g. after a DB swap or deploy) is cleared, not left dangling.
+            if ($field['type'] === 'link' && is_string($value) && str_starts_with($value, 'entry::') && ! Entry::whereKey(substr($value, 7))->exists()) {
+                $existingData[$field['handle']] = '';
+            }
+
+            if ($field['type'] === 'bard' && is_string($value)) {
+                $existingData[$field['handle']] = $this->cleanBardImages($value);
             }
 
             $data[$field['handle']] = $existingData[$field['handle']] ?? ($field['default'] ?? ($field['type'] === 'toggle' ? false : ''));
         }
 
         return $data;
+    }
+
+    /**
+     * Makes a rich text field's "/storage/" images host-independent (the stored
+     * absolute URL breaks when the domain changes) and removes the ones whose
+     * file is no longer in the media library.
+     */
+    protected function cleanBardImages(string $html): string
+    {
+        return preg_replace_callback('#<img\b[^>]*\bsrc="([^"]*)"[^>]*>#i', function (array $match): string {
+            if (! preg_match('#^(?:https?://[^/"]+)?(/storage/[^"?]+)#i', $match[1], $path)) {
+                return $match[0];
+            }
+
+            if (! Storage::disk('public')->exists(rawurldecode(substr($path[1], 9)))) {
+                return '';
+            }
+
+            return str_replace($match[1], $path[1], $match[0]);
+        }, $html);
     }
 
     /**
