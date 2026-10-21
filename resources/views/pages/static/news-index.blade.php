@@ -10,7 +10,7 @@
             </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
-            @collection('news')
+            @collection('news', ['site' => $site->handle])
                 @php
                     $newsCollection = \App\Modules\Collections\Models\Collection::where(
                         'handle',

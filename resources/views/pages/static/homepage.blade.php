@@ -145,7 +145,7 @@
             </h2>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
-            @collection('news', ['limit' => 3])
+            @collection('news', ['site' => $site->handle, 'limit' => 3])
                 @php
                     $newsCollection = \App\Modules\Collections\Models\Collection::where(
                         'handle',
