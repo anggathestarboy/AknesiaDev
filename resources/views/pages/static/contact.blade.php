@@ -16,7 +16,7 @@
         <div class="relative z-10 container mx-auto h-full px-4 lg:px-0 flex flex-col justify-center">
             <div class="max-w-xl">
                 <nav class="flex items-center gap-2 text-sm text-zinc-200 mb-4">
-                    <a href="/" class="hover:text-white transition-colors">Beranda</a>
+                    <a href="/" class="hover:text-white transition-colors">{{ $site?->name == "Indonesia" ? "Beranda" : "Homepage" }}</a>
                     <span class="text-zinc-400">&gt;</span>
                     <span class="font-semibold text-red-500">{{ $data->hero_heading }}</span>
                 </nav>

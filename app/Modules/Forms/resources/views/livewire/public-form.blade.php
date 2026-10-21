@@ -110,7 +110,7 @@
         type="submit"
         wire:target="submit"
         wire:loading.attr="disabled"
-        class="inline-flex items-center justify-center px-8 py-3 rounded-[8px] bg-zinc-900 text-white font-semibold text-sm uppercase transition-all duration-300 hover:bg-zinc-700 disabled:opacity-60 disabled:cursor-default"
+        class="inline-flex items-center cursor-pointer justify-center px-8 py-3 rounded-[8px] bg-zinc-900 text-white font-semibold text-sm uppercase transition-all duration-300 hover:bg-zinc-700 disabled:opacity-60 disabled:cursor-default"
     >
         <span wire:loading.remove wire:target="submit">{{ __("Send") }}</span>
         <span wire:loading wire:target="submit">{{ __("Sending…") }}</span>
