@@ -4,7 +4,7 @@
 
 
 @global('footer')
-    <footer class="bg-gray-100 text-black">
+    <footer class="bg-gray-100 text-black mt-26 sm:mt-0">
         <div class="container relative mx-auto px-5 lg:px-0 py-12">
             <a href="#"
                 class="absolute right-4 top-12 z-10 w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center">
