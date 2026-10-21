@@ -16,4 +16,6 @@ Schedule::command('entries:publish-scheduled')->everyMinute();
 
 // Executes confirmed activity log deletion requests — see
 // ActivityLogDeletionRequest / HardDeleteActivityLogYear.
-Schedule::command('activity-log:process-deletions')->dailyAt('00:00');
+if (config('activity-log.enabled')) {
+    Schedule::command('activity-log:process-deletions')->dailyAt('00:00');
+}

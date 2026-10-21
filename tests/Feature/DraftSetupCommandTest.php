@@ -72,3 +72,16 @@ test('draft:setup does not create a second default site if one already exists', 
     expect(Site::count())->toBe(1);
     expect(Site::sole()->handle)->toBe('existing');
 });
+
+test('draft:activity_log turns the activity log on in .env', function () {
+    $envFile = tempnam(sys_get_temp_dir(), 'env');
+    file_put_contents($envFile, "APP_NAME=Draft\nACTIVITY_LOG_ENABLED=false\n");
+    $this->app->useEnvironmentPath(dirname($envFile));
+    $this->app->loadEnvironmentFrom(basename($envFile));
+
+    $this->artisan('draft:activity_log')->assertSuccessful();
+
+    expect(file_get_contents($envFile))->toContain('ACTIVITY_LOG_ENABLED=true')->not->toContain('=false');
+
+    unlink($envFile);
+});
