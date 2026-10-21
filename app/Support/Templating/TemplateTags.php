@@ -4,6 +4,7 @@ namespace App\Support\Templating;
 
 use App\Models\TaxonomyTerm;
 use App\Modules\Collections\Models\Entry;
+use App\Modules\Globals\Models\GlobalSet;
 use App\Modules\Globals\Models\GlobalSetVariable;
 use App\Modules\Navigation\Models\Navigation;
 use App\Modules\Navigation\Services\NavigationTreeService;
@@ -30,9 +31,24 @@ class TemplateTags
 
     public static function global(string $handle): ?Fluent
     {
-        $variable = GlobalSetVariable::where('handle', $handle)->where('locale', null)->first();
+        // shortcut: always the default site's values, not the visitor's site; upgrade when localized globals are needed on the front end
+        $variable = GlobalSetVariable::where('handle', $handle)
+            ->where(fn (Builder $query) => $query->where('locale', Site::orderBy('order')->value('handle'))->orWhereNull('locale'))
+            ->orderByRaw('locale is null')
+            ->first();
 
-        return $variable ? FluentWrapper::wrap($variable->data ?? []) : null;
+        if (! $variable) {
+            return null;
+        }
+
+        // Turns "entry::{id}" links into URLs and asset ids into AssetMeta models, like Entry::fluentData().
+        $fields = GlobalSet::where('handle', $handle)->first()?->effectiveBlueprint()?->data['fields'] ?? [];
+        $resolver = new Entry;
+        $resolver->site = Site::orderBy('order')->value('handle');
+        $data = $resolver->resolveLinkFields($variable->data ?? [], $fields);
+        $data = $resolver->resolveAssetFields($data, $fields);
+
+        return FluentWrapper::wrap($data);
     }
 
     /**
