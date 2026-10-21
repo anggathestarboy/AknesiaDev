@@ -76,6 +76,7 @@
 
         <div x-show="contextMenu === 'file-{{ $asset->id }}'" x-cloak x-on:click.outside="contextMenu = null" :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }" class="fixed z-50 w-40 rounded-md border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
             <button type="button" wire:click.stop="openPreview({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("View") }}</button>
+            <button type="button" x-on:click="navigator.clipboard.writeText(@js($asset->copy_url)); contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Copy URL") }}</button>
             @if (auth()->user()->hasPermission("rename {$this->container} assets"))
                 <button type="button" wire:click.stop="startRenameFile({{ $asset->id }})" x-on:click="contextMenu = null" class="block w-full px-3 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">{{ __("Rename") }}</button>
             @endif

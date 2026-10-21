@@ -64,6 +64,17 @@ class AssetMeta extends Model
         );
     }
 
+    /**
+     * The asset's URL on APP_URL's host instead of whatever host the disk
+     * or the current request resolves to, for pasting outside the CMS.
+     */
+    public function getCopyUrlAttribute(): string
+    {
+        $parts = parse_url($this->url);
+
+        return rtrim(config('app.url'), '/').($parts['path'] ?? '').(isset($parts['query']) ? '?'.$parts['query'] : '');
+    }
+
     public function fileExists(): bool
     {
         return is_file($this->absolutePath());
