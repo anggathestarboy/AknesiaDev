@@ -108,6 +108,44 @@ php artisan entries:publish-scheduled   # or just run the command directly, once
 - **Frequency**: `everyMinute()` means an entry can go live up to ~60 seconds after its scheduled time, not instantly at the exact second.
 - **Manual override**: an editor can always bypass the wait by opening the entry and re-saving with a past/present date — see `EntryForm::save()`, which resolves Published-vs-Scheduled the same way on every save.
 
+## Activity log
+
+Activity logging is **optional** and is **not** part of `draft:setup`. If you need it (e.g. to keep track of who changed what in the admin panel), run this command once after the initial setup:
+
+```bash
+php artisan draft:activity_log
+```
+
+Like every other bootstrap step, it is a standalone Artisan command — run `php artisan list` to find it, or `php artisan draft:activity_log --help` to see the options it supports.
+
+### Running it in each environment
+
+**Local development** — run it directly from the project root:
+
+```bash
+php artisan draft:activity_log
+```
+
+**Docker (staging)** — run it inside the running `app` container (remember the `--env-file` flag, see [Docker (staging)](#docker-staging)):
+
+```bash
+docker compose --env-file .env.docker exec app php artisan draft:activity_log
+```
+
+**Production / existing install** — run it after pulling the latest code and running migrations, since the command depends on the application being fully set up (database migrated, `.env` configured):
+
+```bash
+git pull
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan draft:activity_log
+```
+
+### Notes
+
+- Run `php artisan draft:setup` **first** — the activity log needs a working install (migrated database and at least one user).
+- If something doesn't look right after running it, check `storage/logs/laravel.log`.
+
 ## reCAPTCHA (bot protection)
 
 [Google reCAPTCHA v3](https://developers.google.com/recaptcha/docs/v3) — score-based, no checkbox/puzzle widget. Set these in `.env` to turn it on:
