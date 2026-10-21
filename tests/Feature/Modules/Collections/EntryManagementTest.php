@@ -3483,3 +3483,31 @@ test('duplicating an entry needs the edit permission', function () {
         ->call('duplicate', $entry->id)
         ->assertForbidden();
 });
+
+test('editing an entry clears missing images and links and makes rich text images host-independent', function () {
+    $this->actingAs(User::factory()->create());
+    makeSites();
+    $field = fn (string $handle, string $type): array => ['handle' => $handle, 'display' => $handle, 'type' => $type, 'required' => false, 'placeholder' => null, 'default' => null, 'validation' => null, 'instructions' => null, 'validate_sometimes' => false, 'conditions' => null];
+    Blueprint::create(['namespace' => 'collections.blog', 'handle' => 'post', 'data' => ['fields' => [$field('gallery', 'assets'), $field('cta', 'link'), $field('body', 'bard')]]]);
+    $collection = Collection::create(['title' => 'Blog', 'handle' => 'blog']);
+
+    Storage::fake('public');
+    Storage::disk('public')->put('kept.png', 'x');
+    AssetContainer::create(['handle' => 'photos', 'title' => 'Photos', 'disk' => 'public']);
+    $asset = AssetMeta::create(['container' => 'photos', 'folder' => '', 'basename' => 'kept.png', 'filename' => 'kept', 'extension' => 'png', 'path' => 'kept.png', 'meta' => []]);
+
+    $entry = Entry::create([
+        'collection' => 'blog', 'blueprint' => 'post', 'site' => 'indonesia', 'slug' => 'hello', 'status' => 'draft',
+        'data' => [
+            'title' => 'Hello',
+            'gallery' => [$asset->id, 9999],
+            'cta' => 'entry::'.Str::uuid(),
+            'body' => '<p>a</p><img src="http://old-host.test/storage/kept.png"><img src="/storage/gone.png">',
+        ],
+    ]);
+
+    Livewire::test(EntryForm::class, ['collection' => $collection, 'entry' => $entry, 'site' => 'indonesia'])
+        ->assertSet('data.gallery', [$asset->id])
+        ->assertSet('data.cta', '')
+        ->assertSet('data.body', '<p>a</p><img src="/storage/kept.png">');
+});
