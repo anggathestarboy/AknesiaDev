@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 /**
  * Opt-in switch for the activity log: draft:setup leaves it off (see
  * config/activity-log.php), this turns ACTIVITY_LOG_ENABLED on in .env and
- * makes sure its tables are migrated.
+ * migrates its tables (kept out of database/migrations so draft:setup never creates them).
  */
 class DraftActivityLogCommand extends Command
 {
@@ -31,7 +31,7 @@ class DraftActivityLogCommand extends Command
             : rtrim($env)."\nACTIVITY_LOG_ENABLED=true\n";
         file_put_contents($envPath, $env);
 
-        $this->call('migrate', ['--force' => true]);
+        $this->call('migrate', ['--force' => true, '--path' => 'app/Modules/ActivityLog/database/migrations']);
         $this->call('config:clear');
 
         $this->info('Activity log enabled.');
