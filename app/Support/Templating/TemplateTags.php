@@ -29,23 +29,41 @@ class TemplateTags
      */
     protected const COLUMNS = ['id', 'site', 'status', 'slug', 'uri', 'date', 'order', 'collection', 'taxonomy', 'created_at', 'updated_at'];
 
+    /**
+     * A global set's values for the current page's site (set by PageController
+     * via the shared "currentEntry"; the default site elsewhere): non-localizable
+     * fields always come from the default site, localizable ones use the site's
+     * own value, falling back to the default site's while it is still empty.
+     */
     public static function global(string $handle): ?Fluent
     {
-        // shortcut: always the default site's values, not the visitor's site; upgrade when localized globals are needed on the front end
-        $variable = GlobalSetVariable::where('handle', $handle)
-            ->where(fn (Builder $query) => $query->where('locale', Site::orderBy('order')->value('handle'))->orWhereNull('locale'))
-            ->orderByRaw('locale is null')
-            ->first();
+        $originSite = Site::orderBy('order')->value('handle');
+        $site = view()->shared('currentEntry')?->site ?? $originSite;
 
-        if (! $variable) {
+        $rows = GlobalSetVariable::where('handle', $handle)->get()->keyBy(fn (GlobalSetVariable $row): string => (string) $row->locale);
+        $origin = $rows->get((string) $originSite) ?? $rows->get('');
+
+        if (! $origin) {
             return null;
         }
 
-        // Turns "entry::{id}" links into URLs and asset ids into AssetMeta models, like Entry::fluentData().
         $fields = GlobalSet::where('handle', $handle)->first()?->effectiveBlueprint()?->data['fields'] ?? [];
+        $data = $origin->data ?? [];
+
+        if ($site !== $originSite && ($own = $rows->get((string) $site))) {
+            foreach ($fields as $field) {
+                $isLocalized = $field['type'] === 'replicator' || ($field['localizable'] ?? false);
+
+                if ($isLocalized && filled($own->data[$field['handle']] ?? null)) {
+                    $data[$field['handle']] = $own->data[$field['handle']];
+                }
+            }
+        }
+
+        // Turns "entry::{id}" links into URLs and asset ids into AssetMeta models, like Entry::fluentData().
         $resolver = new Entry;
-        $resolver->site = Site::orderBy('order')->value('handle');
-        $data = $resolver->resolveLinkFields($variable->data ?? [], $fields);
+        $resolver->site = $site;
+        $data = $resolver->resolveLinkFields($data, $fields);
         $data = $resolver->resolveAssetFields($data, $fields);
 
         return FluentWrapper::wrap($data);
